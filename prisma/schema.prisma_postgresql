@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+datasource db {
+  provider = "postgresql" // ใช้ PostgreSQL หรือ "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Account {
+  // id                Int     @id @default(autoincrement())
+  id       String   @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  // id           Int      @id @default(autoincrement())
+  id       String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model User {
+  // id         Int       @id @default(autoincrement())
+  id       String   @id @default(cuid())
+  studentId  String?   @unique
+  name       String?
+  name_en    String?
+  name_th    String?
+  email      String    @unique
+  image      String?
+  faculty    String?
+  department String?
+  tu_status  String?
+  role       String?   @default("student")
+  // role     Role     @default(STUDENT)
+  bookings   Booking[]
+
+  emailVerified DateTime?
+  accounts      Account[]
+  sessions      Session[]
+}
+
+model Dorm {
+  id    Int    @id @default(autoincrement())
+  name  String
+  rooms Room[]
+}
+
+model Room {
+  id       Int      @id @default(autoincrement())
+  number   String
+  floor    Int // ชั้นที่ห้องอยู่
+  zone     String // หอโซนไหน
+  price    Float
+  isBooked Boolean  @default(false)
+  dormId   Int // ไอดี หอที่ภูมิภาคไหน
+  dorm     Dorm     @relation(fields: [dormId], references: [id]) // หอที่ภูมิภาคไหน
+  booking  Booking?
+}
+
+model Booking {
+  // id        Int      @id @default(autoincrement())
+  id       String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  roomId    Int      @unique
+  room      Room     @relation(fields: [roomId], references: [id])
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+enum Status {
+  PENDING
+  CONFIRMED
+  CANCELLED
+}

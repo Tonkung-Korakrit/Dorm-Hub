@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px; /* ปรับให้แคบลงจะดูไม่ห่าง */
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(0, 100, 50, 0.2); /* สีเขียวจางๆ */
+  border-radius: 20px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 100, 50, 0.5); /* เข้มขึ้นเมื่อจ่อเมาส์ */
+}
+
+.react-datepicker {
+  border: none !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+  font-family: inherit !important;
+  border-radius: 12px !important;
+}
+
+.react-datepicker__header {
+  background-color: #f9fafb !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+  border-top-left-radius: 12px !important;
+}
+
+.react-datepicker__day--selected {
+  background-color: #ef4444 !important; /* สีเดียวกับ ring-red-500 ของคุณ */
+  border-radius: 8px !important;
+}

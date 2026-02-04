@@ -1,0 +1,12 @@
+{
+  "events": [
+    {
+      "type": "message",
+      "replyToken": "TESTTOKEN",
+      "source": { "userId": "Uxxxxxxxx", "type": "user" },
+      "timestamp": 1690000000000,
+      "mode": "active",
+      "message": { "id": "1", "type": "text", "text": "สถานะการจอง 321" }
+    }
+  ]
+}
