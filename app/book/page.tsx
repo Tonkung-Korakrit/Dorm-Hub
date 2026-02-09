@@ -24,7 +24,7 @@ export default async function BookRoomPage() {
   // กรณี Login ด้วย Google
   if (provider === "google") {
     const token = session?.user?.token;
-    if (!token) redirect("/login");
+    if (!token) redirect("/");
 
     try {
       const decoded = jwt.verify(token, jwtSecret) as CustomJwtPayload;
@@ -55,7 +55,7 @@ export default async function BookRoomPage() {
         user.name_th = session.user.name;
       }
     } catch (error) {
-      redirect("/login");
+      redirect("/");
     }
 
   } 
@@ -63,7 +63,7 @@ export default async function BookRoomPage() {
   else {
     const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
-    if (!token) redirect("/login");
+    if (!token) redirect("/");
 
     try {
       const decoded = jwt.verify(token, jwtSecret) as CustomJwtPayload;
@@ -86,7 +86,7 @@ export default async function BookRoomPage() {
         },
       }) as Resident | null;
     } catch (error) {
-      redirect("/login");
+      redirect("/");
     }
   }
 
@@ -101,7 +101,7 @@ export default async function BookRoomPage() {
   //   } 
   // });
 
-  if (!user) redirect("/login");
+  if (!user) redirect("/");
 
   return <Form user={user} />;
 }

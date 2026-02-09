@@ -1,6 +1,7 @@
 "use client";
 
 import { useBooking } from "@/app/contexts/BookingContext";
+import { Checkbox } from "@headlessui/react";
 import { useState, useEffect } from "react";
 import { MdOutlinePerson, MdOutlineStyle } from "react-icons/md";
 // import { MdTimer } from "react-icons/md";
@@ -8,12 +9,13 @@ import { MdOutlinePerson, MdOutlineStyle } from "react-icons/md";
 interface BookingSummaryProps {
   setStep: (step: number) => void;
   // onConfirm: () => void;
-  // isSubmitting: boolean;
+  isSubmitting: boolean;
 }
 
 export function BookingSummary({ setStep }: BookingSummaryProps) {
   const { formResident, formRoom, setFormRoom, currentBooking, setCurrentBooking, ownerInfo } = useBooking();
-  // const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAcceptAgreement, setIsAccepstAgreement] = useState(false);
 
   console.log("formRoom in Summary:", formRoom);
   console.log("formResident in Summary:", formResident);
@@ -36,8 +38,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
     return options[id] || { label: id, icon: '•' };
   };
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const handleFinalConfirm = async () => {
     setIsSubmitting(true);
     try {
@@ -48,6 +48,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           user: formResident,
           room: formRoom,
           type: currentBooking.type,
+          groupId: ownerInfo?.studentId,
         }),
       });
 
@@ -77,7 +78,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
       {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4"> */}
-      <h1 className="text-[24px] font-bold text-gray-700 mb-4">Booking Summary / สรุปการจอง</h1>
+      <h2 className="text-[24px] font-semibold text-gray-700 mb-4">Booking Summary / สรุปการจอง</h2>
 
       <div className="space-y-4">
         {/* 1. ข้อมูลนักศึกษา */}
@@ -110,8 +111,9 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           <div className="bg-[#f0f7f0] p-4 rounded-[2rem] border-2 border-[#e0ede0]">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[15px]">
               <p><span className="text-gray-500">Campus (Dorm):</span> {formRoom.campus}</p>
-              <p><span className="text-gray-500">Zone / Floor:</span> {formRoom.zone.name} / Floor {formRoom.floor}</p>
-              <p><span className="text-gray-500">Type:</span> {currentBooking?.type}</p>
+              <p><span className="text-gray-500">Zone / Floor:</span> {formRoom?.zone?.name} / Floor {formRoom.floor}</p>
+              {/* <p><span className="text-gray-500">Type:</span> {currentBooking?.type}</p> */}
+              <p><span className="text-gray-500">Room Type:</span> {formRoom.roomType}</p>
               <p><span className="text-gray-500">Monthly Price:</span> <span className="font-bold text-gray-800">{formRoom.price?.toLocaleString()} THB/MONTH</span></p>
             </div>
 
@@ -160,15 +162,86 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           </div>
         </section>
 
+        {/* 4. รายละเอียดการจอง (booking detail) */}
+        <section>
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="font-bold text-lg text-[#006432]">4. Booking Detail</h3>
+            <button onClick={() => setStep(4)} className="text-sm text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
+          </div>
+          <h3 className="font-bold text-lg text-[#006432] mb-3 flex items-center gap-2">
+
+          </h3>
+          <div className="flex flex-wrap gap-2">
+            <p><span className="text-gray-500">Booking Type:</span> {currentBooking?.type}</p>
+          </div>
+        </section>
+
         <div className="p-4 bg-red-50 rounded-2xl border border-red-100 flex gap-3">
           <span className="text-red-500 font-bold shrink-0">⚠️ Note:</span>
           <p className="text-[12px] text-red-700 leading-relaxed">
             กรุณาตรวจสอบความถูกต้องของข้อมูลที่กรอกไว้ ก่อนทำการยืนยันการจองห้องพัก เนื่องจากเมื่อทำการยืนยันแล้ว จะไม่สามารถแก้ไขข้อมูลได้อีก
           </p>
         </div>
+
+        <div className="mt-2">
+          <label
+            htmlFor="agreement"
+            className={`flex items-start gap-4 pt-2 pr-5 pl-5 pb-5 rounded-2xl transition-all duration-200 cursor-pointer group `}
+              // ${isAcceptAgreement
+              //   ? "bg-green-50/50 border-green-200 shadow-sm"
+              //   : "bg-gray-50 border-gray-100 hover:border-gray-200"
+              // }`}
+          >
+            {/* Custom Checkbox Wrapper */}
+            <div className="relative flex items-center mt-1">
+              <input
+                type="checkbox"
+                id="agreement"
+                className="peer h-5 w-5 cursor-pointer appearance-none rounded-md border border-gray-300 bg-white checked:bg-[#006633] checked:border-[#006633] transition-all focus:ring-2 focus:ring-[#006633]/20"
+                checked={isAcceptAgreement}
+                onChange={(e) => setIsAccepstAgreement(e.target.checked)}
+              />
+              {/* Checkmark Icon (แสดงเมื่อติ๊ก) */}
+              <svg
+                className="absolute h-3.5 w-3.5 text-white opacity-0 peer-checked:opacity-100 pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-opacity"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="4"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+            </div>
+
+            {/* Text Content */}
+            <span className="text-[12px] md:text-[14px] text-gray-600 leading-relaxed select-none">
+              ข้าพเจ้าได้ทำความเข้าใจ และ{" "}
+              <a
+                href="https://precheckin.psm.tu.ac.th/dormitory-policy"
+                target="_blank"
+                className="text-[#006633] font-bold underline decoration-[#006633]/30 underline-offset-4 hover:text-[#004d26] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ยอมรับข้อตกลงการพักอาศัยหอพักนักศึกษามหาวิทยาลัยธรรมศาสตร์
+              </a>
+              {" "}และ{" "}
+              <a
+                href="https://precheckin.psm.tu.ac.th/privacy-policy"
+                target="_blank"
+                className="text-[#006633] font-bold underline decoration-[#006633]/30 underline-offset-4 hover:text-[#004d26] transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                ข้อตกลงการใช้ข้อมูล
+              </a>
+            </span>
+          </label>
+        </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3 mt-10">
+      <div className="flex flex-col md:flex-row gap-3 mt-2">
         <button
           onClick={() => setStep(6)}
           className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all order-2 md:order-1"
@@ -176,7 +249,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           ย้อนกลับ (Back)
         </button>
         <button
-          disabled={isSubmitting} // || timeLeft <= 0
+          disabled={!isAcceptAgreement || isSubmitting} // || timeLeft <= 0
           onClick={handleFinalConfirm}
           className="flex-1 py-4 bg-[#126A31] text-white rounded-2xl font-bold hover:bg-black shadow-lg shadow-green-100 transition-all disabled:bg-gray-300 order-1 md:order-2"
         >

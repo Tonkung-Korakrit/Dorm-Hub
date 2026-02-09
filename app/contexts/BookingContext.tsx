@@ -2,8 +2,8 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import { Room, Resident, Booking, BookingType, RoomStatus, Role, BookingStatus, RoomType, GenderType, Admin, OwnerInfo } from "@/types/booking";
+// import { useRouter } from "next/navigation";
+import { Room, Resident, Booking, BookingType, RoomStatus, Role, BookingStatus, RoomType, GenderType, Admin, OwnerInfo, Vehicle } from "@/types/booking";
 
 // กำหนด Interface สำหรับข้อมูลใน Context (จะแชร์อะไรบ้าง)
 interface BookingContextType {
@@ -15,6 +15,9 @@ interface BookingContextType {
   setCurrentBooking: React.Dispatch<React.SetStateAction<Booking>>;
   ownerInfo: OwnerInfo | null;
   setOwnerInfo: React.Dispatch<React.SetStateAction<OwnerInfo>>;
+  vehicle: Vehicle | null;
+  setVehicle: React.Dispatch<React.SetStateAction<Vehicle>>;
+
   admin: Admin;
   setAdmin: React.Dispatch<React.SetStateAction<Admin>>;
 
@@ -31,10 +34,37 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: ReactNode }) => {
   // console.log("Context Provider is Rendering!");
+  // const router = useRouter();
 
-  const router = useRouter();
+  const [formResident, setFormResident] = useState<Resident>({
+    id: 0,
+    role: Role.STUDENT,
+    email: "",
+    citizenType: "",
+    citizenNumber: "",
+    studentId: "",
+    gender: GenderType.OTHER,
+    prefix: "",
+    // name: "",
+    name_en: "",
+    name_th: "",
+    birthDate: "",
+    phone: "",
 
-  // กำหนดค่าเริ่มต้นของ Room ตาม Interface
+    isScholarshipStudent: false,
+    isDisabled: false,
+
+    image: "",
+    faculty_department: "",
+    // department: "",
+    // tu_status: "",
+    lifestyle: [],
+    guardians: [],
+    documents: [],
+    // vehicleInfo: null,
+    address: [],
+  });
+
   const [formRoom, setFormRoom] = useState<Room>({
     id: 0,
     campus: "",
@@ -66,49 +96,27 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     },
   });
 
-  const [formResident, setFormResident] = useState<Resident>({
-    id: 0,
-    role: Role.STUDENT,
-    email: "",
-    citizenType: "",
-    citizenNumber: "",
-    studentId: "",
-    gender: GenderType.OTHER,
-    prefix: "",
-    // name: "",
-    name_en: "",
-    name_th: "",
-    birthDate: "",
-    phone: "",
-
-    isScholarshipStudent: false,
-    isDisabled: false,
-
-    image: "",
-    faculty_department: "",
-    // department: "",
-    // tu_status: "",
-    lifestyle: [],
-    guardians: [],
-    documents: [],
-    // vehicleInfo: null,
-    address: [],
-  });
-
-  // const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>({
-    // studentId: "",
-    // name: "",
-    // zoneName: "",
-    // roomNumber: "",
-    // roomId: "",
-  // });
-
   const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null)
 
-  const [message, setMessage] = useState<string>("");
+  // const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>({
+  // studentId: "",
+  // name: "",
+  // zoneName: "",
+  // roomNumber: "",
+  // roomId: "",
+  // });
 
-  // const [currentBooking, setCurrentBooking] = useState<Booking | null>(null);
-  const [currentBooking, setCurrentBooking] = useState<Booking | null>({
+  const [vehicle, setVehicle] = useState<Vehicle>({
+    id: 0,
+    userId: 0,
+    licensePlate: "",
+    province: "",
+    ownerName: "",
+    // createdAt: "",
+    // updatedAt: "",
+  })
+
+  const [currentBooking, setCurrentBooking] = useState<Booking>({
     id: 0,
     status: BookingStatus.PENDING,
     type: BookingType.NOT_CHARTER,
@@ -126,6 +134,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     employeeId: "",
     role: Role.ADMIN,
   })
+
+  const [message, setMessage] = useState<string>("");
 
   // const handleBook = async () => {
   //   console.log("Booking room:", formRoom);
@@ -155,7 +165,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   //     const result = await res.json();
   //     if (res.ok) {
   //       setMessage("✅ จองสำเร็จ!");
-  //       setTimeout(() => router.push("/dashboard"), 1000);
+  //       setTimeout(() => router.push("/my-booking"), 1000);
   //     } else {
   //       setMessage("❌ เกิดข้อผิดพลาด: " + (result.error || "Unknown error"));
   //     }
@@ -172,6 +182,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         formRoom, setFormRoom,
         currentBooking, setCurrentBooking,
         ownerInfo, setOwnerInfo,
+        vehicle, setVehicle,
         admin, setAdmin,
         // bookingType, setBookingType,
         // handleBook,
@@ -183,7 +194,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   );
 };
 
-// 4. สร้าง Custom Hook พร้อมตัวเช็ค Error
+// สร้าง Custom Hook พร้อมตัวเช็ค Error
 export const useBooking = () => {
   const context = useContext(BookingContext);
   if (context === undefined) {

@@ -43,8 +43,8 @@ export interface Vehicle {
   licensePlate: string;
   province: string;
   ownerName: string;
-  createdAt: Date;
-  updatedAt: Date;
+  // createdAt: Date;
+  // updatedAt: Date;
 }
 
 export interface Address {
@@ -78,7 +78,7 @@ export interface Zone {
 export interface Room {
   id: number;
   campus: string;   
-  // zone: string;
+  zone: Zone;
   roomId: string;
   floor: number;
   status: RoomStatus;
@@ -90,8 +90,7 @@ export interface Room {
   lifestyleConfig: any; // Prisma เก็บเป็น Json
 
   posX: number;
-  posY: number;
-  zone: Zone; 
+  posY: number; 
   booking: Booking[];
 
   // bookingId?: number; // สำหรับเก็บ ID การจองเมื่อมีการจองสำเร็จ
@@ -126,7 +125,6 @@ export interface Booking {
   verifiedBy?: number | null;
   verifier?: Admin | null;
   
-  // Relations (ข้อมูลที่ดึงพ่วงมาด้วย)
   user: Resident; 
   room: Room;
 }

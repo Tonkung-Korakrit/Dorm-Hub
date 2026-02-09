@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 import DatePicker from "./DatePickerWrapper";
 import "react-datepicker/dist/react-datepicker.css";
 import { th } from "date-fns/locale"; // สำหรับภาษาไทยในปฏิทิน
+import { Combobox, Transition } from '@headlessui/react';
+import { MdSwapVert, MdCheck } from "react-icons/md"; // ต้องลง @heroicons/react เพิ่ม
 
 // กำหนด Type สำหรับ Props ของ Component
 interface StudentInfoFormProps {
@@ -16,6 +18,13 @@ interface StudentInfoFormProps {
 
 export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
   const { formResident, setFormResident } = useBooking();
+  const [query, setQuery] = useState('');
+
+  const filteredFaculty = query === ''
+    ? FACULTY_LIST
+    : FACULTY_LIST.filter((faculty) =>
+      faculty.name.toLowerCase().replace(/\s+/g, '').includes(query.toLowerCase().replace(/\s+/g, ''))
+    );
 
   // useEffect(() => {
   //   // เลื่อนหน้าไปด้านบนสุด เมื่อคอมโพเนนต์ mount
@@ -336,40 +345,79 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
           </div>
         </label>
 
-        {/* Faculty */}
         <div className="col-span-2">
           <label className="block text-[16px] font-medium text-gray-700 mb-1">
             Faculty and Department / คณะ และสาขา <span className="text-red-500">*</span>
           </label>
 
-          <div className="relative group">
-            <input
-              list="faculty-options"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 
-                 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500
-                 text-white placeholder:text-gray-400
-                 transition-all duration-200 bg-[#006633]"
-              placeholder="พิมพ์เพื่อค้นหาคณะ หรือเลือกจากรายการ..."
-              value={formResident.faculty_department || ""}
-              onChange={(e) => setFormResident(prev => ({ ...prev, faculty_department: e.target.value }))}
-              suppressHydrationWarning
-              required
-            />
+          {mounted ? (
+            <Combobox
+              value={formResident.faculty_department}
+              onChange={(val) => setFormResident(prev => ({ ...prev, faculty_department: val }))}
+            >
+              <div className="relative mt-1">
+                <div className="relative w-full cursor-default overflow-hidden rounded-lg border border-gray-300 bg-white text-left focus-within:ring-2 focus-within:ring-[#006633] transition-all">
+                  <Combobox.Input
+                    id="faculty-combobox-input"
+                    className="w-full border-none py-2.5 pl-4 pr-10 text-sm leading-5 text-gray-900 focus:ring-0 outline-none"
+                    displayValue={(val: string) => val}
+                    onChange={(event) => setQuery(event.target.value)}
+                    placeholder="พิมพ์เพื่อค้นหาคณะ..."
+                  />
+                  <Combobox.Button
+                    id="faculty-combobox-button"
+                    className="absolute inset-y-0 right-0 flex items-center pr-2"
+                  >
+                    <MdSwapVert className="h-5 w-5 text-gray-400" aria-hidden="true" />
+                  </Combobox.Button>
+                </div>
 
-            {/* รายการตัวเลือกที่จะเด้งขึ้นมาเมื่อพิมพ์ */}
-            <datalist id="faculty-options">
-              {FACULTY_LIST.map((faculty) => (
-                <option key={faculty.id} value={faculty.name} />
-              ))}
-            </datalist>
-
-            {/* เส้นขีดสีเขียวตกแต่งด้านล่าง (Optional) เพื่อความคุมโทน */}
-            <div className="absolute bottom-0 left-0 h-0.5 w-0 bg-[#006633] transition-all duration-300 group-focus-within:w-full rounded-b-lg"></div>
-          </div>
-
-          <p className="text-[12px] text-gray-400 mt-1.5 ml-1">
-            * หากไม่พบรายชื่อคณะ โปรดพิมพ์ชื่อคณะเต็มลงในช่อง
-          </p>
+                <Transition
+                  as={React.Fragment}
+                  leave="transition ease-in duration-100"
+                  leaveFrom="opacity-100"
+                  leaveTo="opacity-0"
+                  afterLeave={() => setQuery('')}
+                >
+                  <Combobox.Options className="absolute mt-1 max-h-60 w-full overflow-auto rounded-md bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm z-50">
+                    {filteredFaculty.length === 0 && query !== '' ? (
+                      <div className="relative cursor-default select-none py-2 px-4 text-gray-700">
+                        ไม่พบข้อมูล " {query} " สามารถพิมพ์ชื่อคณะใหม่ได้เลย
+                      </div>
+                    ) : (
+                      filteredFaculty.map((faculty) => (
+                        <Combobox.Option
+                          key={faculty.id}
+                          className={({ active }) =>
+                            `relative cursor-default select-none py-2 pl-10 pr-4 ${active ? 'bg-[#006633] text-white' : 'text-gray-900'
+                            }`
+                          }
+                          value={faculty.name}
+                        >
+                          {({ selected, active }) => (
+                            <>
+                              {/* <span className={`block truncate ${selected ? 'font-medium' : 'font-normal'}`}> */}
+                              <span className={`block whitespace-normal leading-tight ${selected ? 'font-bold' : 'font-normal'}`}>
+                                {faculty.name}
+                              </span>
+                              {selected ? (
+                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-[#006633]'}`}>
+                                  <MdCheck className="h-5 w-5" aria-hidden="true" />
+                                </span>
+                              ) : null}
+                            </>
+                          )}
+                        </Combobox.Option>
+                      ))
+                    )}
+                  </Combobox.Options>
+                </Transition>
+              </div>
+            </Combobox>
+          ) : (
+            // แสดง Placeholder สวยๆ ระหว่างรอ Hydrate เพื่อไม่ให้ Layout กระโดด
+            <div className="w-full h-[42px] bg-gray-50 border border-gray-300 rounded-lg animate-pulse"></div>
+          )}
         </div>
       </div>
 

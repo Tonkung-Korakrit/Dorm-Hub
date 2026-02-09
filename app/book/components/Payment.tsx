@@ -28,7 +28,7 @@ export function PaymentPage() {
       const res = await fetch("/api/bookings/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: currentBooking.id })
+        body: JSON.stringify({ bookingId: currentBooking.id, isExpired: isExpired })
       });
 
       // ไม่ว่าจะสำเร็จหรือไม่ ถ้าเวลาหมดและไม่ได้จ่าย เราควรล็อกหน้าจอ Expired
@@ -102,7 +102,6 @@ export function PaymentPage() {
   };
 
   // 2. จำลองการจ่ายเงินสำเร็จ
-  // ใน PaymentPage.tsx
   const handlePaymentSuccess = async () => {
     // เรียกใช้ bookingId ที่เราพึ่งเซตไปใน Step ก่อนหน้า
     const bId = currentBooking.id;
@@ -113,7 +112,7 @@ export function PaymentPage() {
     }
 
     try {
-      const res = await fetch("/api/bookings/confirm-payment", {
+      const res = await fetch("/api/bookings/submit-payment", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: bId }) // ส่งเลขใบจองที่ถูกต้องไป
@@ -204,7 +203,7 @@ export function PaymentPage() {
   return (
     <div className="max-w-2xl mx-auto bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Pay a deposit</h2>
+        <h2 className="text-[24px] font-semibold text-gray-700 mb-4">Pay a deposit</h2>
         <p className="text-gray-400 text-sm">กรุณาชำระเงิน และอัปโหลดสลิปเพื่อยืนยันสิทธิ์การจองห้องพัก</p>
       </div>
 
@@ -249,13 +248,13 @@ export function PaymentPage() {
             <p className="text-[10px] text-gray-400 mt-1 uppercase">JPG, PNG up to 5MB</p>
           </div>
 
-          <button
+          {/* <button
             disabled={!selectedFile || isUploading}
             onClick={handleUploadPayment}
             className="w-full py-5 bg-[#126A31] text-white rounded-[1.5rem] font-bold hover:bg-black transition-all shadow-xl shadow-green-100 disabled:bg-gray-200 disabled:shadow-none"
           >
             {isUploading ? "Uploading..." : "Confirm Payment / ยืนยันการชำระเงิน"}
-          </button>
+          </button> */}
         </div>
 
         {/* ปุ่มจำลองสถานการณ์สำหรับ Dev */}
@@ -263,7 +262,7 @@ export function PaymentPage() {
           onClick={handlePaymentSuccess}
           className="w-full py-4 bg-[#126A31] text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-green-100"
         >
-          จำลองการจ่ายเงินสำเร็จ (Simulate Success)
+          จำลองการจ่ายเงิน และอัปโหลดสลีปโอนเงินสำเร็จ (Simulate Success)
         </button>
       </div>
     </div >

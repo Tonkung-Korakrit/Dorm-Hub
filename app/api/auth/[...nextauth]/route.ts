@@ -61,21 +61,21 @@ export const authOptions: NextAuthOptions = {
       return token;
     },
 
-    async session({ session, token }) {
-      if (session.user) {
-        // ดึงข้อมูล Role ล่าสุดจาก Database (ถ้าจำเป็น)
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id },
-        });
+    // async session({ session, token }) {
+    //   if (session.user) {
+    //     // ดึงข้อมูล Role ล่าสุดจาก Database (ถ้าจำเป็น)
+    //     const dbUser = await prisma.user.findUnique({
+    //       where: { id: token.id },
+    //     });
 
-        session.user.id = token.id;
-        session.user.email = token.email;
-        session.user.role = dbUser?.role || token.role;
-        session.user.token = token.myToken;
-        session.user.provider = token.provider;
-      }
-      return session;
-    },
+    //     session.user.id = token.id;
+    //     session.user.email = token.email;
+    //     session.user.role = dbUser?.role || token.role;
+    //     session.user.token = token.myToken;
+    //     session.user.provider = token.provider;
+    //   }
+    //   return session;
+    // },
   },
   pages: {
     signIn: "/login",

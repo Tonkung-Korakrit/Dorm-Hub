@@ -1,73 +1,76 @@
-// /api/bookings/cancel/route.ts
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { RoomStatus, BookingType, BookingStatus } from "@prisma/client";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
 export async function POST(request: NextRequest) {
   try {
-    const { bookingId } = await request.json();
+    const { bookingId, isExpired } = await request.json();
 
-    if (!bookingId) return NextResponse.json({ error: "Booking ID required" }, { status: 400 });
+    // ตรวจสอบตัวตน (Security) เพื่อให้มั่นใจว่าเป็นเจ้าของรายการจอง
+    const cookieStore = await cookies();
+    const token = cookieStore.get("token")?.value;
+    if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as any;
+    const studentId = decoded.username;
 
     const result = await prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({
+      // Select เฉพาะฟิลด์ที่จำเป็น (Optimization)
+      const currentBooking = await tx.booking.findUnique({
         where: { id: Number(bookingId) },
-        include: { room: true }
+        select: {
+          id: true,
+          status: true,
+          type: true,
+          user: { select: { studentId: true } },
+          room: { select: { id: true, status: true, currentOccupancy: true, capacity: true, } }
+        }
       });
 
-      // ตรวจสอบสถานะว่าต้องเป็น PENDING เท่านั้นถึงจะยกเลิกและคืนสิทธิ์ได้
-      if (!booking || booking.status !== BookingStatus.PENDING) {
-        throw new Error("รายการจองนี้ไม่สามารถยกเลิกได้ หรือถูกดำเนินการไปแล้ว");
+      // ตรวจสอบสิทธิ์และสถานะ
+      if (!currentBooking || currentBooking.user.studentId !== studentId) {
+        throw new Error("คุณไม่มีสิทธิ์ยกเลิกรายการนี้");
       }
 
-      // 1. อัปเดตสถานะการจอง (ใช้ CANCELLED สำหรับการกดเอง หรือ EXPIRED สำหรับเวลาหมด)
-      await tx.booking.update({
-        where: { id: booking.id },
-        data: { status: BookingStatus.CANCELLED } 
-      });
+      if (currentBooking.status !== BookingStatus.PENDING) {
+        throw new Error("รายการจองนี้ไม่สามารถยกเลิกได้ (อาจได้รับการยืนยันหรือหมดอายุไปแล้ว)");
+      }
 
-      // 2. คำนวณการคืนสิทธิ์
-      const { type, room } = booking;
-      const isCharter = type === BookingType.CHARTER;
-      const isCoResident = type === BookingType.CO_RESIDENT;
-      
+      // คำนวณการคืนสิทธิ์ให้ห้องพัก
+      const { type, room } = currentBooking;
       let newOcc = room.currentOccupancy;
       let newStatus = room.status;
 
-      const maxCap = room.capacity;
-      // const CO_RESIDENT_LIMIT = maxCap + 10; // พักร่วมได้ไม่เกิน 10 คน
-
-      if (isCharter) {
-        // ถ้าเจ้าของห้องเหมายกเลิก ห้องต้องว่าง 100%
+      if (type === BookingType.CHARTER) {
         newOcc = 0;
         newStatus = RoomStatus.AVAILABLE;
       } else {
-        // ถ้าจองแยกหรือพักร่วมยกเลิก ให้ลดจำนวนคนลง 1
         newOcc = Math.max(0, room.currentOccupancy - 1);
-        
-        // จัดการสถานะห้อง
-        if (isCoResident) {
-          // ถ้าผู้พักร่วมยกเลิก สถานะห้องควรยังเป็น FULL หรือ PENDING ตามเดิม (เพราะเจ้าของยังอยู่)
-          // นอกจากว่าจะหลุดจาก Hard Limit 10 คน ให้เป็น PENDING
-          // newStatus = newOcc < CO_RESIDENT_LIMIT ? RoomStatus.PENDING : RoomStatus.FULL;
-          newStatus = RoomStatus.FULL;
-        } else {
-          // กรณี NOT_CHARTER (จองรายคน)
-          // ถ้าจำนวนคนน้อยกว่าความจุเตียง ให้กลับมาเป็น AVAILABLE
-          newStatus = newOcc < maxCap ? RoomStatus.AVAILABLE : RoomStatus.PENDING;
+        // ถ้าไม่เหลือคนแล้ว หรือเป็นแบบแยกคนจองแล้วมีที่ว่าง ให้กลับมา AVAILABLE
+        if (newOcc === 0 || (type === BookingType.NOT_CHARTER && newOcc < room.capacity)) {
+          newStatus = RoomStatus.AVAILABLE;
+        } else if (type === BookingType.CO_RESIDENT) {
+          newStatus = RoomStatus.FULL; // ตามเงื่อนไขห้องพักร่วมของคุณ
         }
       }
 
+      // อัปเดตสถานะ booking
+      const finalStatus = isExpired ? BookingStatus.EXPIRED : BookingStatus.CANCELLED;
+      await tx.booking.update({
+        where: { id: currentBooking.id },
+        data: { status: finalStatus }
+      });
+
+      // อัปเดตสถานะจำนวนผู้อาศัยปัจจุบันใน room
       await tx.room.update({
         where: { id: room.id },
-        data: {
-          currentOccupancy: newOcc,
-          status: newStatus
-        }
+        data: { currentOccupancy: newOcc, status: newStatus }
       });
 
       return { success: true };
-    });
+    }, { timeout: 10000 });
 
     return NextResponse.json(result);
   } catch (error: any) {

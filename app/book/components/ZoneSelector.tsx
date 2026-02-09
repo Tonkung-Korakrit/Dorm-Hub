@@ -3,6 +3,9 @@
 
 import { useState, useEffect } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
+import useSWR from 'swr';
+import { Zone } from "@/types/booking";
+import { DORM_LABELS } from "@/lib/constants";
 
 const zoneImages: Record<string, string> = {
   B: "/images/zones/B.png",
@@ -15,21 +18,22 @@ interface ZoneSelectorProps {
   setStep: (step: number) => void;
 }
 
-interface ZoneData {
-  id: number;
-  name: string;
-  gender: string;
-  mapUrl: string;
-  maxCols: true;
-  maxRows: true;
-}
+// interface ZoneData {
+//   id: number;
+//   name: string;
+//   gender: string;
+//   mapUrl: string;
+//   maxCols: true;
+//   maxRows: true;
+// }
 
 export function ZoneSelector({ setStep }: ZoneSelectorProps) {
   // const [zones, setZones] = useState<string[]>([]);
-  const [zones, setZones] = useState<ZoneData[]>([]);
+  const [zones, setZones] = useState<Zone[]>([]);
   const [loading, setLoading] = useState(true);
 
   const { formResident, setFormResident, formRoom, setFormRoom, currentBooking, setCurrentBooking } = useBooking();
+  const fetcher = (url: string) => fetch(url).then(res => res.json());
 
   // console.log("formRoom in Summary:", formRoom);
 
@@ -64,24 +68,46 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
   // });
 
   const filteredZones = zones.filter((zone) => {
-    const userGender = formResident.gender; // MALE, FEMALE หรือ LGBTQ จาก Database
-    const zoneGender = zone.gender;         // MALE, FEMALE หรือ LGBTQ จาก API
+    const userGender = formResident.gender;
+    const userPrefix = formResident.prefix; // "นาย", "นางสาว", "นาง"
+    const zoneGender = zone.gender;         // "MALE", "FEMALE"
 
-    // 1. ถ้าโซนนั้นกำหนดเพศไว้เป็น OTHER หรือตรงกับเพศผู้ใช้ ให้แสดงผล
-    // 2. ถ้าคุณมีหอรวม (LGBTQ) ก็สามารถเพิ่มเงื่อนไขเช็คเพิ่มได้ที่นี่
-    return zoneGender === "OTHER" || zoneGender === userGender;
+    // กรณีโซนสำหรับผู้ชาย (MALE) -> อนุญาตเฉพาะคำนำหน้า "นาย"
+    if (userGender === "MALE" && userPrefix === "Mr.") {
+      return zoneGender === "MALE";
+    }
+
+    // กรณีโซนสำหรับผู้หญิง (FEMALE) -> อนุญาตเฉพาะ "นางสาว" หรือ "นาง"
+    if (userGender === "FEMALE" && userPrefix === "Mrs." || userPrefix === "Ms.") {
+      return zoneGender === "FEMALE";
+    }
+
+    // กรณีโซนหอรวม หรือเพศทางเลือก (ถ้ามี)
+    // return zoneGender === "OTHER" || zoneGender === "LGBTQ";
+    return true;
   });
 
   useEffect(() => {
     if (!formRoom.campus) return;
+
+    let isMounted = true;
     setLoading(true);
+
     fetch(`/api/zones?campus=${formRoom.campus}`)
       .then((res) => res.json())
-      .then((data: ZoneData[]) => {
-        setZones(data);
-        setLoading(false);
+      .then((data: Zone[]) => {
+        if (isMounted) { // เช็คว่าคอมโพเนนต์ยังอยู่ไหมก่อนอัปเดต State
+          setZones(data);
+          setLoading(false);
+        }
       })
-      .catch((err) => console.error("Fetch zones error:", err));
+      .catch((err) => {
+        if (isMounted) console.error("Fetch error:", err);
+      });
+
+    return () => {
+      isMounted = false; // Clean-up เมื่อ Unmount
+    };
   }, [formRoom.campus]);
 
   const handleSelectZone = (selectedZone: string) => {
@@ -118,22 +144,32 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
 
       <h1 className="text-[24px] font-bold mb-4 text-gray-700">
         Select Zone / เลือกโซน ของวิทยาเขต ({formRoom.campus})
+        {/* ({DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}) */}
       </h1>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 text-[16px]">
         <div className="flex flex-col gap-1">
           <span className="font-bold text-black shrink-0">Gender / เพศ :</span>
-          <span className="text-gray-700">{formResident.gender}</span>
+          <span className="text-gray-700">
+            {/* {formResident.gender} */}
+            {DORM_LABELS.GENDER[formResident.gender as keyof typeof DORM_LABELS.GENDER] || formResident.gender}
+          </span>
         </div>
 
         <div className="md:col-span-2 flex flex-col md:flex-row md:gap-2 mt-1">
           <span className="font-bold text-black">Type of student / ประเภทของผู้พัก :</span>
-          <span className="text-gray-700">{currentBooking.type}</span>
+          <span className="text-gray-700">
+            {/* {currentBooking.type} */}
+            {DORM_LABELS.RESIDENT_TYPE[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking.type}
+          </span>
         </div>
 
         <div className="flex flex-col gap-1">
           <span className="font-bold text-black shrink-0">Selected Campus / วิทยาเขต :</span>
-          <span className="text-gray-700">{formRoom.campus}</span>
+          <span className="text-gray-700">
+            {/* {formRoom.campus} */}
+            {DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}
+          </span>
         </div>
 
         <div className="md:col-span-2 flex flex-col gap-3 mt-1 bg-gray-50/50 rounded-2xl">
@@ -142,35 +178,34 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
             <span className="font-bold text-gray-800 text-[16px]">Vibe Roommate / เพื่อนร่วมห้องที่เข้ากันได้ดี</span>
           </div>
 
-          <div className="flex flex-wrap gap-2.5 ml-3">
-            {formResident?.lifestyle ? (
-              Object.entries(
-                (() => {
-                  try {
-                    return typeof formResident.lifestyle === 'string'
-                      ? JSON.parse(formResident.lifestyle)
-                      : formResident.lifestyle;
-                  } catch (e) { return {}; }
-                })()
-              ).map(([key, value]) => (
-                <div
-                  key={key}
-                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-white border border-[#8ACCA1]/40 text-[#006432] text-[13px] rounded-xl shadow-sm hover:border-[#006633] transition-colors duration-200"
-                >
-                  {/* Label (Key) */}
-                  <span className="opacity-70 font-medium">
-                    {LIFESTYLE_LABELS[key as keyof typeof LIFESTYLE_LABELS] || key}:
-                  </span>
+          <div className="flex flex-wrap gap-2.5">
+            {formResident?.lifestyle && formResident.lifestyle.length > 0 ? (
+              formResident.lifestyle.map((id: string) => {
+                // ดึงค่า Config จาก Constants
+                const config = DORM_LABELS.LIFESTYLE[id as keyof typeof DORM_LABELS.LIFESTYLE];
 
-                  {/* Value (เน้นตัวหนา) */}
-                  <span className="font-bold">
-                    {String(value)}
-                  </span>
-                </div>
-              ))
+                if (!config) return null;
+
+                const Icon = config.icon; // เก็บ Component ไว้ในตัวแปรตัวใหญ่
+
+                return (
+                  <div
+                    key={id}
+                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-100 text-[#126A31] text-[13px] rounded-xl shadow-sm hover:border-[#126A31]/30 transition-all duration-200 group"
+                  >
+                    {/* แสดง Icon พร้อมสีที่เป็นเอกลักษณ์ */}
+                    <Icon size={16} className="text-[#126A31] opacity-80 group-hover:opacity-100" />
+
+                    {/* แสดง Label ภาษาไทย/อังกฤษ ที่เป็นทางการ */}
+                    <span className="font-bold">
+                      {config.label}
+                    </span>
+                  </div>
+                );
+              })
             ) : (
-              <div className="text-gray-400 italic text-[14px] bg-white px-4 py-2 rounded-lg border border-dashed">
-                ยังไม่ได้ระบุไลฟ์สไตล์
+              <div className="text-gray-400 italic text-[13px] py-1 ml-3">
+                ไม่ได้ระบุไลฟ์สไตล์เพิ่มเติม
               </div>
             )}
           </div>
@@ -199,7 +234,7 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
               <div className="relative aspect-[16/10] overflow-hidden rounded-[10px] shadow-inner">
                 <img
                   src={zoneImages[zone.name[0]] || "/images/zones/default.png"}
-                  alt={`Zone ${zone.name || "Zone ..."}`}
+                  alt={`${zone.name || "Zone ..."}`}
                   // เพิ่ม scale และ rotate เล็กน้อยตอน hover ให้ดูมีมิติเหมือนกระดาษขยับ
                   className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 group-hover:rotate-1"
                 />
@@ -207,7 +242,7 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
 
               <div className="mt-2 flex justify-between items-center px-2">
                 <div className="font-bold text-gray-800 text-[16px] md:text-2xl">
-                  {`Zone ${zone.name || "Zone ..."}`}
+                  {`${zone.name || "Zone ..."}`}
                 </div>
 
                 <button
@@ -223,7 +258,7 @@ export function ZoneSelector({ setStep }: ZoneSelectorProps) {
                       window.open(fallbackUrl, "_blank");
                     }
                   }}
-                  className="bg-[#FF0000] text-white px-2 py-2 rounded-full text-[10px] font-bold shadow-md hover:bg-red-700 hover:shadow-lg transition-all flex items-center gap-2 uppercase"
+                  className="bg-[#FF0000] text-white px-2 py-1 rounded-full text-[10px] font-bold shadow-md hover:bg-red-700 hover:shadow-lg transition-all flex items-center gap-2 uppercase"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                     <path fillRule="evenodd" d="M11.54 22.351l.07.04.028.016a.76.76 0 00.723 0l.028-.015.071-.041a16.975 16.975 0 001.144-.742 19.58 19.58 0 002.683-2.282c1.944-1.99 3.963-4.98 3.963-8.827a8.25 8.25 0 00-16.5 0c0 3.846 2.02 6.837 3.963 8.827a19.58 19.58 0 002.682 2.282 16.975 16.975 0 001.145.742zM12 13.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" clipRule="evenodd" />

@@ -1,42 +1,71 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { jwtVerify } from 'jose'; // ใช้ jose แทนเพราะรันบน Edge ได้ไวมาก
 
-export function middleware(request: NextRequest) {
-  // เช็คทั้งแบบธรรมดา และแบบ Secure (สำหรับ HTTPS)
-  const nextAuthToken = 
-    request.cookies.get('next-auth.session-token') || 
-    request.cookies.get('__Secure-next-auth.session-token');
-    
-  const tuToken = request.cookies.get('token');
-  const isAuthenticated = nextAuthToken || tuToken;
+// เตรียม Secret Key ในรูปแบบที่ jose ต้องการ
+const secret = new TextEncoder().encode(process.env.JWT_SECRET);
 
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const token = request.cookies.get('token')?.value;
 
-  // 1. ถ้า Login แล้วพยายามเข้าหน้า Login -> ดีดไปหน้าแรก
-  if (pathname === '/login' && isAuthenticated) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // 1. ฟังก์ชันตรวจสอบ JWT และดึง Payload
+  let payload = null;
+  if (token) {
+    try {
+      const verified = await jwtVerify(token, secret);
+      payload = verified.payload;
+    } catch (err) {
+      // ถ้า Token ปลอมหรือหมดอายุ ให้ลบคุกกี้แล้วส่งกลับหน้า Login
+      const response = NextResponse.redirect(new URL(pathname.startsWith('/admin') ? '/admin/login' : '/', request.url));
+      response.cookies.delete('token');
+      return response;
+    }
   }
 
-  // 2. ถ้ายังไม่ Login และพยายามเข้าหน้าที่ต้องป้องกัน -> ดีดไป Login
-  const protectedPaths = ['/', '/dashboard', '/book'];
-  const isProtected = protectedPaths.some(path => pathname === path || pathname.startsWith(`${path}/`));
+  const isAuthenticated = !!payload;
+  const userRole = payload?.role; // ดึง Role มาเช็คสิทธิ์ (ถ้ามีเก็บไว้ใน JWT)
 
-  if (isProtected && !isAuthenticated) {
-    return NextResponse.redirect(new URL('/login', request.url));
+  // 2. กำหนด Path ต่างๆ
+  const isRootPath = pathname === '/';
+  const isAdminLogin = pathname === '/admin/login';
+  const isAdminPath = pathname.startsWith('/admin'); // ครอบคลุมทุกหน้า admin
+  const isUserPath = ['/my-booking', '/book', '/payment'].some(path => pathname.startsWith(path));
+
+  // --- 🚩 LOGIC สำหรับ ADMIN ---
+  if (isAdminLogin) {
+    if (isAuthenticated && userRole === 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (isAdminPath) {
+    // ถ้าไม่มี Token หรือมีแต่ไม่ใช่ ADMIN ให้ดีดไปหน้า Login Admin
+    if (!isAuthenticated || userRole !== 'ADMIN') {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // --- 🚩 LOGIC สำหรับ USER (นักศึกษา) ---
+  if (isRootPath) {
+    if (isAuthenticated) {
+      return NextResponse.redirect(new URL('/my-booking', request.url));
+    }
+    return NextResponse.next();
+  }
+
+  if (isUserPath) {
+    if (!isAuthenticated) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+    return NextResponse.next();
   }
 
   return NextResponse.next();
 }
 
 export const config = {
-  /*
-   * Matcher ที่แนะนำ:
-   * 1. ไม่ดักจับไฟล์ใน public (images, logo)
-   * 2. ไม่ดักจับ _next/static (ไฟล์สไตล์และสคริปต์)
-   * 3. ไม่ดักจับ _next/image (การทำ Image Optimization)
-   * 4. ไม่ดักจับ favicon.ico
-   */
-  matcher: [
-    '/((?!api|_next/static|_next/image|favicon.ico|images|icons).*)',
-  ],
+  matcher: ['/((?!api|_next/static|_next/image|favicon.ico|images|icons).*)'],
 };

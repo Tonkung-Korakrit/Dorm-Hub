@@ -5,6 +5,7 @@ import React, { useState, useEffect, ChangeEvent, Dispatch, SetStateAction } fro
 import { useBooking } from "@/app/contexts/BookingContext";
 import { BookingType } from "@/types/booking";
 import { MdPersonSearch } from "react-icons/md";
+import { DORM_LABELS } from "@/lib/constants";
 
 // กำหนด Interface สำหรับ Props
 interface DormSelectorProps {
@@ -14,7 +15,7 @@ interface DormSelectorProps {
 
 export function DormSelector({ setStep }: DormSelectorProps) {
   const { formResident, setFormResident, formRoom, setFormRoom, currentBooking, setCurrentBooking, ownerInfo, setOwnerInfo } = useBooking();
-  const [ownerStudentId, setOwnerId] = useState("");
+  const [ ownerStudentId, setOwnerId ] = useState("");
   // const [ownerInfo, setOwnerInfo] = useState<any>(null);
 
   useEffect(() => {
@@ -22,11 +23,11 @@ export function DormSelector({ setStep }: DormSelectorProps) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
-  const BOOKING_TYPE_LABELS: Record<BookingType, string> = {
-    CHARTER: "ผู้พักหลัก (เหมาห้อง) Charter room",
-    NOT_CHARTER: "ผู้พักหลัก (ไม่เหมาห้อง) Not charter room",
-    CO_RESIDENT: "ผู้พักร่วม (Co-Resident)",
-  };
+  // const BOOKING_TYPE_LABELS: Record<BookingType, string> = {
+  //   CHARTER: "ผู้พักหลัก (เหมาห้อง) Charter room",
+  //   NOT_CHARTER: "ผู้พักหลัก (ไม่เหมาห้อง) Not charter room",
+  //   CO_RESIDENT: "ผู้พักร่วม (Co-Resident)",
+  // };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const selectedType = e.target.value as BookingType;
@@ -86,12 +87,12 @@ export function DormSelector({ setStep }: DormSelectorProps) {
 
   const REGIONS = ["rangsit", "thaprachan", "lampang", "pattaya"];
 
-  const regionLabels: Record<string, string> = {
-    rangsit: "Rangsit / รังสิต",
-    thaprachan: "Tha Prachan / ท่าพระจันทร์",
-    lampang: "Lampang / ลำปาง",
-    pattaya: "Pattaya / พัทยา",
-  };
+  // const regionLabels: Record<string, string> = {
+  //   rangsit: "Rangsit / รังสิต",
+  //   thaprachan: "Tha Prachan / ท่าพระจันทร์",
+  //   lampang: "Lampang / ลำปาง",
+  //   pattaya: "Pattaya / พัทยา",
+  // };
 
   const handleSelectRegion = (selectedRegion: string) => {
     // onSelectRegion(region); // เรียกใช้ Function เพื่อเปลี่ยน Step แทน
@@ -99,16 +100,16 @@ export function DormSelector({ setStep }: DormSelectorProps) {
     setStep(5);
   };
 
-  const LIFESTYLE_OPTIONS = [
-    { id: 'MORNING', label: 'ตื่นเช้า (Early Bird)', icon: '☀️' },
-    { id: 'NIGHT', label: 'นอนดึก (Night Owl)', icon: '🌙' },
-    { id: 'QUIET', label: 'รักความเงียบ (Quiet)', icon: '🔇' },
-    { id: 'SOCIAL', label: 'ชอบเข้าสังคม (Social)', icon: '🔊' },
-    { id: 'NEAT', label: 'รักความสะอาด (Neat)', icon: '🧼' },
-    { id: 'LGBTQ_FRIENDLY', label: 'อยู่ร่วมกับ LGBTQ+ ได้', icon: '🌈' },
-    // { id: 'ISLAMIC', label: 'ผู้พักแบบอิสลาม (Islamic)', icon: '🕌' },
-    // { id: 'SMOKING', label: 'สูบบุหรี่ (Smoking)', icon: '🚬' },
-  ];
+  // const LIFESTYLE_OPTIONS = [
+  //   { id: 'MORNING', label: 'ตื่นเช้า (Early Bird)', icon: '☀️' },
+  //   { id: 'NIGHT', label: 'นอนดึก (Night Owl)', icon: '🌙' },
+  //   { id: 'QUIET', label: 'รักความเงียบ (Quiet)', icon: '🔇' },
+  //   { id: 'SOCIAL', label: 'ชอบเข้าสังคม (Social)', icon: '🔊' },
+  //   { id: 'NEAT', label: 'รักความสะอาด (Neat)', icon: '🧼' },
+  //   { id: 'LGBTQ_FRIENDLY', label: 'อยู่ร่วมกับ LGBTQ+ ได้', icon: '🌈' },
+  //   // { id: 'ISLAMIC', label: 'ผู้พักแบบอิสลาม (Islamic)', icon: '🕌' },
+  //   // { id: 'SMOKING', label: 'สูบบุหรี่ (Smoking)', icon: '🚬' },
+  // ];
 
   const toggleLifestyle = (id: string) => {
     if (!setFormResident) return;
@@ -162,7 +163,8 @@ export function DormSelector({ setStep }: DormSelectorProps) {
 
               {Object.values(BookingType).map((type) => (
                 <option key={type} value={type}>
-                  {BOOKING_TYPE_LABELS[type]}
+                  {/* {BOOKING_TYPE_LABELS[type]} */}
+                  {DORM_LABELS.RESIDENT_TYPE[type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || type}
                 </option>
               ))}
             </select>
@@ -230,13 +232,13 @@ export function DormSelector({ setStep }: DormSelectorProps) {
           {/* 2. ส่วนเลือก Lifestyle */}
           <section className="animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex items-center gap-2 mb-2">
-              <h2 className="text-[16px] font-semibold text-gray-700">Roommate Matching Preference</h2>
+              <h2 className="text-[16px] font-semibold text-gray-700">Roommate Matching Preference / ความชอบในการจับคู่เพื่อนร่วมห้อง</h2>
               <span className="bg-green-100 text-green-700 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider">New</span>
             </div>
             <p className="text-[14px] text-gray-500 mb-2">ระบุไลฟ์สไตล์ของคุณเพื่อช่วยให้ระบบจับคู่รูมเมทที่ "Vibe" ตรงกันที่สุด</p>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
-              {LIFESTYLE_OPTIONS.map((opt) => {
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-2">
+              {/* {LIFESTYLE_OPTIONS.map((opt) => {
                 const isSelected = formResident?.lifestyle?.includes(opt.id);
                 return (
                   <button
@@ -252,6 +254,29 @@ export function DormSelector({ setStep }: DormSelectorProps) {
                     <span className="text-[12px] font-semibold">{opt.label}</span>
                   </button>
                 );
+              })} */}
+
+              {Object.entries(DORM_LABELS.LIFESTYLE).map(([id, config]) => {
+                // ตรวจสอบว่า ID นี้ถูกเลือกอยู่ใน State หรือยัง
+                const isSelected = formResident?.lifestyle?.includes(id);
+                const Icon = config.icon;
+
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => toggleLifestyle(id)} // ต้องใช้ toggleLifestyle เหมือนเดิม
+                    className={`p-4 rounded-[2rem] border-2 flex flex-col items-center gap-2 transition-all duration-300
+          ${isSelected
+                        ? 'border-[#006432] bg-[#f0f7f0] text-[#006432] shadow-md scale-105'
+                        : 'border-gray-100 bg-white text-gray-400 hover:border-green-200'
+                      }`}
+                  >
+                    {/* แสดง Icon และ Label ตามค่าที่ดึงมาจาก Constants */}
+                    <Icon size={24} className={isSelected ? 'text-[#006432]' : 'text-gray-400'} />
+                    <span className="text-[12px] font-bold">{config.label}</span>
+                  </button>
+                );
               })}
             </div>
 
@@ -262,7 +287,7 @@ export function DormSelector({ setStep }: DormSelectorProps) {
           </div> */}
           </section>
 
-          <hr className="my-8 border-gray-100" />
+          <hr className="my-2 border-gray-100" />
 
           {/* 3. ส่วนปุ่มดูรายละเอียดหอ */}
           <div className="flex justify-center">
@@ -277,7 +302,7 @@ export function DormSelector({ setStep }: DormSelectorProps) {
           </div>
 
           {/* 4. ส่วนเลือกวิทยาเขตหอพัก (Region) */}
-          <div className="pt-4">
+          <div className="mt-6">
             <h2 className="text-[16px] font-bold text-gray-800 mb-6">
               Desired campus / เลือกวิทยาเขต<span className="text-red-500 ml-1">*</span>
             </h2>
@@ -308,7 +333,8 @@ export function DormSelector({ setStep }: DormSelectorProps) {
                       <div className="overflow-hidden rounded-[12px] aspect-[16/10]">
                         <img
                           src={`/images/dorms/${region}.png`}
-                          alt={regionLabels[region]}
+                          // alt={regionLabels[region]}
+                          alt={DORM_LABELS.CAMPUS[region as keyof typeof DORM_LABELS.LIFESTYLE] || region}
                           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                         />
                       </div>
@@ -318,7 +344,8 @@ export function DormSelector({ setStep }: DormSelectorProps) {
                         <p className={`text-[16px] transition-colors
                         ${isSelected ? "text-[#006633] font-extrabold" : "text-black font-medium"}
                       `}>
-                          {regionLabels[region]}
+                          {/* {regionLabels[region]} */}
+                          {DORM_LABELS.CAMPUS[region as keyof typeof DORM_LABELS.LIFESTYLE] || region}
                         </p>
                       </div>
                     </div>

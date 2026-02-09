@@ -216,7 +216,7 @@ model Room {
   // available Boolean  @default(true)
   status           RoomStatus @default(AVAILABLE)
   isLocked         Boolean    @default(false) // สำหรับ Admin ล็อกห้องไม่ให้จอง (กรณีซ่อมแซม)
-  roomType         RoomType   @default(AC_PRIVATE_BATHROOM) // เช่น "Single", "Double", "Triple"
+  roomType         RoomType   @default(AC_PRIVATE_BATHROOM)
   price            Float      @default(0.0)
   capacity         Int        @default(2) // รองรับกี่คน (เช่น ห้องคู่ ห้องเดี่ยว)
   currentOccupancy Int        @default(0) // (จำนวนคนที่พักอยู่ตอนนี้)
@@ -237,6 +237,10 @@ enum RoomType {
   AC_SHARED_BATHROOM // แอร์ + ห้องน้ำรวม
   FAN_PRIVATE_BATHROOM // พัดลม + ห้องน้ำในตัว
   FAN_SHARED_BATHROOM // พัดลม + ห้องน้ำรวม
+  TOILET // ห้องน้ำ
+  WASH // อ่างล้างจาน
+  COMMON_ROOM // ห้องกลาง อ่านนส.
+  ELEVATOR // ลิฟต์
 }
 
 enum RoomStatus {
@@ -244,6 +248,7 @@ enum RoomStatus {
   PENDING
   FULL
   MAINTENANCE
+  COMMON
 }
 
 model Booking {
@@ -256,7 +261,7 @@ model Booking {
   status    BookingStatus @default(PENDING)
   type      BookingType   @default(NOT_CHARTER)
   groupId   String? // รหัสกลุ่ม (กรณีจองเหมาห้อง)
-  expiresAt DateTime?
+  expiresAt DateTime? // 
 
   paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
   adminRemark  String? // หมายเหตุจาก Admin (กรณีปฏิเสธการจอง)

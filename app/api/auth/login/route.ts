@@ -7,7 +7,7 @@ import axios from "axios";
 export async function POST(req) {
   try {
     const { username, password } = await req.json();
-     // verify TU API
+    // verify TU API
     const tuData = await axios.post(
       "https://restapi.tu.ac.th/api/v1/auth/Ad/verify",
       {
@@ -25,69 +25,45 @@ export async function POST(req) {
 
     if (tuData.data.status === true) {
       const tuUser = tuData.data;
-      // check user ใน DB
-      let user = await prisma.user.findUnique({
+
+      // ⚡ 2. ใช้ upsert เพื่อให้จบใน Query เดียว (ลด Round-trip DB)
+      // และใช้ select เพื่อดึงเฉพาะข้อมูลที่จำเป็น
+      const user = await prisma.user.upsert({
         where: { studentId: tuUser.username },
+        update: {
+          name_en: tuUser.displayname_en,
+          name_th: tuUser.displayname_th,
+          email: tuUser.email,
+          tu_status: tuUser.tu_status,
+        },
+        create: {
+          studentId: tuUser.username,
+          name_en: tuUser.displayname_en,
+          name_th: tuUser.displayname_th,
+          email: tuUser.email,
+          tu_status: tuUser.tu_status,
+          role: "STUDENT",
+        },
+        select: { studentId: true, role: true }
       });
 
-      // console.log("user: ", user)
-
-      if (!user) {
-        // ถ้าไม่มี → สร้างใหม่
-        user = await prisma.user.create({
-          data: {
-            studentId: tuUser.username,
-            name_en: tuUser.displayname_en,
-            name_th: tuUser.displayname_th,
-            email: tuUser.email,
-            // faculty_department: tuUser.faculty,
-            // department: tuUser.department,
-            tu_status: tuUser.tu_status,
-            role: "STUDENT",
-            // citizenType: "",
-            // citizenNumber: `TEMP-${tuUser.username}`, // ต้อง Unique
-            // gender: "OTHER", // ต้องตรงกับ Enum GenderType
-            // prefix: "",
-            // phone: "",
-            // birthDate: new Date(), // หรือค่าที่เหมาะสม
-          },
-        });
-      } else {
-        // ถ้ามี → อัปเดตข้อมูล
-        user = await prisma.user.update({
-          where: { studentId: tuUser.username },
-          data: {
-            name_en: tuUser.displayname_en,
-            name_th: tuUser.displayname_th,
-            email: tuUser.email,
-            // faculty_department: tuUser.faculty,
-            // department: tuUser.department,
-            tu_status: tuUser.tu_status,
-            role: "STUDENT",
-          },
-        });
-      }
-
-      // set cookie หรือ generate toke
-      const provider = "TU";
+      // ⚡ 3. สร้าง Token
       const token = jwt.sign(
-        { username, provider }, // payload
+        { username: user.studentId, role: user.role, provider: "TU" },
         process.env.JWT_SECRET,
-        { expiresIn: process.env.JWT_EXPIRES_IN }
+        { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
       );
 
-      // set cookie
       const res = NextResponse.json({ message: "Login successful", ok: true });
       res.cookies.set("token", token, {
         httpOnly: true,
-        // secure: true,
+        secure: process.env.NODE_ENV === "production",
         sameSite: "lax",
         path: "/",
-        maxAge: 60 * 60,
+        maxAge: 3600,
       });
-      // console.log("res", res);
-      return res;
 
+      return res;
     } else {
       return NextResponse.json(
         { error: "Login failed. Invalid username or password." },
