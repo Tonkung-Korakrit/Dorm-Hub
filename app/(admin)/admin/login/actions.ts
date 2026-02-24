@@ -10,7 +10,7 @@ export async function createAdminSession(token: string) {
   const cookieStore = await cookies();
   
   // กำหนดค่า Cookie ด้วยความปลอดภัยสูงสุด
-  cookieStore.set('token', token, {
+  cookieStore.set('admin-token', token, {
     httpOnly: true, // ป้องกันการเข้าถึงผ่าน JavaScript (ลดความเสี่ยง XSS)
     secure: process.env.NODE_ENV === 'production', // ส่งผ่าน HTTPS เท่านั้นใน Production
     sameSite: 'lax', // ป้องกัน CSRF ในระดับที่เหมาะสมกับการทำ Redirect
@@ -26,10 +26,12 @@ export async function createAdminSession(token: string) {
 export async function deleteAdminSession() {
   const cookieStore = await cookies();
   
-  // ลบ Token และล้างค่า Path เพื่อความชัวร์
-  cookieStore.set('token', '', {
-    path: '/',
-    maxAge: 0, // สั่งให้หมดอายุทันที
-    expires: new Date(0),
-  });
+  // 1. ต้องใช้ชื่อ 'admin-token' ให้ตรงกับตอน Login และ Middleware
+  cookieStore.delete('admin-token');
+  
+  // 2. ถ้ามีคุกกี้ชื่อ 'token' (ของระบบเก่า) ก็ลบเผื่อไว้ด้วย
+  // cookieStore.delete('token');
+
+  // 3. สั่งดีดกลับไปหน้า Login ทันที
+  // redirect('/admin/login');
 }

@@ -1,33 +1,33 @@
 // types/booking.ts
-import { RoomStatus, BookingType, BookingStatus, Role, GenderType, UserDocument, AddressType, RoomType } from "@prisma/client";
+import { RoomStatus, BookingType, BookingStatus, Role, GenderType, File_info, AddressType, RoomType, CitizenType } from "@prisma/client";
 
 export interface Resident {
   id: number;
-  role: Role;
-  email: string;
   citizenType: string;
   citizenNumber: string;
   studentId: string;
   gender: GenderType;
-  prefix: string;
+  titleName: string;
   name?: string;
   name_en: string;
   name_th: string;
-  birthDate: string;
-  phone: string;
-
+  email: string;
+  mobilePhone?: string;
+  birthDate?: Date | string;
   isScholarshipStudent?: boolean;
   isDisabled?: boolean;
-
-  image?: string;
   faculty_department?: string;
   // department?: string;
-  tu_status?: string;
-  lifestyle: string[] | any;
-  guardians: Guardian[];
-  documents: UserDocument[];
+  lifestyle?: string[] | any;
+  isEnabled?: boolean;
+  // image?: string;
+  // tu_status?: string;
+  
+  address?: Address[];
+  guardians?: Guardian[];
+  profileImage?: File_info[];
   vehicleInfo?: Vehicle | null;
-  address: Address[];
+  role: Role;
 }
 
 export interface Guardian {
@@ -58,27 +58,28 @@ export interface Address {
   country: string;
 }
 
+export interface Campus {
+  id: number;
+  name: string;
+  dorm?: Dorm[];
+}
+
 export interface Dorm {
   id: number;
   name: string;
-  zone?: Zone[];
-}
-
-export interface Zone {
-  id: number;
-  name: string;
-  gender: GenderType;
+  genderType: GenderType;
   mapUrl: string;
   maxCols: number;
   maxRows: number;
-  dorm: Dorm;
+  campus: Campus;
+  // floors: number[]
   rooms?: Room[];
 }
 
 export interface Room {
   id: number;
   campus: string;   
-  zone: Zone;
+  dorm: Dorm;
   roomId: string;
   floor: number;
   status: RoomStatus;
@@ -88,6 +89,11 @@ export interface Room {
   capacity: number;
   currentOccupancy: number;
   lifestyleConfig: any; // Prisma เก็บเป็น Json
+  
+  isSuite: boolean;
+  parentId?: number | null;     // ID ของห้องใหญ่ (กรณีที่เป็นห้องย่อย A หรือ B)
+  parent?: Room | null;         // ข้อมูลห้องใหญ่
+  subRooms?: Room[];
 
   posX: number;
   posY: number; 
@@ -99,12 +105,12 @@ export interface Room {
 export interface OwnerInfo {
   studentId?: string;
   name?: string;
-  zoneName?: string;
-  // roomNumber: string;
+  dorm?: string;
   roomId?: string;
+  // roomNumber: string;
 }
 
-export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType };
+export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType, CitizenType };
 
 export interface BookRoomFormProps {
   user: Resident;
@@ -118,21 +124,52 @@ export interface Booking {
   status: BookingStatus;
   type: BookingType;
   createdAt: Date;
-  expiresAt?: Date | null;
-  userId: number;
-  roomId: number;
 
-  verifiedBy?: number | null;
-  verifier?: Admin | null;
+  // expiresAt?: Date | null;
+  // userId: number;
+  // roomId: number;
+  // verifiedBy?: number | null;
+  // verifier?: Admin | null;
   
-  user: Resident; 
+  cus_users: Resident; 
   room: Room;
 }
 
-export interface Admin {
+export interface MailBookingData {
+  id: number;
+  type: string;
+  cus_users: {
+    name_th: string;
+    email: string;
+  };
+  room: {
+    roomId: string;
+    floor: number;
+    roomType: string;
+    dorm: {
+      name: string;
+      campus: {
+        name: string;
+      };
+    };
+  };
+}
+
+export interface Staff {
   id: number;
   name: string | null;
   email: string;
   employeeId: string | null;
   role: Role;
 }
+
+// export { 
+//   RoomStatus, 
+//   BookingType, 
+//   BookingStatus, 
+//   Role, 
+//   GenderType, 
+//   // profileImage, 
+//   AddressType, 
+//   RoomType 
+// } from "@prisma/client";

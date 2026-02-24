@@ -11,8 +11,13 @@ export async function GET(req: Request) {
   try {
     const booking = await prisma.booking.findFirst({
       where: {
-        user: { studentId: studentId },
-        status: BookingStatus.COMPLETED, // หรือ "VERIFIED" ตามที่คุณต้องการ
+        cus_users: { studentId: studentId },
+        // status: BookingStatus.COMPLETED,
+        booking_logs: {
+          some: {
+            status: BookingStatus.COMPLETED,
+          }
+        },
         type: BookingType.CHARTER    // เช็คเฉพาะคนที่เป็นเจ้าของห้องเหมา
       },
       select: {
@@ -24,14 +29,14 @@ export async function GET(req: Request) {
             floor: true,
             price: true,
             roomType: true,
-            zone: {
+            dorm: {
               include: {
-                dorm: true
+                campus: true
               }
             }
           }
         },
-        user: {
+        cus_users: {
           select: {
             id: true,
             studentId: true,

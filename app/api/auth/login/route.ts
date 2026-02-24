@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
+import { Role } from "@/types/booking";
 
 export async function POST(req) {
   try {
@@ -26,28 +27,28 @@ export async function POST(req) {
     if (tuData.data.status === true) {
       const tuUser = tuData.data;
 
-      // ⚡ 2. ใช้ upsert เพื่อให้จบใน Query เดียว (ลด Round-trip DB)
+      // 2. ใช้ upsert เพื่อให้จบใน Query เดียว (ลด Round-trip DB)
       // และใช้ select เพื่อดึงเฉพาะข้อมูลที่จำเป็น
-      const user = await prisma.user.upsert({
+      const user = await prisma.cus_users.upsert({
         where: { studentId: tuUser.username },
         update: {
           name_en: tuUser.displayname_en,
           name_th: tuUser.displayname_th,
           email: tuUser.email,
-          tu_status: tuUser.tu_status,
+          // tu_status: tuUser.tu_status,
         },
         create: {
-          studentId: tuUser.username,
+          studentId: tuUser.username, // หรือ BigInt(tuUser.username) ถ้าใน DB เป็น BigInt
           name_en: tuUser.displayname_en,
           name_th: tuUser.displayname_th,
           email: tuUser.email,
-          tu_status: tuUser.tu_status,
-          role: "STUDENT",
+          // tu_status: tuUser.tu_status,
+          role: Role.STUDENT,
         },
         select: { studentId: true, role: true }
       });
 
-      // ⚡ 3. สร้าง Token
+      // 3. สร้าง Token
       const token = jwt.sign(
         { username: user.studentId, role: user.role, provider: "TU" },
         process.env.JWT_SECRET,
@@ -55,7 +56,9 @@ export async function POST(req) {
       );
 
       const res = NextResponse.json({ message: "Login successful", ok: true });
-      res.cookies.set("token", token, {
+      res.cookies.set({
+        name: 'token',
+        value: token,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "lax",

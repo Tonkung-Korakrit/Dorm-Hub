@@ -13,10 +13,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Account {
+model Google_login {
   id                Int      @id @default(autoincrement())
-  // id       String   @id @default(cuid())
   userId            Int
+  email             String? @db.Text
   type              String
   provider          String
   providerAccountId String
@@ -30,81 +30,101 @@ model Account {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cus_users Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
 
-// model Session {
-//   // id           Int      @id @default(autoincrement())
-//   id       String   @id @default(cuid())
-//   sessionToken String   @unique
-//   userId       String
-//   expires      DateTime
+model Line_login {
+  id                Int      @id @default(autoincrement())
+  lineUserId        Int
+  username          String
 
-//   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-// }
+  cus_user  Cus_users @relation(fields: [lineUserId], references: [id])
 
-// model VerificationToken {
-//   identifier String
-//   token      String   @unique
-//   expires    DateTime
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
 
-//   @@unique([identifier, token])
-// }
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique
+  userId       Int
+  expires      DateTime
 
-model User {
+  cus_users Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Cus_users {
   id            Int        @id @default(autoincrement())
-  citizenType   String?
+  citizenType   CitizenType?
   citizenNumber String?    @unique
-  studentId     String    @unique
+  studentId     String?    @unique
   gender        GenderType?
-  prefix        String?
+  titleName     String?
   name          String?
-  name_en       String
-  name_th       String
+  name_th       String?
+  name_en       String?
+  email         String     @unique @db.VarChar(191)
+  // password      String?
+  // religion      String?
+  mobilePhone   String?
   birthDate     DateTime?
-  phone         String?
-  email         String     @unique @db.VarChar(191) // ป้องกันปัญหา key ยาว
   isScholarshipStudent  Boolean? @default(false)
   isDisabled            Boolean? @default(false)
-  address       Address[]
-
-  image      String?
   faculty_department    String?
-  //   facultyId  Int
-  //   faculty    Faculty @relation(fields: [facultyId], references: [id])
   // faculty    String?
   // department String?
-  tu_status  String?
-  lifestyle  Json? // เก็บเป็น JSON string เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]'
+  // tu_status  String?
+  lifestyle     Json? // เก็บเป็น JSON string เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]'
+  isEnabled     Boolean @default(true) // สถานะการใช้งาน (เผื่อลาออก หรือระงับสิทธิ์ชั่วคราว)
 
-  guardians   Guardian[]
-  documents   UserDocument[]
-  vehicleInfo Vehicle?
+  address       Address[]
+  guardians     Guardian[]
+  profileImage  File_info[]
+  vehicleInfo   Vehicle?
 
-  role     Role      @default(STUDENT)
-  bookings Booking[]
+  role          Role      @default(STUDENT)
+  bookings      Booking[]
 
-  emailVerified DateTime?
-  accounts      Account[]
-  // sessions      Session[]
+  emailVerified   DateTime?
+  googleAccounts  Google_login[]
+  line_logins     Line_login[]
+  sessions        Session[]
+  logs            cus_users_log[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
+model cus_users_log {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  cus_users      Cus_users    @relation(fields: [userId], references: [id])
+
+  action    String // เช่น "CREATE", "UPDATE", "DELETE"
+  details   Json?  // รายละเอียดเพิ่มเติม เช่น ข้อมูลที่ถูกเปลี่ยนแปลง
+
+  createdAt DateTime @default(now())
+}
+
+enum CitizenType {
+  CITIZEN_ID
+  PASSPORT
+  OTHER
+}
+
 enum GenderType {
-  MALE // หอชาย
-  FEMALE // หอหญิง
-  LGBTQ // หอรวม (แยกชั้น หรือแยกฝั่ง)
-  OTHER // อื่นๆ
+  MALE
+  FEMALE
+  LGBTQ
+  OTHER
 }
 
 model Guardian {
   id       Int       @id @default(autoincrement())
   userId   Int
-  user     User      @relation(fields: [userId], references: [id])
+  cus_users     Cus_users      @relation(fields: [userId], references: [id])
   name     String
   relation String
   phone    String
@@ -114,19 +134,23 @@ model Guardian {
   updatedAt DateTime @updatedAt
 }
 
-model UserDocument {
+model File_info {
   id     Int  @id @default(autoincrement())
-  userId Int
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdBy Int
+  cus_users   Cus_users @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  type   DocType // Enum: CITIZEN_CARD, FACE_PHOTO, VEHICLE_PHOTO
-  url    String // ลิงก์ไปยัง Cloud Storage (เช่น S3, Supabase Storage)
-  status String  @default("PENDING") // VERIFIED, REJECTED
+  type   FileType // Enum: CITIZEN_CARD, FACE_PHOTO, VEHICLE_PHOTO
+  path   String
+  // extension String
+  isEnabled Boolean @default(true)
+
+  booking_logs Booking_log[]
 
   createdAt DateTime @default(now())
+  // updatedAt DateTime @updatedAt
 }
 
-enum DocType {
+enum FileType {
   FACE_PHOTO
   CITIZEN_CARD
   VEHICLE_CARD
@@ -136,7 +160,7 @@ enum DocType {
 model Vehicle {
   id     Int  @id @default(autoincrement())
   userId Int  @unique
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cus_users   Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // type         VehicleType   // ประเภทรถ เช่น รถยนต์, มอเตอร์ไซค์
   // brand        String
@@ -161,7 +185,7 @@ enum VehicleType {
 model Address {
   id     Int  @id @default(autoincrement())
   userId Int
-  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cus_users   Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   type          AddressType // Enum: REGISTERED (ตามทะเบียนบ้าน), CURRENT (ปัจจุบัน)
   addressDetail String // เลขที่บ้าน, ถนน, ซอย
@@ -182,24 +206,26 @@ enum AddressType {
   CURRENT
 }
 
-model Dorm {
+model Campus {
   id   Int    @id @default(autoincrement())
-  name String
-  zone Zone[]
+  name String @unique
+  dorm Dorm[]
 
-  // createdAt DateTime @default(now())
-  // updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
-model Zone {
+model Dorm {
   id      Int        @id @default(autoincrement())
-  name    String // เช่น "B", "C", "F5"
-  gender  GenderType @default(OTHER)
-  mapUrl  String // ลิงก์ Google Map
+  name    String     @unique
+  genderType  GenderType @default(OTHER)
+  mapUrl  String
   maxCols Int        @default(15) // จำนวนคอลัมน์ของแผนผัง
   maxRows Int        @default(25) // จำนวนแถวของแผนผัง
-  dorm    Dorm       @relation(fields: [dormId], references: [id])
-  dormId  Int
+  campusId  Int
+  campus    Campus       @relation(fields: [campusId], references: [id])
+  // floors  Json       @default("[]")
+  availableRooms Int @default(0)
   rooms   Room[]
 
   // createdAt DateTime @default(now())
@@ -208,25 +234,29 @@ model Zone {
 
 model Room {
   id               Int        @id @default(autoincrement())
-  roomId           String
-  // roomNumber           String
+  roomId           String     //@unique ไม่ได้เพราะ มีห้อง M1-COMMON , TOILET, WASH, ELEVATOR ที่ซ้ำกันในแต่ละ Zone
   floor            Int
-  zone             Zone       @relation(fields: [zoneId], references: [id])
-  zoneId           Int
-  // available Boolean  @default(true)
+  // zone            String
+  dormId           Int
+  dorm             Dorm       @relation(fields: [dormId], references: [id])
+  // isAvailable      Boolean    @default(true)
   status           RoomStatus @default(AVAILABLE)
-  isLocked         Boolean    @default(false) // สำหรับ Admin ล็อกห้องไม่ให้จอง (กรณีซ่อมแซม)
+  isLocked         Boolean    @default(false)
   roomType         RoomType   @default(AC_PRIVATE_BATHROOM)
   price            Float      @default(0.0)
-  capacity         Int        @default(2) // รองรับกี่คน (เช่น ห้องคู่ ห้องเดี่ยว)
-  currentOccupancy Int        @default(0) // (จำนวนคนที่พักอยู่ตอนนี้)
-  lifestyleConfig  Json? // คนแรกที่จองจะมา Set ค่าที่นี่ไว้ lgbtqFriendly 
-  // dormId   Int // ไอดี หอที่ภูมิภาคไหน
-  // dorm     Dorm     @relation(fields: [dormId], references: [id]) // หอที่ภูมิภาคไหน
+  capacity         Int        @default(2)
+  currentOccupancy Int        @default(0)
+  lifestyleConfig  Json? // คนแรกที่จองจะมา Set ค่าที่นี่ไว้ เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]' เพื่อให้คนที่จองต่อไปต้องมี Lifestyle ที่เข้ากัน 
+  
+  // --- เพื่อรองรับ Zone B ---
+  isSuite          Boolean      @default(false) // ระบุว่าเป็นห้องใหญ่ หรือไม่
+  parentId         Int?         // ชี้ไปที่ ID ของห้องใหญ่ (สำหรับห้องย่อย A, B)
+  parent           Room?        @relation("RoomToSubRoom", fields: [parentId], references: [id])
+  subRooms         Room[]       @relation("RoomToSubRoom")
+  
   booking          Booking[]
-
-  posX Int @default(1)
-  posY Int @default(1)
+  posX             Int @default(1)
+  posY             Int @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -237,10 +267,11 @@ enum RoomType {
   AC_SHARED_BATHROOM // แอร์ + ห้องน้ำรวม
   FAN_PRIVATE_BATHROOM // พัดลม + ห้องน้ำในตัว
   FAN_SHARED_BATHROOM // พัดลม + ห้องน้ำรวม
+  COMMON_ROOM // ห้องกลาง อ่านนส.
   TOILET // ห้องน้ำ
   WASH // อ่างล้างจาน
-  COMMON_ROOM // ห้องกลาง อ่านนส.
   ELEVATOR // ลิฟต์
+  SECRET // ห้องลับ ห้องอะไรก็ไม่รู้
 }
 
 enum RoomStatus {
@@ -253,35 +284,43 @@ enum RoomStatus {
 
 model Booking {
   id        Int           @id @default(autoincrement())
-  // id       String   @id @default(cuid())
   userId    Int
-  user      User          @relation(fields: [userId], references: [id])
-  roomId    Int //@unique
+  cus_users      Cus_users          @relation(fields: [userId], references: [id])
+  roomId    Int
   room      Room          @relation(fields: [roomId], references: [id])
-  status    BookingStatus @default(PENDING)
+  // status    BookingStatus @default(PENDING)
   type      BookingType   @default(NOT_CHARTER)
   groupId   String? // รหัสกลุ่ม (กรณีจองเหมาห้อง)
-  expiresAt DateTime? // 
 
-  paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
-  adminRemark  String? // หมายเหตุจาก Admin (กรณีปฏิเสธการจอง)
-  verifiedBy   Int? // ID ของ Admin ที่เป็นคนกดอนุมัติ
-  verifier     Admin?    @relation("AdminVerifications", fields: [verifiedBy], references: [id])
-  verifiedAt   DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  booking_logs Booking_log[]
 
   @@index([userId])
   @@index([roomId])
 }
 
+model Booking_log {
+  id        Int           @id @default(autoincrement())
+  bookingId Int
+  booking      Booking          @relation(fields: [bookingId], references: [id])
+
+  status    BookingStatus @default(PENDING)
+  file      File_info[]
+  // expiresAt DateTime? // เวลาที่การจองนี้จะหมดอายุ (ถ้ายังไม่ชำระเงิน)
+
+  paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
+  verifiedBy   Int? // ID ของ Admin ที่เป็นคนกดอนุมัติ
+  verifier     Staff_users?    @relation("AdminVerifications", fields: [verifiedBy], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum BookingStatus {
   PENDING // รอชำระเงิน (Hold ที่ไว้ 10 นาที)
-  COMPLETED // ชำระเงินเรียบร้อย
-  CANCELLED // ยกเลิก หรือ หมดเวลาชำระเงิน
+  COMPLETED // ผ่านการตรวจสอบแล้ว
+  CANCELLED // ยกเลิก
   EXPIRED // หมดเวลา (ถ้าไม่ชำระเงินภายใน 10 นาที)
-  VERIFYING // รอการตรวจสอบการชำระเงิน
+  VERIFYING // ชำระเงินเรียบร้อย และรอการตรวจสอบการชำระเงิน
   REJECTED // การชำระเงินถูกปฏิเสธ
 }
 
@@ -296,27 +335,47 @@ enum Role {
   ADMIN
 }
 
-model Admin {
-  id       Int     @id @default(autoincrement())
-  email    String  @unique
-  password String
+model Staff_users {
+  id            Int     @id @default(autoincrement())
+  email         String  @unique
+  password      String
 
-  name  String?
-  phone String?
-  image String? // โปรไฟล์รูปภาพสำหรับหน้า Dashboard
+  titleName     String?
+  name          String?
+  phone         String?
+  profileImage  String?
 
-  role       Role    @default(ADMIN) // ปรับ Default ให้เป็น ADMIN
-  employeeId String?  @unique
-  department String?
-  level      Int     @default(1)
+  role          Role    @default(ADMIN)
+  employeeId    String?  @unique
+  department    String?
+  // level         Int     @default(1)
+  isEnabled     Boolean @default(true)
 
-  isActive Boolean @default(true) // สถานะการใช้งาน (เผื่อลาออก หรือระงับสิทธิ์ชั่วคราว)
+  lastLogin     DateTime?
 
-  lastLogin DateTime? // ตรวจสอบความปลอดภัย (Audit Trail)
+  booking_logs Booking_log[] @relation("AdminVerifications")
+  staff_action_log Staff_action_log[]
 
-  // เชื่อมกลับไปที่ Booking เพื่อดูว่า Admin คนนี้อนุมัติรายการไหนบ้าง
-  verifiedBookings Booking[] @relation("AdminVerifications")
+  createdAt     DateTime @default(now())
+  // updatedAt     DateTime @updatedAt
+}
+
+model Staff_action_log {
+  id        Int           @id @default(autoincrement())
+  verifiedBy   Int
+  staff     Staff_users    @relation(fields: [verifiedBy], references: [id])
+
+  // verified_logs
+  // เชื่อมกลับไปที่ Booking_log เพื่อดูว่า Admin คนนี้อนุมัติรายการไหนบ้าง
+  // booking_log    booking_log[] @relation("AdminVerifications")
+
+  // paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
+  
+  // verifiedBy   Int? // ID ของ Admin ที่เป็นคนกดอนุมัติ
+  // verifier     Staff_users?    @relation("AdminVerifications", fields: [verifiedBy], references: [id])
+  
+  remark  String? // หมายเหตุจาก Admin (กรณีปฏิเสธการจอง)
+  // verifiedAt   DateTime?
 
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

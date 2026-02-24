@@ -1,71 +1,106 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify } from 'jose'; // ใช้ jose แทนเพราะรันบน Edge ได้ไวมาก
+import { jwtVerify } from 'jose';
+import { getToken } from 'next-auth/jwt';
 
-// เตรียม Secret Key ในรูปแบบที่ jose ต้องการ
-const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+// 1. เตรียม Secret Key แยกกุญแจสองดอกให้ชัดเจน
+const SECRET_USER = new TextEncoder().encode(process.env.JWT_SECRET);
+const SECRET_ADMIN = new TextEncoder().encode(process.env.JWT_SECRET_ADMIN);
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const token = request.cookies.get('token')?.value;
 
-  // 1. ฟังก์ชันตรวจสอบ JWT และดึง Payload
-  let payload = null;
-  if (token) {
-    try {
-      const verified = await jwtVerify(token, secret);
-      payload = verified.payload;
-    } catch (err) {
-      // ถ้า Token ปลอมหรือหมดอายุ ให้ลบคุกกี้แล้วส่งกลับหน้า Login
-      const response = NextResponse.redirect(new URL(pathname.startsWith('/admin') ? '/admin/login' : '/', request.url));
+  // --- A. ตรวจสอบบัตร NextAuth (Google Login) ---
+  const nextAuthSession = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
+
+  // --- B. ตรวจสอบบัตร Custom JWT (Cookie) ---
+  const userToken = request.cookies.get('token')?.value;
+  const adminToken = request.cookies.get('admin-token')?.value;
+
+  let customPayload: any = null;
+  let isAdminAuthenticated = false;
+  let isUserAuthenticated = !!nextAuthSession;
+
+  // แยกส่วนการไขกุญแจตามประเภทบัตรที่ถือมา
+  try {
+    // 1. ถ้ามีบัตร Admin ให้ใช้กุญแจ Admin ไขเท่านั้น
+    if (adminToken) {
+      const { payload } = await jwtVerify(adminToken, SECRET_ADMIN);
+      if (payload.role === 'ADMIN') {
+        isAdminAuthenticated = true;
+        customPayload = payload;
+      }
+    }
+
+    // 2. ถ้ามีบัตร User และยังไม่มี Session จาก Google ให้ใช้กุญแจ User ไข
+    if (userToken && !isUserAuthenticated) {
+      const { payload } = await jwtVerify(userToken, SECRET_USER);
+      isUserAuthenticated = true;
+      customPayload = payload;
+    }
+  } catch (err) {
+    // กรณีบัตรเน่า/หมดอายุ/โดนปลอม ให้ทำลายบัตรและดีดออก
+    // 1. กำหนดหน้าที่จะเด้งไป (ตรวจสอบให้ตรงกับหน้า Login ของคุณ)
+    const isTargetingAdmin = pathname.startsWith('/admin');
+    const loginUrl = new URL(isTargetingAdmin ? '/admin/login' : '/', request.url);
+
+    // 2. ส่งเหตุผลไปด้วยเพื่อให้หน้า Client โชว์ Popup
+    loginUrl.searchParams.set('reason', 'expired');
+    const response = NextResponse.redirect(loginUrl);
+
+    if (isTargetingAdmin) {
+      response.cookies.delete('admin-token');
+    } else {
       response.cookies.delete('token');
-      return response;
+      // ลบ cookie ของ next-auth ไปด้วยเลยเพื่อความชัวร์ (ถ้ามี)
+      response.cookies.delete('next-auth.session-token');
+      response.cookies.delete('next-auth.csrf-token');
     }
+
+    return response;
   }
 
-  const isAuthenticated = !!payload;
-  const userRole = payload?.role; // ดึง Role มาเช็คสิทธิ์ (ถ้ามีเก็บไว้ใน JWT)
+  // สรุปสถานะการเข้าสู่ระบบและบทบาท
+  const isAuthenticated = isAdminAuthenticated || isUserAuthenticated;
+  const userRole = isAdminAuthenticated ? 'ADMIN' : (nextAuthSession?.role || customPayload?.role || 'USER');
 
-  // 2. กำหนด Path ต่างๆ
-  const isRootPath = pathname === '/';
-  const isAdminLogin = pathname === '/admin/login';
-  const isAdminPath = pathname.startsWith('/admin'); // ครอบคลุมทุกหน้า admin
-  const isUserPath = ['/my-booking', '/book', '/payment'].some(path => pathname.startsWith(path));
+  // --- ส่วนการควบคุมสิทธิ์เข้าถึง (Access Control) ---
 
-  // --- 🚩 LOGIC สำหรับ ADMIN ---
-  if (isAdminLogin) {
-    if (isAuthenticated && userRole === 'ADMIN') {
-      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
-    }
-    return NextResponse.next();
-  }
+  const isAdminPath = pathname.startsWith('/admin');
+  const isAdminLoginPage = pathname === '/admin/login';
+  const isUserProtectedPath = ['/my-booking', '/new-booking', '/payment'].some(p => pathname.startsWith(p));
+  const isPublicAuthPage = pathname === '/login' || pathname === '/';
 
-  if (isAdminPath) {
-    // ถ้าไม่มี Token หรือมีแต่ไม่ใช่ ADMIN ให้ดีดไปหน้า Login Admin
-    if (!isAuthenticated || userRole !== 'ADMIN') {
+  // กฎข้อที่ 1: เข้าหน้า Admin ต้องเป็น ADMIN เท่านั้น
+  if (isAdminPath && !isAdminLoginPage) {
+    if (!isAdminAuthenticated || userRole !== 'ADMIN') {
       return NextResponse.redirect(new URL('/admin/login', request.url));
     }
-    return NextResponse.next();
   }
 
-  // --- 🚩 LOGIC สำหรับ USER (นักศึกษา) ---
-  if (isRootPath) {
-    if (isAuthenticated) {
-      return NextResponse.redirect(new URL('/my-booking', request.url));
-    }
-    return NextResponse.next();
+  // กฎข้อที่ 2: เข้าหน้าจองหอพัก ต้องล็อกอินก่อน
+  if (isUserProtectedPath && !isAuthenticated) {
+    // return NextResponse.redirect(new URL('/', request.url));
+    const loginUrl = new URL('/', request.url);
+    loginUrl.searchParams.set('reason', 'unauthorized'); // <--- เพิ่มตรงนี้
+    return NextResponse.redirect(loginUrl);
   }
 
-  if (isUserPath) {
-    if (!isAuthenticated) {
-      return NextResponse.redirect(new URL('/', request.url));
-    }
-    return NextResponse.next();
+  const isExpiredReason = request.nextUrl.searchParams.get('reason') === 'expired';
+
+  // กฎข้อที่ 3: ถ้าล็อกอินแล้ว ห้ามเข้าหน้า Login ซ้ำ (ดีดไปหน้า Dashboard/Booking)
+  if (isAuthenticated && (isPublicAuthPage || isAdminLoginPage) && !isExpiredReason) {
+    const dest = userRole === 'ADMIN' ? '/admin/dashboard' : '/my-booking';
+    return NextResponse.redirect(new URL(dest, request.url));
   }
 
   return NextResponse.next();
 }
 
+// กำหนด Path ที่ต้องการให้ Middleware ทำงาน (ครอบคลุมทั้งโปรเจกต์ ยกเว้นไฟล์ Resource)
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico|images|icons).*)'],
 };

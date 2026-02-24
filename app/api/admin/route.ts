@@ -6,12 +6,14 @@ import { BookingStatus, RoomStatus, BookingType } from "@prisma/client";
 export async function GET() {
   try {
     const bookings = await prisma.booking.findMany({
-      where: { status: BookingStatus.VERIFYING },
+      where: { booking_logs: { some: { status: BookingStatus.VERIFYING } } },
       include: {
-        user: true,
-        room: { include: { zone: { include: { dorm: true } } } }
+        cus_users: true,
+        room: { include: { dorm: { include: { campus: true } } } },
+        booking_logs: {
+          orderBy: { createdAt: 'asc' }
+        }
       },
-      orderBy: { createdAt: 'asc' }
     });
     return NextResponse.json(bookings);
   } catch (error: any) {

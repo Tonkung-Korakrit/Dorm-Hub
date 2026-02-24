@@ -19,11 +19,27 @@ import {
   // MdWc,
   MdMeetingRoom,
   MdElevator,
+  MdOutlineEmojiPeople,
+  MdSentimentSatisfied,
+  MdEnergySavingsLeaf,
+  MdOutlineHome,
+  MdChair,
+  MdSmokeFree,
+  MdSelfImprovement,
+  MdVolunteerActivism,
+  MdOutlineBrightness2,
+  MdOutlineDoNotTouch,
+  MdOutlineAir,
 } from "react-icons/md";
 
 import { PiRainbowCloud } from "react-icons/pi";
-
 import { FaHandsWash, FaShower } from "react-icons/fa";
+// import { GiSecretDoor } from "react-icons/gi";
+import { SiAwssecretsmanager } from "react-icons/si";
+import { SlGameController } from "react-icons/sl";
+import { FaFaceSmileBeam } from "react-icons/fa6";
+import { LiaPrayingHandsSolid } from "react-icons/lia";
+import { RiHomeSmileFill } from "react-icons/ri";
 
 export const DORM_LABELS = {
   GENDER: {
@@ -32,11 +48,26 @@ export const DORM_LABELS = {
     LGBTQ: "LGBTQ+ - เพศทางเลือก",
     OTHER: "OTHER - อื่นๆ"
   },
+
   RESIDENT_TYPE: {
     CHARTER: "Charter Room - ผู้พักหลัก (เหมาห้อง)",
     NOT_CHARTER: "Not Charter Room - ผู้พักหลัก (ไม่เหมาห้อง)",
     CO_RESIDENT: "Co-Resident - ผู้พักร่วม (พักกับผู้พักหลักที่เหมาห้อง)"
   },
+
+  RESIDENT_TYPE_DESC: {
+    CHARTER: "จองคนเดียวทั้งห้อง โดยคุณจะเป็นผู้รับผิดชอบค่าใช้จ่ายทั้งหมด และสามารถเลือกดึงเพื่อนมาพักด้วยกันได้ภายหลัง",
+    NOT_CHARTER: "จองเฉพาะเตียงรายบุคคล ระบบจะจัดสรรเพื่อนร่วมห้องคนอื่นมาพักร่วมกับคุณตามจำนวนเตียงที่ว่าง",
+    CO_RESIDENT: "สำหรับการจองเพื่อเข้าพักกับเพื่อนที่ทำการ 'เหมาห้อง' ไว้แล้ว (ต้องระบุรหัสของผู้พักหลัก)"
+  },
+
+  // ROOM_TYPE: {
+  //   AC_PRIVATE_BATHROOM: "ห้องแอร์ + ห้องน้ำในห้อง",
+  //   AC_SHARED_BATHROOM: "ห้องแอร์ + ห้องน้ำรวม",
+  //   FAN_PRIVATE_BATHROOM: "ห้องพัดลม + ห้องน้ำในห้อง",
+  //   FAN_SHARED_BATHROOM: "ห้องพัดลม + ห้องน้ำรวม",
+  // },
+
   CAMPUS: {
     rangsit: "Rangsit - รังสิต",
     lampang: "Lampang - ลำปาง",
@@ -44,111 +75,115 @@ export const DORM_LABELS = {
     pattaya: "Pattaya - พัทยา",
   },
 
-  //   LIFESTYLE: {
-  //     MORNING: "ตื่นเช้า (Early Bird)",
-  //     NIGHT: "นอนดึก (Night Owl)",
-  //     QUIET: "รักความเงียบ (Quiet)",
-  //     SOCIAL: "ชอบเข้าสังคม (Social)",
-  //     NEAT: "รักความสะอาด (Neat)",
-  //     
-  //   }
-
   LIFESTYLE: {
     // --- 1. ช่วงเวลาการใช้ชีวิต (Sleep Cycle) ---
-    MORNING: {
-      label: "Early Bird - ตื่นเช้า",
+    EARLY_SLEEPER: {
+    // MORNING: {
+      label: "Early Sleeper - นอนเร็ว (ก่อนเที่ยงคืน)",
       icon: MdWbSunny
     },
     NIGHT: {
-      label: "Night Owl - นอนดึก",
+      label: "Night Owl - นอนดึก (หลังเที่ยงคืน)",
       icon: MdNightsStay
     },
 
     // --- 2. ระดับเสียงและการเข้าสังคม (Noise & Social) ---
     QUIET: {
-      label: "Quiet - รักความเงียบ",
+      label: "Quiet & Privacy - เน้นความสงบ และเป็นส่วนตัว",
       icon: MdVolumeOff
     },
     SOCIAL: {
-      label: "Social - ชอบเข้าสังคม",
-      icon: MdPeopleOutline
+      label: "Friendly & Social - เน้นการพูดคุย และเป็นกันเอง",
+      icon: MdOutlineEmojiPeople
     },
 
     // --- 3. มาตรฐานความสะอาด (Cleanliness) ---
     NEAT: {
-      label: "Neat & Tidy - เจ้าระเบียบ",
+      label: "Neat & Tidy - รักความสะอาด และเป็นระเบียบ",
       icon: MdAutoAwesome
     },
 
     EASY_GOING: {
-      label: "Easy-going - ยืดหยุ่นเรียบง่าย",
-      icon: MdCleaningServices
+      label: "Easy-going - อยู่แบบชิลๆ เรียบง่าย",
+      icon: FaFaceSmileBeam
     },
 
     // --- 4. การใช้เครื่องปรับอากาศ (AC Preference) ---
-    AC_COLD: {
-      label: "Air-Con Lover - ชอบอากาศเย็น",
-      icon: MdAcUnit
-    },
-    // AC_ECO: {
-    //   label: "Eco-Friendly - ประหยัดพลังงาน",
-    //   icon: MdLeafMode
+    // AC_COLD: {
+    //   label: "Air-Con Lover - ชอบอากาศเย็น",
+    //   icon: MdAcUnit
     // },
+    AC_ECO: {
+      label: "Eco-Friendly - ประหยัดพลังงาน",
+      icon: MdEnergySavingsLeaf 
+    },
 
-    // --- 5. ความเป็นส่วนตัวและผู้มาเยือน (Privacy) ---
     LGBTQ_FRIENDLY: {
       label: "LGBTQ+ Friendly - อยู่ร่วมกับเพศทางเลือกได้",
       icon: PiRainbowCloud
     },
 
-    PRIVATE: {
-      label: "Private - เน้นความเป็นส่วนตัว",
-      icon: MdVpnKey
-    },
-    GUEST_FRIENDLY: {
-      label: "Guest-Friendly - เปิดรับผู้มาเยือน",
-      icon: MdGroups
+    // --- 5. สภาพแวดล้อมและสุขภาพ (Health & Environment) ---
+    SMOKE_FREE: {
+    // NON_SMOKER: {
+      label: "Smoke-Free - ไม่ชอบกลิ่น/ควันบุหรี่",
+      icon: MdSmokeFree
     },
 
-    // --- 6. สภาพแวดล้อมและสุขภาพ (Health & Environment) ---
-    NON_SMOKER: {
-      label: "Non-Smoker - ปลอดบุหรี่",
-      icon: MdBlock
+    // --- 6. ข้อปฏิบัติเฉพาะ (Practices & Dietary) ---
+    PRAYER_ROUTINE: {
+    // RELIGIOUS_PRACTICE: {
+      label: "Daily Rituals - มีการสวดมนต์/ทำสมาธิทุกวัน",
+      icon: LiaPrayingHandsSolid
+    },
+    HALAL_LIFESTYLE: {
+    // HALAL_FRIENDLY: {
+      label: "Halal Conscious - เข้าใจวิถีฮาลาล",
+      icon: MdVolunteerActivism
     },
 
-    // --- 7. ข้อปฏิบัติเฉพาะ (Practices & Dietary) ---
-    RELIGIOUS_PRACTICE: {
-      label: "Religious Practice - มีการทำศาสนกิจในห้อง",
-      icon: MdPlace
+    // --- 7. ความต้องการพิเศษอื่นๆ (Other Preferences) ---
+    LIGHT_SENSITIVE: {
+      label: "Need Darkness - นอนต้องปิดไฟมืดสนิท",
+      icon: MdOutlineBrightness2
     },
-    HALAL_FRIENDLY: {
-      label: "Halal Friendly - ปลอดเนื้อหมู",
-      icon: MdRestaurant
+    STRICTLY_PERSONAL: {
+      label: "Personal Space - ไม่แชร์ของใช้ส่วนตัว",
+      icon: MdOutlineDoNotTouch
+    },
+    SCENT_SENSITIVE: {
+      label: "Scent-Sensitive - แพ้กลิ่นหอม/กลิ่นฉุน",
+      icon: MdOutlineAir
+    },
+
+    GAMER: {
+      label: "Gamer - สายเกมเมอร์",
+      icon: SlGameController
     },
   },
 
   ROOM_TYPES: {
     AC_PRIVATE_BATHROOM: {
-      label: "แอร์ + ห้องน้ำในตัว",
-      icon: MdMeetingRoom,
+      label: "AC_PRIVATE_BATHROOM - (แอร์ + ห้องน้ำในตัว)",
+      icon: RiHomeSmileFill,
       color: "bg-[#126A31]" // สีเขียวเข้มสำหรับห้องพักหลัก
     },
 
     AC_SHARED_BATHROOM: {
-      label: "แอร์ + ห้องน้ำรวม",
-      icon: MdMeetingRoom,
+      label: "AC_SHARED_BATHROOM - (แอร์ + ห้องน้ำรวม)",
+      icon: RiHomeSmileFill,
       color: "bg-[#126A31]"
     },
 
     FAN_PRIVATE_BATHROOM: {
-      label: "พัดลม + ห้องน้ำในตัว",
-      icon: MdMeetingRoom,
+      label: "FAN_PRIVATE_BATHROOM - (พัดลม + ห้องน้ำในตัว)",
+      icon: RiHomeSmileFill,
       color: "bg-[#126A31]"
     },
 
     FAN_SHARED_BATHROOM: {
-      label: "พัดลม + ห้องน้ำรวม",
-      icon: MdMeetingRoom,
+      label: "FAN_SHARED_BATHROOM - (พัดลม + ห้องน้ำรวม)",
+      icon: RiHomeSmileFill,
       color: "bg-[#126A31]"
     },
 
@@ -175,5 +210,12 @@ export const DORM_LABELS = {
       icon: MdElevator,
       color: "bg-gray-700"
     },
+
+    SECRET: {
+      label: "ห้องลับ / ไม่รู้ว่าเป็นห้องอะไร (Secret)",
+      icon: SiAwssecretsmanager,
+      color: "bg-gray-700"
+    },
+
   },
 };

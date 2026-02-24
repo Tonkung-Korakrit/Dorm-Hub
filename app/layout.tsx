@@ -17,26 +17,11 @@ interface RootLayoutProps {
   children: React.ReactNode; // children ใน React ต้องใช้ Type นี้เสมอ
 }
 
-// export default function RootLayout({ children }: RootLayoutProps) {
-//   return (
-//     <html lang="en">
-//       <body className="bg-gray-50 min-h-screen text-gray-800">
-//         <BookingProvider>
-
-//           <main className="p-6">
-//             {children}
-//           </main>
-//         </BookingProvider>
-//       </body>
-//     </html>
-//   );
-// }
-
 export default function RootLayout({ children }: RootLayoutProps) {
   return (
     <html lang="en">
       <body className="bg-gray-50 min-h-screen text-gray-800 relative flex flex-col">
-        <Toaster />
+        <Toaster position="top-right" reverseOrder={false} />
         {/* <NextAuthProvider> */}
           <BookingProvider>
 

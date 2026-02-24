@@ -37,10 +37,10 @@ export default function AdminLoginPage() {
         throw new Error(data.message || "การเข้าสู่ระบบล้มเหลว");
       }
 
-      // ✅ เซ็ต Cookie ผ่าน Server Action (ปลอดภัยกว่า)
-      await createAdminSession(data.token);
+      // เซ็ต Cookie ผ่าน Server Action (ปลอดภัยกว่า)
+      // await createAdminSession(data.token);
 
-      // ✅ สลับไปหน้า Dashboard ทันที
+      // สลับไปหน้า Dashboard ทันที
       router.push("/admin/dashboard");
       router.refresh(); 
 

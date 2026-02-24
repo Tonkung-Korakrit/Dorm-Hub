@@ -2,236 +2,222 @@ import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { RoomStatus, BookingType, BookingStatus } from "@prisma/client";
 
-// export async function POST(request: NextRequest) {
-//   try {
-//     // 1. รับข้อมูล lifestyle เพิ่มจากก้อน user
-//     const { user, room, type } = await request.json();
-
-//     console.log("user: ", user);
-//     console.log("room: ", room);
-//     console.log("type: ", type);
-
-//     const result = await prisma.$transaction(async (tx) => {
-//       // 2. ดึงข้อมูลห้องพักและตรวจสอบความสัมพันธ์
-//       const targetRoom = await tx.room.findUnique({
-//         where: { id: Number(room.id) },
-//         include: { zone: { include: { dorm: true } } }
-//       });
-
-//       if (!targetRoom) throw new Error("ไม่พบข้อมูลห้องพัก");
-
-//       // const isCharter = type === "CHARTER";
-//       let dbType: BookingType;
-//       if (type === "CHARTER") dbType = BookingType.CHARTER;
-//       else if (type === "CO_RESIDENT") dbType = BookingType.CO_RESIDENT;
-//       else dbType = BookingType.NOT_CHARTER;
-
-//       const currentOcc = targetRoom.currentOccupancy;
-//       const maxCap = targetRoom.capacity;
-//       const CO_RESIDENT_LIMIT = maxCap + 10; // เวลาคนเหมาห้องจะทำให้ห้องเต็มทันที ต้องบวกเพิ่มจากขนาดห้อง
-
-//       // 3. ตรวจสอบเงื่อนไขการจอง
-//       if (dbType === BookingType.CHARTER) {
-//         if (currentOcc > 0 || targetRoom.status !== RoomStatus.AVAILABLE) {
-//           throw new Error("ห้องนี้ไม่สามารถจองแบบเหมาได้เนื่องจากมีผู้พักอยู่แล้ว");
-//         }
-//       } else if (dbType === BookingType.CO_RESIDENT) {
-//         // เคสผู้พักร่วม: ต้องไม่เกิน 10 คน
-//         if (currentOcc >= CO_RESIDENT_LIMIT) {
-//           throw new Error("ขออภัย! ห้องพักนี้มีผู้พักร่วมเต็มจำนวน 10 คนแล้ว");
-//         }
-//         // หมายเหตุ: กรณี CO_RESIDENT เราอาจจะไม่เช็ค RoomStatus.FULL 
-//         // เพราะสถานะ FULL ของห้องปกติอาจจะอ้างอิงตาม capacity (เช่น 2 หรือ 4 คน)
-//       } else {
-//         // สำหรับ NOT_CHARTER
-//         if (currentOcc >= maxCap || targetRoom.status === RoomStatus.FULL) {
-//           throw new Error("ขออภัย! ห้องพักนี้เต็มแล้ว");
-//         }
-//       }
-
-//       await tx.user.update({
-//         where: { id: Number(user.id) },
-//         data: {
-//           citizenType: user.citizenType,
-//           citizenNumber: user.citizenNumber,
-//           studentId: user.studentId,
-//           gender: user.gender,
-//           prefix: user.prefix,
-//           // name: user.name,
-//           name_en: user.name_en,
-//           name_th: user.name_th,
-//           birthDate: user.birthDate,
-//           phone: user.phone,
-//           isScholarshipStudent: user.isScholarshipStudent,
-//           isDisabled: user.isDisabled,
-//           // address_own: user.address_own,
-//           // country: user.country,
-//           // province: user.province,
-//           // district: user.district,
-//           // sub_district: user.sub_district,
-//           // postal_code: user.postal_code,
-
-//           faculty_department: user.faculty_department,
-//           lifestyle: user.lifestyle
-//         }
-//       });
-
-//       // 4. สร้างรายการจอง
-//       const booking = await tx.booking.create({
-//         data: {
-//           status: BookingStatus.PENDING, // รอจ่ายตัง
-//           type: dbType,
-//           createdAt: new Date(),
-//           user: { connect: { id: Number(user.id) } },
-//           room: { connect: { id: targetRoom.id } },
-//         },
-//       });
-
-//       // 5. คำนวณสถานะและเตรียมข้อมูลไลฟ์สไตล์
-//       // let newStatus = targetRoom.status;
-//       // const newOcc = isCharter ? maxCap : currentOcc + 1;
-//       // if (isCharter || newOcc === maxCap) {
-//       //   newStatus = RoomStatus.FULL;
-//       // } else if (newOcc > 3) {
-//       //   newStatus = RoomStatus.PENDING;
-//       // }
-
-//       if (dbType === BookingType.CHARTER) {
-//         newStatus = RoomStatus.PENDING;
-//       } else if (dbType === BookingType.CO_RESIDENT) {
-//         // ถ้าพักร่วมครบ 10 คนค่อยเปลี่ยนเป็น FULL
-//         newStatus = RoomStatus.FULL;
-//         // if (dbType === BookingType.CO_RESIDENT) {
-//         // newStatus = newOcc >= CO_RESIDENT_LIMIT ? RoomStatus.FULL : RoomStatus.PENDING;
-//         // newStatus = newOcc >= CO_RESIDENT_LIMIT ? RoomStatus.FULL : targetRoom.status;
-//         // }
-//       } else {
-//         // จองปกติ: ถ้าเท่ากับความจุห้อง (เช่น 2 หรือ 4) ให้ FULL
-//         if (newOcc >= maxCap) newStatus = RoomStatus.PENDING;
-//         else newStatus = RoomStatus.AVAILABLE;
-//       }
-
-//       // แปลง lifestyle array เป็น JSON string เพื่อเก็บลง DB
-//       // const lifestyleJson = user.lifestyle ? JSON.stringify(user.lifestyle) : null;
-//       const lifestyleArray = user.lifestyle || [];
-
-//       // 6. อัปเดตห้องพัก
-//       await tx.room.update({
-//         where: { id: targetRoom.id },
-//         data: {
-//           currentOccupancy: newOcc,
-//           status: newStatus,
-//           // ถ้าเป็นคนแรกที่จอง ให้ Set Lifestyle ของห้องตามคนจองทันที
-//           ...(currentOcc === 0 && { lifestyleConfig: lifestyleArray })
-//         },
-//       });
-
-//       return { booking };
-//     }, {
-//       timeout: 10000 // เพิ่มเป็น 10 วินาที
-//     });
-
-//     return NextResponse.json({ success: true, booking: result.booking });
-
-//   } catch (error: any) {
-//     console.error("📌 Booking Error:", error.message);
-//     return NextResponse.json({ success: false, error: error.message }, { status: 400 });
-//   }
-// }
-
 export async function POST(request: NextRequest) {
   try {
     const { user, room, type, groupId } = await request.json();
 
-    // 1. เตรียม Data และ Logic พื้นฐานนอก Transaction
-    // let dbType: BookingType = type === "CHARTER" ? BookingType.CHARTER : 
-    //                          type === "CO_RESIDENT" ? BookingType.CO_RESIDENT : 
-    //                          BookingType.NOT_CHARTER;
+    if (!user?.id || !room?.id) {
+      return NextResponse.json({ error: "Missing required data" }, { status: 400 });
+    }
 
     const lifestyleArray = user.lifestyle || [];
 
+    // --- เริ่มกระบวนการจองภายใน Transaction ---
     const result = await prisma.$transaction(async (tx) => {
-      // 2. Select เฉพาะที่ใช้จริง (ลดเวลาการดึงข้อมูลลงได้มหาศาล)
+
+      // 1. ดึงข้อมูลห้องที่ต้องการจอง
       const targetRoom = await tx.room.findUnique({
         where: { id: Number(room.id) },
-        select: { id: true, status: true, capacity: true, currentOccupancy: true }
+        select: {
+          id: true,
+          status: true,
+          capacity: true,
+          currentOccupancy: true,
+          isSuite: true,
+          parentId: true
+        }
       });
 
       if (!targetRoom) throw new Error("ไม่พบข้อมูลห้องพัก");
+      if (targetRoom.status === RoomStatus.FULL) throw new Error("ห้องพักนี้เต็มแล้ว");
 
-      const currentOcc = targetRoom.currentOccupancy;
-      const maxCap = targetRoom.capacity;
-      const CO_RESIDENT_LIMIT = maxCap + 10;
-
-      // 3. Validation Logic
-      if (type === BookingType.CHARTER && (currentOcc > 0 || targetRoom.status !== RoomStatus.AVAILABLE)) {
-        throw new Error("ห้องนี้ไม่สามารถจองแบบเหมาได้เนื่องจากมีผู้พักอยู่แล้ว");
+      // 2. ตรวจสอบเงื่อนไขการจองแบบเหมา (CHARTER)
+      if (type === BookingType.CHARTER) {
+        if (targetRoom.currentOccupancy > 0 || targetRoom.status !== RoomStatus.AVAILABLE) {
+          throw new Error("ห้องนี้ไม่สามารถจองแบบเหมาได้ เนื่องจากมีผู้เข้าพักแล้วหรือถูกจองไปบางส่วนแล้ว");
+        }
       }
-      
-      //  4. คำนวณค่าใหม่
-      let newOcc = currentOcc + 1;
-      // let newStatus = RoomStatus.AVAILABLE;
+
+      // 3. คำนวณค่า Occupancy และ Status ใหม่ของห้องที่จอง
+      let newOcc = targetRoom.currentOccupancy + 1;
       // let newStatus: RoomStatus = RoomStatus.AVAILABLE;
       let newStatus: RoomStatus = targetRoom.status;
 
+      const MAX_CO_RESIDENT_ADDITIONAL = 10;
+      const CO_RESIDENT_LIMIT = room.capacity + MAX_CO_RESIDENT_ADDITIONAL;
+
       if (type === BookingType.CHARTER) {
-        newOcc = maxCap;
-        newStatus = RoomStatus.PENDING;
+        newOcc = targetRoom.capacity;
+        newStatus = RoomStatus.PENDING; // ตั้งเป็น PENDING ระหว่างรอชำระเงิน
       } else if (type === BookingType.CO_RESIDENT) {
-        newStatus = RoomStatus.FULL; 
-      } else if (newOcc >= maxCap) {
+        // ด่านตรวจโควตา 10 คน
+        if (targetRoom.currentOccupancy >= CO_RESIDENT_LIMIT) {
+          throw new Error("ห้องนี้มีผู้พักร่วมเต็มโควตา (10 คน) แล้ว");
+        }
+        // เมื่อเป็น CO_RESIDENT ให้ล็อกสถานะเป็น FULL ทันทีตามที่คุณต้องการ
+        newStatus = RoomStatus.FULL;
+      } else if (newOcc >= targetRoom.capacity) {
+        // ถ้าคนจองคนนี้ทำให้ห้อง "เต็มพอดี" (เป็นคนสุดท้าย)
+        // ให้สถานะเป็น PENDING เพื่อรอชำระเงินก่อนจะเป็น FULL
         newStatus = RoomStatus.PENDING;
+      } else {
+        // ถ้ายังไม่เต็ม และไม่ใช่คนสุดท้าย ห้องต้องยัง AVAILABLE
+        // เพื่อให้คนที่ 2, 3 เข้ามาเห็นและจองได้
+        newStatus = RoomStatus.AVAILABLE;
       }
 
-      // 5. สร้างใบ booking
-      const newBooking = await tx.booking.create({
-        data: {
-          userId: Number(user.id),
-          roomId: targetRoom.id,
-          status: BookingStatus.PENDING,
-          type: type,
-          groupId: groupId,
-          expiresAt: new Date(Date.now() + 10 * 60 * 1000), // บวกเพิ่ม 10 นาที
-        },
-      });
-
-      // 6. อัปเดตห้อง (ปิด Transaction ทันที)
-      await tx.room.update({
+      // 4. อัปเดตข้อมูลห้องที่ผู้ใช้เลือก
+      const updatedRoom = await tx.room.update({
+        // await tx.room.update({
         where: { id: targetRoom.id },
         data: {
           currentOccupancy: newOcc,
           status: newStatus,
-          ...(currentOcc === 0 && { lifestyleConfig: lifestyleArray })
+          // คนแรกที่จองห้องนี้จะเป็นคนกำหนด Lifestyle กลางของห้อง
+          ...(targetRoom.currentOccupancy === 0 && { lifestyleConfig: lifestyleArray })
         },
       });
 
-      return newBooking;
-    }, { timeout: 10000 });
+      // 5. --- LOGIC พิเศษสำหรับ ZONE B (Suite Hierarchy) ---
 
-    // 7. อัปเดตข้อมูล (พยายามส่งเฉพาะฟิลด์ที่จำเป็นจริงๆ)
-    await prisma.user.update({
+      // กรณี A: ถ้าผู้ใช้จอง "ห้องลูก" (Sub-room)
+      // if (targetRoom.parentId) {
+      //   // เช็คพี่น้องใน Suite เดียวกันทั้งหมด
+      //   const allSubRooms = await tx.room.findMany({
+      //     where: { parentId: targetRoom.parentId },
+      //     select: { status: true }
+      //   });
+
+      //   const isEverySubRoomFull = allSubRooms.every(r => r.status === RoomStatus.FULL);
+
+      //   // อัปเดตสถานะห้องแม่ (Suite)
+      //   await tx.room.update({
+      //     where: { id: targetRoom.parentId },
+      //     data: {
+      //       status: isEverySubRoomFull ? RoomStatus.FULL : RoomStatus.PENDING
+      //     }
+      //   });
+      // }
+
+      // กรณี A: ถ้าผู้ใช้จอง "ห้องลูก" (Sub-room)
+      if (targetRoom.parentId) {
+        // ดึงข้อมูลพี่น้อง และห้องแม่มาคำนวณพร้อมกัน
+        const suiteData = await tx.room.findUnique({
+          where: { id: targetRoom.parentId },
+          include: { subRooms: true }
+        });
+
+        if (suiteData) {
+          // คำนวณ Occupancy รวมทั้งของ suite จากยอดใหม่ของห้องลูก
+          // ใช้ยอดที่อัปเดตแล้วของห้องที่เพิ่งจอง + ยอดปัจจุบันของห้องลูกอื่นๆ 
+          const totalSuiteOcc = suiteData.subRooms.reduce((sum, r) => {
+            return sum + (r.id === targetRoom.id ? newOcc : r.currentOccupancy);
+          }, 0);
+
+          // เช็คว่าเหลือห้องลูกห้องไหนที่ยัง AVAILABLE อยู่บ้าง
+          const hasAvailableSubRoom = suiteData.subRooms.some(r => {
+            if (r.id === targetRoom.id) return newStatus === RoomStatus.AVAILABLE;
+            return r.status === RoomStatus.AVAILABLE;
+          });
+
+          // เช็คสถานะห้องแม่: จะขึ้น PENDING ก็ต่อเมื่อ "ทั้ง A และ B" ไม่ว่างแล้ว
+          // const isRoomA_Busy = suiteData.subRooms.find(r => r.roomId.endsWith('A'))?.status !== RoomStatus.AVAILABLE;
+          // const isRoomB_Busy = suiteData.subRooms.find(r => r.roomId.endsWith('B'))?.status !== RoomStatus.AVAILABLE;
+
+          // อัปเดตสถานะห้องแม่: Sync ทั้งจำนวนคน และสถานะ
+          await tx.room.update({
+            where: { id: targetRoom.parentId },
+            data: {
+              currentOccupancy: totalSuiteOcc,
+              status: hasAvailableSubRoom ? RoomStatus.AVAILABLE : RoomStatus.PENDING
+            }
+          })
+        }
+      }
+
+      // กรณี B: ถ้าผู้ใช้จอง "ห้องแม่" (Suite) แบบเหมา (CHARTER)
+      // if (targetRoom.isSuite && type === BookingType.CHARTER) {
+      //   // สั่งปิดห้องลูกทุกห้องทันที
+      //   await tx.room.updateMany({
+      //     where: { parentId: targetRoom.id },
+      //     data: {
+      //       status: RoomStatus.PENDING,
+      //       currentOccupancy: 2 // สมมติว่าห้องลูกมีความจุ 2
+      //     }
+      //   });
+      // }
+
+      // 6. สร้างใบ Booking
+      const newBooking = await tx.booking.create({
+        data: {
+          userId: Number(user.id),
+          roomId: targetRoom.id,
+          // status: BookingStatus.PENDING,
+          booking_logs: {
+            create: {
+              status: BookingStatus.PENDING, // ต้องระบุสถานะเริ่มต้นเสมอ
+              createdAt: new Date(),
+            }
+          },
+          type: type as BookingType,
+          groupId: groupId || null,
+          // expiresAt: new Date(Date.now() + 10 * 60 * 1000), // หมดอายุใน 10 นาที
+        },
+
+        include: {
+          booking_logs: {
+            select: {
+              status: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          }
+        }
+      });
+
+      const bookingResponse = {
+        ...newBooking,
+        // ดึง status จาก log ตัวแรกออกมาแปะไว้ข้างบน
+        status: newBooking.booking_logs[0]?.status || BookingStatus.PENDING
+      };
+
+      return bookingResponse;
+    }, {
+      timeout: 15000,
+      isolationLevel: 'Serializable' // เพิ่มความเข้มงวดป้องกันการจองซ้อน
+    });
+
+    // 7. อัปเดต Profile ผู้ใช้งาน (ทำนอก Transaction เพื่อไม่ให้ DB Lock นานเกินไป)
+    await prisma.cus_users.update({
       where: { id: Number(user.id) },
       data: {
         citizenType: user.citizenType,
         citizenNumber: user.citizenNumber,
         studentId: user.studentId,
         isScholarshipStudent: user.isScholarshipStudent,
+        isDisabled: user.isDisabled,
         gender: user.gender,
-        prefix: user.prefix,
+        titleName: user.titleName,
         name_th: user.name_th,
         name_en: user.name_en,
-        birthDate: user.birthDate,
-        phone: user.phone,
+        birthDate: user.birthDate ? new Date(user.birthDate) : null,
+        mobilePhone: user.mobilePhone,
         email: user.email,
         faculty_department: user.faculty_department,
         lifestyle: lifestyleArray,
       }
-    }).catch(err => console.error("User Profile Update Error (Non-critical):", err));
+    }).catch(err => console.error("User Update Warning:", err.message));
 
-    return NextResponse.json({ success: true, booking: result });
+    return NextResponse.json({
+      success: true,
+      booking: result,
+    });
 
   } catch (error: any) {
     console.error("📌 Booking Error:", error.message);
-    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
+    return NextResponse.json({
+      success: false,
+      error: error.message || "เกิดข้อผิดพลาดในการจอง"
+    }, { status: 400 });
   }
 }

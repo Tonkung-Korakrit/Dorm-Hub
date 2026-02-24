@@ -1,3 +1,12 @@
+// app/login/page.tsx
+export default function LoginPage() {
+  return (
+    <div className="flex items-center justify-center min-h-screen">
+      <p className="text-gray-500">Login Page is under construction...</p>
+    </div>
+  );
+}
+
 // // /login/page.tsx
 // "use client";
 

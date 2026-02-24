@@ -1,24 +1,65 @@
+// app/my-booking/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import {
-  MdMeetingRoom, MdLogout, MdPerson, MdFingerprint,
-  MdSchool, MdInfoOutline, MdCircle, MdClose
+  MdLogout, MdInfoOutline, MdCircle, MdClose, MdPayment
 } from "react-icons/md";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { LoginSkeleton } from "../loading/components/login/LoginSkeleton";
+import ConfirmModal from "../loading/components/ConfirmModal";
+import { DORM_LABELS } from "@/lib/constants";
+import { LoadingOverlay } from "../loading/components/LoadingOverlay";
+import { FaUser } from "react-icons/fa";
+import { FaUsersLine } from "react-icons/fa6";
+import { Booking, BookingStatus } from "@/types/booking";
+import { customFetch } from "@/lib/api";
+import { RiHomeSmileFill } from "react-icons/ri";
 
-export default function StudentDashboard() {
-  const [booking, setBooking] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+export default function StudentBooking() {
+  const [booking, setBooking] = useState<Booking>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isLogout, setIsLogout] = useState(false);
   const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
+
+  // const searchParams = useSearchParams();
+  // setError(searchParams.get('error'));
+
+  // const { data: session, status } = useSession();
+
+  // useEffect(() => {
+  //   if (status === "unauthenticated") {
+  //     // บังคับ Hard Refresh ไปหน้าแรกเพื่อล้างสถานะที่ค้างอยู่
+  //     window.location.href = "/";
+  //   }
+  // }, [status]);
+
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean;
+    type: "danger" | "warning";
+    title: string;
+    message: string;
+    confirmText: string;
+    cancelText?: string;
+    action: () => void;
+  }>({
+    isOpen: false,
+    type: "danger",
+    title: "",
+    message: "",
+    confirmText: "",
+    cancelText: "",
+    action: () => { },
+  });
 
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        const res = await fetch("/api/bookings/my-booking");
+        const res = await customFetch("/api/bookings/my-booking");
         if (res.status === 401) {
           router.push("/");
           return;
@@ -28,50 +69,86 @@ export default function StudentDashboard() {
       } catch (err) {
         setError("ไม่สามารถโหลดข้อมูลได้ กรุณาลองใหม่อีกครั้ง");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
     fetchBooking();
   }, [router]);
 
-  console.log(booking)
+  // console.log(booking)
 
-  const handleLogout = async () => {
-    if (!confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) return;
-    try {
-      await fetch("/api/auth/logout", { method: "POST" });
-      await signOut({ redirect: false });
-      router.push("/");
-    } catch (err) {
-      console.error("Logout failed:", err);
-    }
+  const openLogoutModal = () => {
+    setModalConfig({
+      isOpen: true,
+      type: "danger",
+      // ใช้รูปแบบ "English / ภาษาไทย" เพื่อให้ฟังก์ชัน split ใน Component ทำงานได้
+      title: "Sign Out / ออกจากระบบ",
+      message: "Are you sure you want to sign out of your account?\n" +
+        "คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบในขณะนี้?",
+      confirmText: "Sign Out / ออกจากระบบ",
+      action: async () => {
+        setModalConfig(prev => ({ ...prev, isOpen: false }));
+
+        // 2. เริ่มแสดง Loading คลุมทั้งหน้า
+        setIsLogout(true);
+
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+          await signOut({ redirect: false });
+          router.push("/");
+        } catch (error) {
+          console.error(error);
+          setIsLogout(false); // ถ้า error ให้เอา loading ออก
+        }
+      },
+    });
   };
 
-  const handleCancelBooking = async () => {
-    const confirmCancel = confirm("ยืนยันการยกเลิกการจอง? \n*หมายเหตุ: คุณจะไม่ได้รับเงินมัดจำคืนตามเงื่อนไขที่มหาวิทยาลัยกำหนด*");
-    if (!confirmCancel) return;
+  const openCancelModal = () => {
+    const isPaid = booking.status === "VERIFYING";
 
+    setModalConfig({
+      isOpen: true,
+      type: "warning",
+      // หัวข้อ 2 ภาษา
+      title: "Confirm Cancellation / ยืนยันการยกเลิก",
+      message: isPaid
+        ? "Important: Deposit is Non-Refundable\n" +
+        "As you have already paid the deposit, please be aware that it will not be refunded upon cancellation.\n" +
+        "หมายเหตุสำคัญ: ไม่คืนเงินมัดจำ\n" +
+        "เนื่องจากคุณชำระเงินมัดจำแล้ว การยกเลิกจะทำให้ไม่ได้รับเงินคืนตามระเบียบของหอพัก"
+        : "Are you sure you want to cancel this booking?\n" +
+        "This room will be returned to the system for others to book.\n\n" +
+        "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? ห้องพักจะถูกคืนเข้าสู่ระบบเพื่อให้ผู้ใช้อื่นจองต่อ",
+      confirmText: "Confirm Cancellation / ยืนยันการยกเลิก",
+      cancelText: "Keep Booking / รักษาการจอง", // เพิ่มเผื่อมีปุ่มยกเลิกใน Config
+      action: handleCancelBookingAction,
+    });
+  };
+
+  const handleCancelBookingAction = async () => {
     setIsCancelling(true);
     try {
-      const res = await fetch(`/api/bookings/cancel`, {
+      const res = await customFetch(`/api/bookings/cancel`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId: booking.id })
       });
-
       if (res.ok) {
-        alert("ยกเลิกการจองเรียบร้อยแล้ว");
         window.location.reload();
       } else {
         const data = await res.json();
-        alert(data.error || "เกิดข้อผิดพลาดในการยกเลิก");
+        alert(data.error || "เกิดข้อผิดพลาด");
       }
     } catch (err) {
-      alert("ไม่สามารถติดต่อเซิร์ฟเวอร์ได้");
+      alert("ติดต่อเซิร์ฟเวอร์ไม่ได้");
     } finally {
       setIsCancelling(false);
+      setModalConfig(prev => ({ ...prev, isOpen: false }));
     }
   };
+
+  // const currentStatus = booking?.booking_logs?.[0]?.status || "PENDING";
 
   const getStatusStyles = (status: string) => {
     switch (status) {
@@ -101,25 +178,42 @@ export default function StudentDashboard() {
     }
   };
 
-  if (loading) return <DashboardSkeleton />;
+  // if (isLoading) return <DashboardSkeleton />;
+  if (isLoading || isRedirecting) return <LoginSkeleton />;
+
+  // console.log("Booking: ", booking);
 
   // --- Main Wrapper ---
   return (
-    <div className="min-h-screen py-10 px-4">
+    <div className="min-h-screen py-10">
+      {isLogout && <LoadingOverlay message="Logging out...." />}
+      {isCancelling && <LoadingOverlay message="Cancelling booking...." />}
+      <ConfirmModal
+        {...modalConfig}
+        onClose={() => setModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={modalConfig.action}
+        isLoading={isCancelling}
+      />
       <div className="max-w-3xl mx-auto bg-white p-4 md:p-10 rounded-2xl shadow-md border border-gray-200 animate-in fade-in duration-700">
 
         {/* Header Section */}
         <div className="flex justify-between items-center mb-2 pb-2 border-b border-gray-100">
           <div>
             <h1 className="text-[24px] font-black text-gray-900 tracking-tight">Booking <span className="text-[#006633]">Status</span></h1>
-            <p className="text-gray-400 text-xs font-medium mt-1">ตรวจสอบและจัดการข้อมูลการจองห้องพัก</p>
+            <p className="text-gray-500 text-[12px] font-medium mt-1">ตรวจสอบ และจัดการข้อมูลการจองห้องพักได้ที่นี่</p>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={openLogoutModal}
+            disabled={isLogout}
             className="p-2.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
             title="ออกจากระบบ"
           >
-            <MdLogout size={22} />
+            {isLogout ? (
+              // ในปุ่มโชว์แค่ไอคอนหมุนเล็กๆ (หรือจะไม่โชว์ก็ได้เพราะมี Overlay แล้ว)
+              <div className="w-5 h-5 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />
+            ) : (
+              <MdLogout size={22} />
+            )}
           </button>
         </div>
 
@@ -130,20 +224,38 @@ export default function StudentDashboard() {
             <button onClick={() => window.location.reload()} className="mt-4 text-[#006633] font-bold text-sm underline">ลองใหม่อีกครั้ง</button>
           </div>
         ) : !booking || !booking.id ? (
-          <div className="py-16 text-center">
-            <div className="w-16 h-16 bg-gray-50 text-gray-200 rounded-full flex items-center justify-center mx-auto mb-6">
-              <MdMeetingRoom size={32} />
+          <div className="py-20 text-center flex flex-col items-center">
+            <div className="w-20 h-20 bg-green-50 text-[#006633] rounded-full flex items-center justify-center mb-6 shadow-inner">
+              <RiHomeSmileFill size={40} />
             </div>
-            <h2 className="text-xl font-bold text-gray-800 mb-2">ไม่พบข้อมูลการจอง</h2>
-            <p className="text-gray-400 mb-8 text-sm">คุณยังไม่มีรายการจองห้องพักในภาคเรียนนี้</p>
-            <button onClick={() => router.push('/book')} className="bg-[#006633] text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-green-100 hover:bg-[#004d26] transition-all">จองห้องพักตอนนี้</button>
+            <h2 className="text-2xl font-black text-gray-900 mb-2">ไม่พบข้อมูลการจอง</h2>
+            <p className="text-gray-400 mb-10 text-sm max-w-xs mx-auto">
+              ดูเหมือนว่าคุณจะยังไม่มีรายการจองห้องพักในภาคเรียนนี้ เริ่มจองห้องพักของคุณได้ง่ายๆ เพียงกดปุ่มด้านล่าง
+            </p>
+            <button
+              onClick={() => {
+                setIsRedirecting(true);
+                router.push('/new-booking')
+              }}
+              disabled={isRedirecting}
+              className="w-full sm:w-auto min-w-[200px] bg-[#006633] text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-green-100 hover:bg-[#004d26] active:scale-95 transition-all disabled:opacity-50"
+            >
+              {isRedirecting ? (
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                "จองห้องพักทันที"
+              )}
+            </button>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-4">
 
             {/* Room Info Card */}
-            <div className="bg-gray-50 rounded-2xl overflow-hidden border border-gray-100">
-              <div className={`px-6 py-3 flex justify-between items-center text-[10px] font-black uppercase tracking-widest border-b ${getStatusStyles(booking.status)}`}>
+            <div className="bg-gray-100 rounded-2xl overflow-hidden border border-gray-200">
+              <div className={`px-6 py-3 flex justify-between items-center text-[16px] font-black uppercase tracking-widest border-b ${getStatusStyles(booking.status)}`}>
                 <div className="flex items-center gap-2">
                   <MdCircle
                     size={8}
@@ -155,104 +267,225 @@ export default function StudentDashboard() {
                 <span className="text-white">#{booking.id}</span>
               </div>
 
-              <div className="p-8 flex flex-col md:flex-row items-center gap-8">
-                {/* ไอคอนห้องพักที่ดูมีมิติขึ้น */}
-                <div className="w-24 h-24 bg-white rounded-3xl flex items-center justify-center text-[#006633] shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-gray-50 shrink-0">
-                  <MdMeetingRoom size={48} />
+              <div className="p-8 flex flex-col md:flex-row items-center md:items-start gap-8">
+                {/* ไอคอนห้องพัก */}
+                <div className={`w-24 h-24 ${getStatusStyles(booking.status)} rounded-[2.5rem] flex items-center justify-center text-white shadow-[0_10px_25px_rgba(0,0,0,0.05)] border border-gray-50 shrink-0 transform md:-rotate-3`}>
+                  <RiHomeSmileFill size={48} />
                 </div>
-                <div className="text-center md:text-left">
-                  <h2 className="text-6xl font-black text-gray-900 tracking-tighter mb-3 leading-none">{booking.room.roomId}</h2>
-                  <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                    <Tag label={`Floor ${booking.room.floor}`} />
-                    <Tag label={booking.room.zone} />
-                    <Tag label={booking.room.campus} isGreen />
-                    <Tag label={booking.room.type} />
+                <div className="text-center md:text-left flex-1">
+                  <div className="flex flex-col md:flex-row md:items-end md:gap-4 mb-4">
+                    <h2 className="text-[52px] md:text-7xl font-black text-gray-900 tracking-tighter leading-none">
+                      {booking.room.roomId}
+                    </h2>
+                    <span className="text-xs font-bold text-gray-500 md:mb-2 uppercase tracking-widest">Selected Unit</span>
+                  </div>
+
+                  <div className="flex flex-wrap justify-center md:justify-start gap-2.5">
+                    <Tag label={`Floor / ชั้น: ${booking.room.floor}`} />
+                    <Tag label={`Zone / โซน: ${booking.room.dorm}`} />
+                    <Tag label={`Campus / วิทยาเขต: ${DORM_LABELS.CAMPUS[booking.room.campus as keyof typeof DORM_LABELS.CAMPUS] || booking.room.campus}`} isGreen />
+                    <Tag label={`Room Type / ประเภทห้อง: ${DORM_LABELS.ROOM_TYPES[booking.room.roomType as keyof typeof DORM_LABELS.ROOM_TYPES]?.label || booking.room.roomType}`} />
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Resident & Lifestyle Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2">
-                  <MdPerson className="text-[#006633]" /> Resident Profile
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+              {/* ฝั่งซ้าย: Profile */}
+              <div className="flex flex-col">
+                <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2 mb-3">
+                  <FaUser className="text-[#006633] text-lg" />Resident Information
                 </h4>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 space-y-3">
-                  <InfoRow label="ID" value={booking.studentId} />
-                  <InfoRow label="Name" value={booking.name} />
-                  <InfoRow label="Type" value={booking.type} />
+                <div className="bg-gray-100 p-5 rounded-3xl border border-gray-200 space-y-3 h-full">
+                  <InfoRow label="Student ID / เลขประจำตัวนักศึกษา" value={booking?.cus_users?.studentId} />
+                  <InfoRow label="Name / ชื่อ-นามสกุล" value={`${booking?.cus_users?.name_en} - ${booking?.cus_users?.name_th}`} />
+                  <InfoRow label="Type of Booking / ประเภทการจอง" value={DORM_LABELS.RESIDENT_TYPE[booking?.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || booking?.type} />
+                  <InfoRow label="Email / อีเมล" value={booking?.cus_users?.email} />
+                  <InfoRow label="Phone / เบอร์ติดต่อ" value={booking?.cus_users?.mobilePhone} />
+                  <InfoRow label="Gender / เพศ" value={DORM_LABELS.GENDER[booking?.cus_users?.gender as keyof typeof DORM_LABELS.GENDER] || booking?.cus_users?.gender} />
+                  <InfoRow label="Scholarship Student / นักศึกษาทุน" value={booking?.cus_users?.isScholarshipStudent ? "Yes" : "No"} />
+                  <InfoRow label="Disabled Student / นักศึกษาพิการ" value={booking?.cus_users?.isDisabled ? "Yes" : "No"} />
+                  <InfoRow label="Faculty / คณะ" value={booking?.cus_users?.faculty_department} />
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2">
-                  <MdCircle className="text-[#006633]" size={10} /> Roommate Preference
+              {/* ฝั่งขวา: Lifestyle */}
+              <div className="flex flex-col">
+                <h4 className="text-gray-900 font-bold text-sm flex items-center gap-2 mb-3">
+                  <FaUsersLine className="text-[#006633]" size={24} /> Roommate Preference
                 </h4>
-                <div className="flex flex-wrap gap-2">
-                  {booking.room.lifestyleConfig?.length > 0 ? (
-                    booking.room.lifestyleConfig.map((v: string) => (
-                      <span key={v} className="px-3 py-1.5 bg-gray-50 text-gray-500 rounded-xl text-[10px] font-bold border border-gray-100">#{v}</span>
-                    ))
-                  ) : (
-                    <p className="text-gray-300 text-[10px] italic">ไม่มีข้อมูล</p>
-                  )}
+                <div className="bg-gray-100 p-2 rounded-3xl border border-gray-200 h-full">
+                  <div className="flex flex-wrap gap-2">
+                    {booking.room.lifestyleConfig?.length > 0 ? (
+                      booking.room.lifestyleConfig.map((v: string) => {
+                        const config = DORM_LABELS.LIFESTYLE[v as keyof typeof DORM_LABELS.LIFESTYLE];
+                        if (!config) return <span key={v} className="px-3 py-1.5 bg-white text-gray-500 rounded-xl text-[10px] font-bold border border-gray-100">#{v}</span>;
+                        const Icon = config.icon;
+                        return (
+                          <span key={v} className="flex items-center gap-1.5 px-3 py-2 bg-white text-[#006633] rounded-xl text-[10px] font-bold border border-green-100 shadow-sm transition-transform hover:scale-105">
+                            <Icon size={14} />
+                            {/* {config.label.split(' - ')[1]} */}
+                            {config.label}
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <p className="text-gray-500 text-[12px] italic py-2">ไม่มีข้อมูลไลฟ์สไตล์</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+            {/* <p className="text-[10px] text-gray-400">Current Status: {booking.status}</p> */}
+            {/* Cancel Action Section */}
+            {["PENDING", "VERIFYING", "CANCELLED"].includes(booking.status) && (
+              <div className={`flex flex-col md:flex-row justify-between items-center gap-4 -mx-4 md:-mx-10 px-4 md:px-10 pb-6 md:pb-4 rounded-b-2xl transition-colors duration-300
+              ${booking.status === "CANCELLED" ? "bg-gray-50/80 border-gray-100" : "bg-red-50/30 border-red-50"}
+            `}>
 
-            {/* Cancel Action */}
-            {booking.status === "PENDING" && (
-              <div className="pt-6 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
-                <p className="text-[10px] text-gray-400 font-medium text-center md:text-left">ต้องการสละสิทธิ์การจอง? <br />ระบบจะคืนห้องพักให้ผู้ใช้รายอื่นทันที</p>
-                <button
-                  onClick={handleCancelBooking}
-                  disabled={isCancelling}
-                  className="flex items-center gap-2 px-6 py-2.5 text-red-500 hover:bg-red-50 rounded-xl text-xs font-bold transition-all border border-transparent hover:border-red-100 disabled:opacity-50"
-                >
-                  <MdClose size={18} />
-                  {isCancelling ? "กำลังยกเลิก..." : "ยกเลิกการจองนี้"}
-                </button>
+                {/* --- ส่วนข้อความ (Left Side) --- */}
+                <div className="flex items-start gap-3 flex-1">
+                  <div className={`mt-2 rounded-lg ${booking.status === "CANCELLED" ? "bg-gray-200 text-gray-500" : "bg-red-100 text-red-500"}`}>
+                    {booking.status === "CANCELLED" ? <RiHomeSmileFill size={20} /> : <MdInfoOutline size={20} />}
+                  </div>
+
+                  <div className="text-left pt-2">
+                    <h5 className={`font-bold text-[14px] mb-2 uppercase tracking-wider flex items-center gap-2 ${booking.status === "CANCELLED" ? "text-gray-600" : "text-gray-900"}`}>
+                      {booking.status === "CANCELLED" ? "New Booking" : "Cancellation"}
+                      <span className="text-gray-400 font-medium font-thai">/ {booking.status === "CANCELLED" ? "เริ่มจองใหม่" : "สละสิทธิ์การจอง"}</span>
+                    </h5>
+
+                    <div className="flex flex-col gap-1">
+                      {booking.status === "CANCELLED" && (
+                        <p className="text-[12px] text-gray-600 font-medium leading-relaxed">
+                          Your booking has been cancelled. You can now make a new reservation.
+                          <span className="block text-[11px] text-gray-400 italic">รายการจองถูกยกเลิกแล้ว คุณสามารถเริ่มทำรายการจองใหม่ได้ทันที</span>
+                        </p>
+                      )}
+                      {booking.status === "PENDING" && (
+                        <p className="text-[12px] text-gray-700 font-semibold leading-relaxed">
+                          Relinquish your booking to return the room to the system for others.
+                          <span className="block text-[11px] text-gray-400 italic font-medium">สละสิทธิ์เพื่อคืนห้องพักกลับเข้าสู่ระบบ เพื่อให้ผู้อื่นสามารถจองต่อได้</span>
+                        </p>
+                      )}
+                      {booking.status === "VERIFYING" && (
+                        <p className="text-[12px] text-gray-700 font-semibold leading-relaxed">
+                          Note: Deposit is non-refundable upon cancellation (Dormitory regulations).
+                          <span className="block text-[11px] text-gray-400 italic font-medium">เนื่องจากชำระเงินแล้ว การยกเลิกตอนนี้จะทำให้ 'ไม่ได้รับเงินมัดจำคืน'</span>
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* --- ส่วนปุ่ม (Right Side) --- */}
+                <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
+
+                  {/* ปุ่มยกเลิก (โชว์เมื่อรอดำเนินการ/จ่ายเงิน) */}
+                  {(booking.status === "PENDING" || booking.status === "VERIFYING") && (
+                    <button
+                      onClick={openCancelModal}
+                      disabled={isCancelling}
+                      className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 md:py-2.5 text-red-500 bg-white hover:bg-red-50 border border-red-100 rounded-xl text-sm font-black transition-all active:scale-95 disabled:opacity-50"
+                    >
+                      {isCancelling ? <LoadingOverlay message="Cancelling..." /> : <MdClose size={18} />}
+                      Cancel Booking
+                    </button>
+                  )}
+
+                  {/* ปุ่มสีเขียว (Action หลัก) */}
+                  {booking.status === "PENDING" && (
+                    <button
+                      onClick={() => router.push('/new-booking')} // หรือ /new-booking?step=8 ตามที่คุณตั้งค่า
+                      className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-3 md:py-2.5 text-white bg-[#91b838] hover:bg-[#7a9b2f] rounded-xl text-sm font-black transition-all active:scale-95 shadow-lg shadow-green-100"
+                    >
+                      <MdPayment size={18} />
+                      Pay Now / ชำระเงิน
+                    </button>
+                  )}
+
+                  {booking.status === "CANCELLED" && (
+                    <button
+                      onClick={() => router.push('/new-booking')}
+                      className="w-full md:w-auto flex items-center justify-center gap-2 px-10 py-3 bg-[#91b838] hover:bg-[#7a9b2f] text-white rounded-xl text-sm font-black transition-all active:scale-95 shadow-md"
+                    >
+                      <RiHomeSmileFill size={18} />
+                      Book Again / จองใหม่อีกครั้ง
+                    </button>
+                  )}
+                </div>
               </div>
             )}
           </div>
         )}
 
-        <div className="mt-10 text-center">
+        {/* <div className="mt-10 text-center">
           <p className="text-[10px] text-gray-300 font-medium uppercase tracking-widest">Thammasat University Dormitory Management</p>
-        </div>
+        </div> */}
       </div>
     </div>
   );
 }
 
-function InfoRow({ label, value }: { label: string, value: string }) {
-  return (
-    <div className="flex justify-between items-center">
-      <span className="text-[10px] font-black text-gray-300 uppercase tracking-widest">{label}</span>
-      <span className="text-xs font-bold text-gray-700">{value || "-"}</span>
+function InfoRow({ label, value }: { label: string, value: any }) {
+  if (!value) return (
+    <div className="flex justify-between items-baseline gap-6 py-2 border-b border-gray-50 last:border-0">
+      <dt className="text-[10px] font-bold text-gray-500 uppercase tracking-wider w-1/3">{label}</dt>
+      <dd className="text-gray-500 font-normal">-</dd>
     </div>
   );
-}
 
-function DashboardSkeleton() {
+  const safeValue = String(value).trim();
+  const labelParts = label.split(" / ");
+
+  // --- Logic การแยกบรรทัด ---
+  let mainValue = safeValue;
+  let subValue = "";
+
+  if (safeValue.includes(" - ")) {
+    // กรณีชื่อ อังกฤษ - ไทย
+    [mainValue, subValue] = safeValue.split(" - ");
+  } else if (safeValue.includes(" สาขา")) {
+    // กรณี คณะ สาขาวิชา... (ตัดที่คำว่า " สาขา")
+    const index = safeValue.indexOf(" สาขา");
+    mainValue = safeValue.substring(0, index);
+    subValue = safeValue.substring(index).trim(); // เก็บคำว่า "สาขา..." ไว้ด้วย
+  }
+
   return (
-    <div className="min-h-screen py-10 px-4">
-      <div className="max-w-3xl mx-auto bg-white p-10 rounded-2xl shadow-md border border-gray-200 animate-pulse">
-        <div className="h-10 w-40 bg-gray-100 rounded-xl mb-10"></div>
-        <div className="h-64 bg-gray-50 rounded-2xl mb-8"></div>
-        <div className="grid grid-cols-2 gap-6">
-          <div className="h-32 bg-gray-50 rounded-2xl"></div>
-          <div className="h-32 bg-gray-50 rounded-2xl"></div>
-        </div>
-      </div>
+    <div className="flex justify-between items-baseline gap-6 py-2 border-b border-gray-100 last:border-0">
+      {/* Label (เหมือนเดิม) */}
+      <dt className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0 w-1/3 leading-tight">
+        {labelParts.map((part, index) => (
+          <span key={index} className="block">
+            {part.trim()}
+            {index < labelParts.length - 1 && "/"}
+          </span>
+        ))}
+      </dt>
+
+      {/* Value: แสดงผลแบบ 2 บรรทัดถ้ามีข้อมูลย่อย */}
+      <dd className="text-[12px] font-semibold text-gray-800 text-right flex-1">
+        {subValue ? (
+          <div className="flex flex-col">
+            <span className="text-gray-900 leading-tight">{mainValue}</span>
+            <span className="text-[12px] text-gray-500 font-medium leading-tight mt-0.5">
+              {subValue}
+            </span>
+          </div>
+        ) : (
+          mainValue
+        )}
+      </dd>
     </div>
   );
 }
 
 function Tag({ label, isGreen = false }: { label: string, isGreen?: boolean }) {
   return (
-    <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border transition-all ${isGreen
+    <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border transition-all 
+      ${isGreen
       ? "bg-[#006633] text-white border-[#006633]"
       : "bg-white text-gray-500 border-gray-200"
       }`}>

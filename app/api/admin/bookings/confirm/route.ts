@@ -1,62 +1,63 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { sendStatusEmail } from "@/lib/mail";
+import { BookingStatus } from "@/types/booking";
 
 export async function POST(request: Request) {
   try {
-    const { bookingId, adminId } = await request.json();
+    const { bookingId, adminId, remark } = await request.json(); // รับ remark เพิ่ม
 
-    // ⚡ ขั้นตอนที่ 1: Transaction แบบ Lean (เน้น Update อย่างเดียว)
-    // ไม่ต้อง include ข้อมูลเยอะๆ ในนี้ เพื่อให้ COMMIT ได้ทันที
+    // ขั้นตอนที่ 1: Lean Transaction
     const updated = await prisma.$transaction(async (tx) => {
-      return await tx.booking.update({
+      // 1.1 อัปเดตการจองโดยสร้าง log ใหม่
+      const updateResult = await tx.booking.update({
         where: { id: Number(bookingId) },
         data: {
-          status: "COMPLETED",
-          verifiedBy: adminId,
-          verifiedAt: new Date(),
+          booking_logs: {
+            create: {
+              status: BookingStatus.COMPLETED,
+              verifiedBy: Number(adminId), // แปลงเป็น Number เพื่อความปลอดภัย
+              createdAt: new Date(),
+            }
+          }
         },
-        // ดึงเฉพาะ ID กลับมาเพื่อใช้ Query ข้อมูลเต็มข้างนอก
-        select: { id: true } 
+        select: { id: true }
       });
+
+      // 1.2 บันทึกประวัติการทำงานของแอดมินลงใน Staff_action_log
+      await tx.staff_action_log.create({
+        data: {
+          verifiedBy: Number(adminId),
+          remark: remark || "อนุมัติการจอง", // ใส่หมายเหตุประกอบ
+          createdAt: new Date()
+        }
+      });
+
+      return updateResult;
     });
 
-    // ⚡ ขั้นตอนที่ 2: Query ข้อมูลเพื่อส่งเมล (ทำนอก Transaction)
-    // ใช้ select เพื่อเลือกเฉพาะ Field ที่ต้องใช้ใน sendStatusEmail จริงๆ
+    // ขั้นตอนที่ 2: Query ข้อมูลเพื่อส่งเมล (ดีอยู่แล้วครับ)
     const bookingData = await prisma.booking.findUnique({
       where: { id: updated.id },
-      select: {
-        id: true,
-        type: true,
-        user: {
-          select: { email: true, name_th: true }
-        },
+      include: {
+        cus_users: true,
         room: {
-          select: {
-            roomId: true,
-            floor: true,
-            roomType: true,
-            zone: {
-              select: {
-                name: true,
-                dorm: { select: { name: true } }
-              }
-            }
+          include: {
+            dorm: { include: { campus: true } }
           }
         }
       }
     });
 
-    // ⚡ ขั้นตอนที่ 3: ส่งอีเมลแบบ Async (Non-blocking)
-    if (bookingData?.user?.email) {
-      // ส่งไปเลย ไม่ต้องรอ await เพื่อให้ Response ตอบกลับ User ได้ทันที
-      sendStatusEmail(bookingData as any, "CONFIRMED")
-        .catch(err => console.error("Email Error:", err));
+    // ขั้นตอนที่ 3: ส่งอีเมลแบบ Async (Non-blocking)
+    if (bookingData?.cus_users?.email) {
+      sendStatusEmail(bookingData as any, BookingStatus.COMPLETED)
+        .catch(err => console.error("❌ Email Error:", err));
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Confirm API Error:", error);
+    console.error("❌ Confirm API Error:", error);
     return NextResponse.json({ message: "ไม่สามารถอนุมัติรายการได้" }, { status: 500 });
   }
 }

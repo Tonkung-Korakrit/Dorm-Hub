@@ -1,0 +1,50 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ] # รันเมื่อมีการ push ขึ้น branch main เท่านั้น
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Lowercase the repo name
+        run: echo "REPO_NAME=$(echo ${{ github.repository }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 1. Login เข้า GitHub Container Registry (GHCR)
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. Build และ Push Docker Image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # ตั้งชื่อ Image ตามชื่อ Repo ของคุณ
+          tags: ghcr.io/${{ env.REPO_NAME }}:latest
+          # ใช้ cache เพื่อให้ build ครั้งต่อไปเร็วขึ้น
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # 3. สั่ง Deploy ไปที่ Railway
+      - name: Deploy to Railway
+        run: |
+          npm install -g @railway/cli
+          railway up --detach --service tu_dorm_booking
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

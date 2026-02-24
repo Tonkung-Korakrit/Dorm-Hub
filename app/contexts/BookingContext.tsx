@@ -3,7 +3,7 @@
 
 import { createContext, useContext, useState, ReactNode } from "react";
 // import { useRouter } from "next/navigation";
-import { Room, Resident, Booking, BookingType, RoomStatus, Role, BookingStatus, RoomType, GenderType, Admin, OwnerInfo, Vehicle } from "@/types/booking";
+import { Room, Resident, Booking, BookingType, RoomStatus, Role, BookingStatus, RoomType, GenderType, OwnerInfo, Vehicle, Staff } from "@/types/booking";
 
 // กำหนด Interface สำหรับข้อมูลใน Context (จะแชร์อะไรบ้าง)
 interface BookingContextType {
@@ -17,9 +17,11 @@ interface BookingContextType {
   setOwnerInfo: React.Dispatch<React.SetStateAction<OwnerInfo>>;
   vehicle: Vehicle | null;
   setVehicle: React.Dispatch<React.SetStateAction<Vehicle>>;
+  isEditMode: boolean;
+  setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
 
-  admin: Admin;
-  setAdmin: React.Dispatch<React.SetStateAction<Admin>>;
+  staff: Staff;
+  setStaff: React.Dispatch<React.SetStateAction<Staff>>;
 
   // bookingType: BookingType;
   // setBookingType: React.Dispatch<React.SetStateAction<BookingType>>;
@@ -35,34 +37,36 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export const BookingProvider = ({ children }: { children: ReactNode }) => {
   // console.log("Context Provider is Rendering!");
   // const router = useRouter();
+  
+  const [isEditMode, setIsEditMode] = useState(false);
 
   const [formResident, setFormResident] = useState<Resident>({
     id: 0,
-    role: Role.STUDENT,
-    email: "",
-    citizenType: "",
+    citizenType: "CITIZEN_ID",
     citizenNumber: "",
     studentId: "",
     gender: GenderType.OTHER,
-    prefix: "",
+    titleName: "",
     // name: "",
     name_en: "",
     name_th: "",
+    email: "",
+    mobilePhone: "",
     birthDate: "",
-    phone: "",
-
     isScholarshipStudent: false,
     isDisabled: false,
-
-    image: "",
     faculty_department: "",
     // department: "",
+    // image: "",
     // tu_status: "",
     lifestyle: [],
+    isEnabled: true,
+
+    address: [], 
     guardians: [],
-    documents: [],
-    // vehicleInfo: null,
-    address: [],
+    profileImage: [],
+    vehicleInfo: null,
+    role: Role.STUDENT,
   });
 
   const [formRoom, setFormRoom] = useState<Room>({
@@ -77,22 +81,27 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     price: 0,
     capacity: 0,
     currentOccupancy: 0,
+
+    isSuite: false,
+
     posX: 1,
     posY: 1,
     lifestyleConfig: [],
     booking: [],
 
-    zone: {
+    dorm: {
       id: 0,
       name: "",
-      gender: GenderType.OTHER,
+      genderType: GenderType.OTHER,
       mapUrl: "",
       maxCols: 0,
       maxRows: 0,
-      dorm: {
+      campus: {
         id: 0,
         name: "",
+        // dorm: []
       },
+      // floors: []
     },
   });
 
@@ -121,13 +130,13 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     status: BookingStatus.PENDING,
     type: BookingType.NOT_CHARTER,
     createdAt: new Date(),
-    userId: 0,
-    roomId: 0,
-    user: formResident,
+    // userId: 0,
+    // roomId: 0,
+    cus_users: formResident,
     room: formRoom,
   });
 
-  const [admin, setAdmin] = useState<Admin>({
+  const [staff, setStaff] = useState<Staff>({
     id: 0,
     name: "",
     email: "",
@@ -183,7 +192,8 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         currentBooking, setCurrentBooking,
         ownerInfo, setOwnerInfo,
         vehicle, setVehicle,
-        admin, setAdmin,
+        staff, setStaff,
+        isEditMode, setIsEditMode,
         // bookingType, setBookingType,
         // handleBook,
         message, setMessage

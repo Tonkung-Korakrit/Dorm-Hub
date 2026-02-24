@@ -11,7 +11,7 @@ export async function GET() {
         citizenNumber: true,
         studentId: true,
         gender: true,
-        prefix: true,
+        titleName: true,
         name: true,
         name_en: true,
         name_th: true,

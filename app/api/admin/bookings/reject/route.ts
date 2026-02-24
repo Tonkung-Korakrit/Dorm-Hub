@@ -1,73 +1,54 @@
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
 import { sendStatusEmail } from "@/lib/mail";
+import { BookingStatus } from "@/types/booking";
 
 export async function POST(request: Request) {
   try {
     const { bookingId, adminId, remark } = await request.json();
 
-    if (!remark) {
-      return NextResponse.json({ message: "กรุณาระบุเหตุผลที่ปฏิเสธ" }, { status: 400 });
-    }
-
-    // ⚡ 1. Lean Transaction: อัปเดตสถานะให้เร็วที่สุด
-    // ลดภาระโดยไม่ใช้ 'include' ภายใน Transaction เพื่อให้ COMMIT ได้ทันที
+    // ขั้นตอนที่ 1: Transaction (อัปเดตสถานะ + บันทึกประวัติ Admin)
     const updated = await prisma.$transaction(async (tx) => {
-      return await tx.booking.update({
-        where: { id: Number(bookingId) },
+      // 1.1 สร้าง Log การจองใหม่ (COMPLETED)
+      const newLog = await tx.booking_log.create({
         data: {
-          status: "REJECTED",
-          adminRemark: remark,
-          verifiedBy: adminId,
-          verifiedAt: new Date(),
-        },
-        // ดึงเฉพาะ ID กลับมาเพื่อยืนยันว่าการอัปเดตสำเร็จ
-        select: { id: true }
+          bookingId: Number(bookingId),
+          status: BookingStatus.COMPLETED,
+          verifiedBy: Number(adminId), // ป้องกัน Type Mismatch
+        }
       });
-    }, {
-      timeout: 10000 // กำหนด Timeout 10 วินาที ป้องกันคอขวด
+
+      // 1.2 บันทึกประวัติการทำงานของ Staff (Audit Trail)
+      await tx.staff_action_log.create({
+        data: {
+          verifiedBy: Number(adminId),
+          // เชื่อมกับ Log การจองที่เราเพิ่งสร้าง (ถ้าใน Schema นายทำ Relation ไว้)
+          remark: remark || "อนุมัติการจองเรียบร้อย",
+          createdAt: new Date()
+        }
+      });
+
+      return { id: Number(bookingId) };
     });
 
-    // ⚡ 2. Post-Transaction Query: ดึงข้อมูลสำหรับส่งเมลข้างนอก
-    // ใช้ select เฉพาะฟิลด์ที่จำเป็น เพื่อลดปริมาณข้อมูลข้าม Network
+    // ขั้นตอนที่ 2: Query ข้อมูลเพื่อส่งเมล (เหมือนเดิมของนาย - ดีอยู่แล้ว)
     const bookingData = await prisma.booking.findUnique({
       where: { id: updated.id },
-      select: {
-        id: true,
-        type: true,
-        adminRemark: true,
-        user: {
-          select: { email: true, name_th: true }
-        },
-        room: {
-          select: {
-            roomId: true,
-            floor: true,
-            roomType: true,
-            zone: {
-              select: {
-                name: true,
-                dorm: { select: { name: true } }
-              }
-            }
-          }
-        }
+      include: {
+        cus_users: true,
+        room: { include: { dorm: { include: { campus: true } } } }
       }
     });
 
-    // ⚡ 3. Background Notification: ส่งเมลแบบไม่รอผล (Non-blocking)
-    // วิธีนี้ทำให้ API ตอบกลับผลลัพธ์ไปยัง Admin ได้ทันทีโดยไม่ต้องรอ SMTP Server ตอบรับ
-    if (bookingData?.user?.email) {
-      sendStatusEmail(bookingData as any, "REJECTED", remark)
-        .catch(err => console.error("Email Error:", err));
+    // ขั้นตอนที่ 3: ส่งอีเมลแบบ Non-blocking
+    if (bookingData?.cus_users?.email) {
+      sendStatusEmail(bookingData as any, BookingStatus.COMPLETED)
+        .catch(err => console.error("❌ Email Error:", err));
     }
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
-    console.error("Reject API Error:", error.message);
-    return NextResponse.json(
-      { message: "ไม่สามารถปฏิเสธรายการได้ หรือรายการถูกจัดการไปแล้ว" },
-      { status: 500 }
-    );
+  } catch (error) {
+    console.error("❌ Confirm API Error:", error);
+    return NextResponse.json({ message: "ไม่สามารถอนุมัติรายการได้" }, { status: 500 });
   }
 }

@@ -62,7 +62,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
-      await deleteAdminSession(); // 🚩 สำคัญมาก: ต้องลบ Cookie ฝั่ง Server ก่อน
+      await deleteAdminSession(); // สำคัญมาก: ต้องลบ Cookie ฝั่ง Server ก่อน
       window.location.href = "/admin/login"; // แล้วค่อยดีดไปหน้า Login
     }
   };

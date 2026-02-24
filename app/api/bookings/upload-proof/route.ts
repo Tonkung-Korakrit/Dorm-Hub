@@ -1,3 +1,10 @@
+import { NextResponse } from 'next/server';
+
+// ใส่ GET หรือ POST เปล่าๆ ไว้ก่อนเพื่อให้ Next.js มองว่าเป็น Module
+export async function GET() {
+  return NextResponse.json({ message: "This route is under construction" }, { status: 501 });
+}
+
 // // npm install @aws-sdk/client-s3
 
 // import { prisma } from "@/lib/prisma";
