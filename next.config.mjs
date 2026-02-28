@@ -6,9 +6,12 @@ const nextConfig = {
   output: 'standalone',
   
   devIndicators: {
-    appIsrStatus: false, // สำหรับ Next.js เวอร์ชั่นใหม่ๆ (App Router)
-    buildActivity: false, // ปิดตัว Indicator ที่มุมจอ
+    // appIsrStatus: false, 
+    // buildActivity: false, 
   },
+  allowedDevOrigins: [
+    'final.my-ppp.net'
+  ]
 };
 
 export default nextConfig;

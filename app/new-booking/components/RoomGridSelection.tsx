@@ -134,12 +134,12 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
     formRoom.dorm ? `/api/rooms?campus=${formRoom.campus}&dorm=${formRoom.dorm.name}` : null, // &floor=${selectedFloor}
     fetcher,
     {
-      // refreshInterval: 5000, // อัพเดตข้อมูลทุก 5 วินาที
-      // dedupingInterval: 2000, // ถ้ากดซ้ำๆ ภายใน 2 วิ ไม่ต้องยิงใหม่
-      // revalidateOnFocus: true, // กลับมาที่หน้าจอปุ๊บ เช็คให้ทันที (อันนี้สำคัญกว่าสุ่มยิง)
+      refreshInterval: 5000, // อัพเดตข้อมูลทุก 5 วินาที
+      dedupingInterval: 2000, // ถ้ากดซ้ำๆ ภายใน 2 วิ ไม่ต้องยิงใหม่
+      revalidateOnFocus: true, // กลับมาที่หน้าจอปุ๊บ เช็คให้ทันที (อันนี้สำคัญกว่าสุ่มยิง)
 
-      revalidateOnFocus: false,  // (เพิ่มเติม) ปิดการโหลดใหม่เมื่อสลับหน้าจอกลับมา
-      revalidateOnReconnect: false,
+      // revalidateOnFocus: false,  // (เพิ่มเติม) ปิดการโหลดใหม่เมื่อสลับหน้าจอกลับมา
+      // revalidateOnReconnect: false,
     }
   );
 
@@ -274,25 +274,25 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
         Room Information / ข้อมูลห้องพัก (โซน {formRoom?.dorm?.name || "-"})
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 text-[16px] text-gray-600 px-2 py-2 bg-green-50 border border-green-300 rounded-xl animate-fadeIn">
+      <div className="grid grid-cols-1 gap-x-12 text-[16px] text-gray-600 px-2 py-2 bg-green-50 border border-green-300 rounded-xl animate-fadeIn">
         <div className="flex flex-col gap-1">
-          <span className="font-bold text-black">Gender / เพศ:</span>
+          <span className="font-bold text-black shrink-0">Gender / เพศ:</span>
           <span className="text-gray-700">
             {/* {formResident?.gender || "-"} */}
             {DORM_LABELS.GENDER[formResident.gender as keyof typeof DORM_LABELS.GENDER] || formResident.gender}
           </span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="font-bold text-black">Resident Type / ประเภทของผู้พัก:</span>
+        <div className="flex flex-col gap-1 mt-1">
+          <span className="font-bold text-black shrink-0">Resident Type / ประเภทของผู้พัก:</span>
           <span className="text-gray-700">
             {/* {currentBooking?.type || "-"} */}
             {DORM_LABELS.RESIDENT_TYPE[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking.type}
           </span>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <span className="font-bold text-black">Selected Campus / วิทยาเขต:</span>
+        <div className="flex flex-col gap-1 mt-1">
+          <span className="font-bold text-black shrink-0">Selected Campus / วิทยาเขต:</span>
           <span className="text-gray-700">
             {/* {formRoom?.campus || "-"} */}
             {DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}
@@ -305,31 +305,6 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
             {formRoom?.dorm?.name || "-"}
           </span>
         </div>
-
-        {/* ส่วน Lifestyle: ใช้ div แทน p */}
-        {/* <div className="md:col-span-2 flex flex-col gap-3 mt-1">
-          <span className="font-bold text-black">Vibe Roommate / เพื่อนร่วมห้องที่เข้ากันได้ดี :</span>
-
-          <div className="flex flex-wrap gap-2">
-            {formResident?.lifestyle ? (
-              Object.entries(
-                (typeof formResident.lifestyle === 'string'
-                  ? JSON.parse(formResident.lifestyle)
-                  : formResident.lifestyle || {}) as Record<string, string> // ระบุ Type ตรงนี้
-              ).map(([key, value]) => (
-                <span
-                  key={key}
-                  className="px-3 py-1 bg-[#8ACCA1]/20 text-[#006432] text-[13px] font-medium rounded-full border border-[#8ACCA1]/30"
-                >
-                  {LIFESTYLE_LABELS[key] || key}: <span className="font-bold">{value}</span>
-                </span>
-              ))
-            ) : (
-              <span className="text-gray-400">ไม่ระบุ</span>
-            )}
-          </div>
-        </div>
-      </div> */}
 
         <div className="md:col-span-2 flex flex-col gap-3 mt-1 bg-gray-50/50 rounded-2xl">
           <div className="gap-2">
@@ -350,7 +325,7 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
                 return (
                   <div
                     key={id}
-                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-100 text-[#126A31] text-[13px] rounded-xl shadow-sm transition-all duration-200 group" //hover:border-[#126A31]/30
+                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-100 text-[#126A31] text-[10px] md:text-[14px] rounded-xl shadow-sm transition-all duration-200 group" //hover:border-[#126A31]/30
                   >
                     {/* แสดง Icon พร้อมสีที่เป็นเอกลักษณ์ opacity-80 group-hover:opacity-100*/}
                     <Icon size={16} className="text-[#126A31]" />
@@ -658,8 +633,21 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
                       }}
                     />
 
-                    {/* ชั้นหน้า: ปุ่มเลือกห้อง A และ B (จัดตำแหน่งให้ตรงกับรูปแปลน) */}
-                    <div className={`relative z-10 grid grid-cols-2 gap-2 w-full ${position === 'Top' ? 'pt-[4px]' : 'pt-[60px]'} pb-[32px] pr-[88px] pl-[88px] md:pt-[80px] md:pb-[24px] md:pr-[112px] md:pl-[112px]`}>
+                    {/* ชั้นหน้า: ปุ่มเลือกห้อง A และ B (จัดตำแหน่งให้ตรงกับรูปแปลน) 
+
+                      ${position === 'Top' ? 'pb-8 sm:pb-10' : 'pt-12 sm:pt-20 md:pt-24 pb-4'} 
+                      px-4           // Mobile: ห่างขอบนิดเดียวพอ
+                      sm:px-12       // Tablet: เริ่มขยายออก
+                      md:px-[15%]    // Desktop: ใช้ % เพื่อให้มันอยู่กึ่งกลางสวยๆ ตลอดเวลา
+                      lg:px-[20%]    // จอกว้างพิเศษ: บีบเข้ามาไม่ให้ห้องยาวเกินไป
+                    
+                    */}
+                    <div className={`relative z-10 grid grid-cols-2 gap-2 w-full
+                      ${position === 'Top' ? 'pb-[30px] sm:pb-[34px]'
+                        : 'pt-[48px] sm:pt-[54px] md:pt-[80px] lg:pt-[92px] pb-[18px]'} 
+                        md:pb-[48px] pl-[88px] pr-[88px] sm:pl-[112px] sm:pr-[112px]
+                    `}>
+
                       {selectedSuite.subRooms?.map((subRoom: any) => {
                         const isFull = subRoom.currentOccupancy >= subRoom.capacity;
                         const canBook = canUserBookRoom(subRoom);
@@ -701,7 +689,8 @@ export function RoomGridSelection({ setStep }: RoomGridProps) {
                               setConfirmRoom(subRoom);
                             }}
                             // ใช้ aspect-square เพื่อความเป็นระเบียบ และใช้ statusColors จัดการธีม
-                            className={`group relative aspect-square flex flex-col items-center justify-center rounded-xl transition-all duration-300 shadow-sm text-white
+                            className={`group relative aspect-square flex flex-col w-full max-w-[80px] sm:max-w-[92px] md:max-w-[160px]
+                              items-center justify-center rounded-xl transition-all duration-300 shadow-sm text-white
                         ${statusColors} ${hoverEffect} ${label === 'A' ? (isBAFormat ? 'order-2' : 'order-1') : (isBAFormat ? 'order-1' : 'order-2')}`}
                           >
                             {subRoom.currentOccupancy > 0 && matchScore >= 50 && (

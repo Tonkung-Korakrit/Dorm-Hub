@@ -6,23 +6,25 @@ import { useState, useEffect, ChangeEvent, SetStateAction, useRef } from "react"
 import { useBooking } from "@/app/contexts/BookingContext";
 import { StudentInfoForm } from "./StudentInfoForm";
 import { CampusSelector } from "./CampusSelector";
-// import { BookingSummary } from "./BookingSummary";
+import { useSearchParams } from "next/navigation";
+
 import { HiIdentification } from "react-icons/hi";
 import { FaUser, FaCar } from "react-icons/fa";
 import { RiHomeSmileFill } from "react-icons/ri";
 import { HiDocumentMagnifyingGlass } from "react-icons/hi2";
 
+import { BookRoomFormProps, BookingStatus } from "@/types/booking";
+
 import { VehicleStep } from "./Vehicle";
 import { ProfileStep } from "./Profile";
 import { DormSelector } from "./DormSelector";
 import { RoomGridSelection } from "./RoomGridSelection";
-
-import { BookRoomFormProps, BookingStatus } from "@/types/booking";
 import { BookingSummary } from "./BookingSummary";
 import { PaymentPage } from "./Payment";
 import { FormBookSkeleton } from "@/app/loading/components/ิbook/FormBookSkeleton";
 import { customFetch } from "@/lib/api";
-import router from "next/router";
+import { MdInfoOutline } from "react-icons/md";
+// import router from "next/router";
 
 export default function BookRoomForm({ user }: BookRoomFormProps) {
   const [isMounted, setIsMounted] = useState(false);
@@ -30,6 +32,9 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   const { formResident, setFormResident, formRoom, setFormRoom, currentBooking, setCurrentBooking } = useBooking();
   const scrollRef = useRef<HTMLDivElement>(null);
   // const router = useRouter();
+
+  const searchParams = useSearchParams(); // 2. สร้างตัวแปร searchParams
+  const editId = searchParams.get("edit"); // ดึงค่า ?edit=ID
 
   useEffect(() => {
     if (user) setFormResident(user);
@@ -51,6 +56,27 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
+        // กรณีที่ 1: เข้ามาเพื่อ "แก้ไข" (มาจากปุ่ม Edit & Resubmit)
+        if (editId) {
+          const res = await customFetch(`/api/bookings/${editId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setCurrentBooking(data);
+
+            // Map ข้อมูลเดิมเข้าสู่ Form Context
+            setFormResident(data.cus_users);
+            setFormRoom(data.room);
+
+            // ถ้าโดน Reject เรื่องรูป/โปรไฟล์ ให้ดีดไป Step 2 ทันที
+            // หรือถ้าโดน Reject เรื่องสลิป ให้ดีดไป Step 8 ทันที
+            // if (data.status === "REJECTED") {
+            //   // เช็คเงื่อนไขตามความเหมาะสม เช่นถ้ามีรูปแล้วแต่อยากให้แก้ใหม่
+            //   setStep(2);
+            // }
+          }
+          return; // จบการทำงานถ้าเป็นเคส Edit
+        }
+
         // ใช้ customFetch ที่เราทำไว้เพื่อให้จัดการ 401 (Expired) ให้ในตัว
         const res = await customFetch("/api/bookings/my-booking");
 
@@ -59,7 +85,7 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
           setCurrentBooking(data);
 
           // ถ้าเช็คแล้วว่ามีการจองค้างอยู่ (PENDING) ให้ดีดไปหน้า 8 ทันที
-          if (data?.status === "PENDING") {
+          if (data?.status === BookingStatus.PENDING) {
             setStep(8);
           }
         }
@@ -69,8 +95,8 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
     };
 
     // เรียกใช้งานครั้งเดียวตอน Mount
-    fetchBooking();
-  }, []); // [] คือทำงานครั้งเดียวตอนโหลดหน้าเว็บ
+    if (isMounted) fetchBooking();
+  }, [editId, isMounted]); // [] คือทำงานครั้งเดียวตอนโหลดหน้าเว็บ
 
   // แสดง Skeleton ขณะกำลัง Load
   if (!isMounted || !user) {
@@ -80,11 +106,26 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   return (
     <div className="w-full h-screen flex flex-col bg-transparent overflow-hidden">
 
+      {/* ⚠️ ส่วนแจ้งเตือนกรณี REJECTED (ใส่เพิ่มด้านบนฟอร์ม) */}
+      {editId && step < 8 && (
+        <div className="max-w-4xl mx-auto w-full px-6 mt-4">
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
+            <div className="bg-amber-100 p-2 rounded-full text-amber-600">
+              <MdInfoOutline size={24} />
+            </div>
+            <div>
+              <p className="text-amber-800 font-bold text-sm">แก้ไขข้อมูลตามคำแนะนำของเจ้าหน้าที่</p>
+              <p className="text-amber-700 text-xs">หากแก้ไขเสร็จแล้ว กรุณากดส่งเพื่อทำการตรวจสอบอีกครั้ง</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 1. ส่วน STEPPER BAR - โปร่งใส และเส้นชิดซ้ายสุด */}
       <div className="flex-none w-full relative pt-12 pb-2">
 
         {/* --- เส้นพื้นหลัง (Background Line) --- */}
-        <div className="absolute left-0 top-[64px] sm:top-[72px] w-[87.5%] sm:w-[75%] h-[6px] sm:h-[12px] bg-[#8ACCA1] z-0" />
+        <div className="absolute left-0 top-[64px] sm:top-[64px] md:top-[72px] w-[87.5%] sm:w-[87.5%] md:w-[85%] xl:w-[77.5%] h-[6px] sm:h-[8px] md:h-[12px] bg-[#8ACCA1] z-0" />
 
         {/* --- เส้นความคืบหน้า (Active Progress Line) --- */}
         {/* <div
@@ -92,15 +133,15 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
           style={{ width: step === 1 ? '15%' : step === 2 ? '40%' : step === 3 ? '65%' : '90%' }}
         /> */}
         <div
-          className={`absolute left-0 top-[64px] sm:top-[72px] h-[6px] sm:h-[12px] bg-[#006432] z-0 transition-all duration-700 ease-in-out 
-            ${step === 1 ? 'w-[15%] sm:w-[25%]' : ''}
-            ${step === 2 ? 'w-[30%] sm:w-[37.5%]' : ''}
-            ${step === 3 ? 'w-[50%] sm:w-[50%]' : ''}
-            ${step === 4 ? 'w-[70%] sm:w-[62.5%]' : ''}
-            ${step === 5 ? 'w-[70%] sm:w-[62.5%]' : ''}
-            ${step === 6 ? 'w-[70%] sm:w-[62.5%]' : ''}
-            ${step === 7 ? 'w-[90%] sm:w-[75%]' : ''}
-            ${step === 8 ? 'w-[90%] sm:w-[75%]' : ''}
+          className={`absolute left-0 top-[64px] sm:top-[64px] md:top-[72px] h-[6px] sm:h-[8px] md:h-[12px] bg-[#006432] z-0 transition-all duration-700 ease-in-out 
+            ${step === 1 ? 'w-[15%] sm:w-[15%] md:w-[15%] lg:w-[18%] xl:w-[22%]' : ''}
+            ${step === 2 ? 'w-[30%] sm:w-[30%] md:w-[35%]' : ''}
+            ${step === 3 ? 'w-[50%] sm:w-[50%] md:w-[50%]' : ''}
+            ${step === 4 ? 'w-[70%] sm:w-[70%] md:w-[65%]' : ''}
+            ${step === 5 ? 'w-[70%] sm:w-[70%] md:w-[65%]' : ''}
+            ${step === 6 ? 'w-[70%] sm:w-[70%] md:w-[65%]' : ''}
+            ${step === 7 ? 'w-[90%] sm:w-[90%] md:w-[85%] xl:w-[75%]' : ''}
+            ${step === 8 ? 'w-[90%] sm:w-[90%] md:w-[85%] xl:w-[75%]' : ''}
           `}
         />
 

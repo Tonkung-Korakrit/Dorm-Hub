@@ -1,14 +1,17 @@
+// app/new-booking/components/BookingSummary.tsx
 "use client";
 
 import { useBooking } from "@/app/contexts/BookingContext";
 import { Checkbox } from "@headlessui/react";
 import { useState, useEffect } from "react";
-import { MdOutlinePerson, MdOutlineStyle } from "react-icons/md";
+import { MdCheck, MdOutlinePerson, MdOutlineStyle } from "react-icons/md";
 // import { MdTimer } from "react-icons/md";
 import { DORM_LABELS } from "@/lib/constants";
 import { LoadingOverlay } from "@/app/loading/components/LoadingOverlay";
 import { customFetch } from "@/lib/api";
 import ConfirmModal from "@/app/loading/components/ConfirmModal";
+import { BookingStatus } from "@/types/booking";
+import { useRouter } from 'next/navigation';
 
 interface BookingSummaryProps {
   setStep: (step: number) => void;
@@ -17,7 +20,8 @@ interface BookingSummaryProps {
 }
 
 export function BookingSummary({ setStep }: BookingSummaryProps) {
-  const { formResident, formRoom, setFormRoom, currentBooking, setCurrentBooking, ownerInfo, isEditMode, setIsEditMode } = useBooking();
+  const { formResident, formRoom, setFormRoom, currentBooking, setCurrentBooking,
+    ownerInfo, isEditMode, setIsEditMode, vehicle, setVehicle } = useBooking();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAcceptAgreement, setIsAccepstAgreement] = useState(false);
   const [bookingError, setBookingError] = useState<{
@@ -25,7 +29,8 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
     message: string;
     title: string;
   } | null>(null);
-
+  const isResubmitting = currentBooking?.status === BookingStatus.REJECTED;
+  const router = useRouter();
 
   console.log("formRoom in Summary:", formRoom);
   console.log("formResident in Summary:", formResident);
@@ -41,15 +46,30 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
     setStep(targetStep); // ส่งกลับไปยังหน้าที่ต้องการแก้
   };
 
+  // const handleEdit = (targetStep: number, section?: string) => {
+  //   setIsEditMode(true);
+  //   // ตัวอย่าง: ถ้าอยากแก้ Lifestyle ให้ส่ง section=lifestyle ไปด้วย
+  //   // คุณอาจจะต้องใช้ router.push หรือถ้า setStep เป็น state ภายใน ก็สามารถรับ parameter เพิ่มได้
+  //   setStep(targetStep);
+  //   if (section) {
+  //     window.history.replaceState(null, '', `?section=${section}`);
+  //   }
+  // };
+
   const handleFinalConfirm = async () => {
     setIsSubmitting(true);
     try {
-      const res = await customFetch("/api/bookings", {
-        method: "POST",
+      const endpoint = isResubmitting ? "/api/bookings/update-rejected" : "/api/bookings";
+      const method = isResubmitting ? "PUT" : "POST";
+
+      const res = await customFetch(endpoint, {
+        method: method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          bookingId: currentBooking?.id,
           user: formResident,
           room: formRoom,
+          vehicle: vehicle,
           type: currentBooking.type,
           groupId: ownerInfo?.studentId,
         }),
@@ -82,7 +102,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         // room: data.booking.room,
       }));
 
-      setStep(8); // ไปหน้า Payment
+      isResubmitting ? router.push("/my-booking") : setStep(8); // ไปหน้า Payment
     } catch (err: any) {
       // alert(err.message);
       setBookingError({
@@ -115,8 +135,22 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           showCancel={false}
         />
       )}
+
+      {isResubmitting && (
+        <div className="mb-8 p-5 bg-amber-50 border border-amber-200 rounded-[2rem] flex gap-4 items-center">
+          <div className="bg-amber-500 text-white p-2 rounded-full shadow-md">
+            <MdCheck size={24} />
+          </div>
+          <div>
+            <p className="text-amber-800 font-bold text-sm">Review your corrections</p>
+            <p className="text-amber-700 text-xs italic">กรุณาตรวจสอบข้อมูลที่ท่านแก้ไขตามคำแนะนำ: "{currentBooking.remark}"</p>
+          </div>
+        </div>
+      )}
       {/* <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b pb-4 gap-4"> */}
-      <h2 className="text-[24px] font-semibold text-gray-700 mb-4">Booking Summary / สรุปการจอง</h2>
+      <h2 className="text-[24px] font-semibold text-gray-700 mb-4">
+        {isResubmitting ? "Resubmit Information / ส่งข้อมูลแก้ไข" : "Booking Summary / สรุปการจอง"}
+      </h2>
 
       <div className="space-y-4">
         {/* 1. ข้อมูลนักศึกษา */}
@@ -160,84 +194,93 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         </section> */}
 
         {/* 2. รายละเอียดที่พัก */}
-        <section>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold text-lg text-[#006432]">2. Room & Booking Detail</h3>
-            <button
-              // onClick={() => handleEdit(currentBooking?.type === "CO_RESIDENT" ? 4 : 6)}
+        {!isResubmitting && (
+          <section>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold text-lg text-[#006432]">2. Booking & Room Detail</h3>
+              {/* <button
               onClick={() => setStep(currentBooking?.type === "CO_RESIDENT" ? 4 : 4)}
               className="text-sm text-blue-500 hover:text-blue-700 font-semibold">
               Edit
-            </button>
-          </div>
-
-          <div className="bg-[#f0f7f0] p-4 rounded-[2rem] border-2 border-[#e0ede0]">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[15px]">
-              <p><span className="text-gray-500">Campus (Dorm):</span> {DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}</p>
-              <p><span className="text-gray-500">Zone / Floor:</span> {formRoom?.dorm?.name} / Floor {formRoom.floor}</p>
-              {/* <p><span className="text-gray-500">Type:</span> {currentBooking?.type}</p> */}
-              {/* <p><span className="text-gray-500">Room Type:</span> {formRoom.roomType}</p> */}
-              <p><span className="text-gray-500">Room Type:</span> {DORM_LABELS.ROOM_TYPES[formRoom.roomType as keyof typeof DORM_LABELS.ROOM_TYPES]?.label || formRoom.roomType}</p>
-              <p><span className="text-gray-500">Monthly Price:</span> <span className="font-bold text-gray-800">{formRoom.price?.toLocaleString()} THB/MONTH</span></p>
-              <p><span className="text-gray-500">Booking Type:</span> {DORM_LABELS.RESIDENT_TYPE[currentBooking?.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking?.type}</p>
+            </button> */}
+              {!isResubmitting && (
+                <button onClick={() => setStep(4)} className="text-sm text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
+              )}
             </div>
 
-            {/* ส่วนแสดง Room Number ใหญ่ๆ */}
-            <div className="mt-5 pt-5 border-t border-green-200 flex justify-between items-end">
-              <div>
-                <span className="text-green-700/60 block text-xs font-bold uppercase tracking-wider mb-1">Room Number</span>
-                <span className="text-5xl font-black text-[#126A31]">{formRoom.roomId || "N/A"}</span>
+            <div className="bg-[#f0f7f0] p-4 rounded-[2rem] border-2 border-[#e0ede0]">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[15px]">
+                <p><span className="text-gray-500">Booking Type:</span> {DORM_LABELS.RESIDENT_TYPE[currentBooking?.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking?.type}</p>
+                <p><span className="text-gray-500">Campus (Dorm):</span> {DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}</p>
+                <p><span className="text-gray-500">Zone & Floor:</span> {formRoom?.dorm?.name} & Floor {formRoom.floor}</p>
+                {/* <p><span className="text-gray-500">Type:</span> {currentBooking?.type}</p> */}
+                {/* <p><span className="text-gray-500">Room Type:</span> {formRoom.roomType}</p> */}
+                <p><span className="text-gray-500">Room Type:</span> {DORM_LABELS.ROOM_TYPES[formRoom.roomType as keyof typeof DORM_LABELS.ROOM_TYPES]?.label || formRoom.roomType}</p>
+                <p><span className="text-gray-500">Monthly Price:</span> <span className="font-bold text-gray-800">{formRoom.price?.toLocaleString()} THB/MONTH</span></p>
               </div>
-            </div>
-            {currentBooking?.type === "CO_RESIDENT" && ownerInfo && (
-              <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full md:w-auto">
-                <div className="w-12 h-12 bg-[#126A31] rounded-2xl flex items-center justify-center text-white shadow-inner">
-                  <MdOutlinePerson size={24} />
-                </div>
+
+              {/* ส่วนแสดง Room Number ใหญ่ๆ */}
+              <div className="mt-5 pt-5 border-t border-green-200 flex justify-between items-end">
                 <div>
-                  <p className="text-[10px] font-bold text-green-700 uppercase">Staying with</p>
-                  <p className="text-sm font-black text-gray-800">{ownerInfo.name || "Owner ID: " + ownerInfo.studentId}</p>
-                  <p className="text-[10px] text-gray-400">Verified Resident</p>
+                  <span className="text-green-700/60 block text-xs font-bold uppercase tracking-wider mb-1">Room Number</span>
+                  <span className="text-5xl font-black text-[#126A31]">{formRoom.roomId || "N/A"}</span>
                 </div>
               </div>
-            )}
-          </div>
-        </section>
+              {currentBooking?.type === "CO_RESIDENT" && ownerInfo && (
+                <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full md:w-auto">
+                  <div className="w-12 h-12 bg-[#126A31] rounded-2xl flex items-center justify-center text-white shadow-inner">
+                    <MdOutlinePerson size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold text-green-700 uppercase">Staying with</p>
+                    <p className="text-sm font-black text-gray-800">{ownerInfo.name || "Owner ID: " + ownerInfo.studentId}</p>
+                    <p className="text-[10px] text-gray-400">Verified Resident</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </section>
+        )}
 
         {/* 3. ไลฟ์สไตล์ที่เลือก */}
-        <section>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold text-lg text-[#006432] mb-3 flex items-center gap-2">
-              3. Lifestyle Preference
-            </h3>
-            <button
+        {!isResubmitting && (
+          <section>
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="font-bold text-lg text-[#006432] mb-3 flex items-center gap-2">
+                3. Lifestyle Preference
+              </h3>
+              {/* <button
               onClick={() => handleEdit(4)}
               className="text-sm text-blue-500 hover:text-blue-700 font-semibold"
-            >
-              Edit
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {formResident?.lifestyle?.length > 0 ? (
-              formResident.lifestyle.map((id: string) => {
-                // ดึงค่าจาก constants
-                const config = DORM_LABELS.LIFESTYLE[id as keyof typeof DORM_LABELS.LIFESTYLE];
-                if (!config) return null;
+              >
+                Edit
+              </button> */}
+              {/* {!isResubmitting && (
+                  <button onClick={() => setStep(4)} className="text-sm text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
+                )} */}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {formResident?.lifestyle?.length > 0 ? (
+                formResident.lifestyle.map((id: string) => {
+                  // ดึงค่าจาก constants
+                  const config = DORM_LABELS.LIFESTYLE[id as keyof typeof DORM_LABELS.LIFESTYLE];
+                  if (!config) return null;
 
-                const Icon = config.icon; // ดึง Component Icon มา
+                  const Icon = config.icon; // ดึง Component Icon มา
 
-                return (
-                  <span key={id} className="bg-white border border-gray-200 px-3 py-1.5 rounded-xl text-sm flex items-center gap-1.5 shadow-sm">
-                    <Icon className="text-[#126A31]" size={16} />
-                    <span className="text-gray-700 font-medium">{config.label}</span>
-                  </span>
-                );
-              })
-            ) : (
-              <p className="text-sm text-gray-400 italic">ไม่ได้ระบุไลฟ์สไตล์เพิ่มเติม</p>
-            )}
-          </div>
-        </section>
+                  return (
+                    <span key={id} className="bg-white border border-gray-200 px-3 py-1.5 rounded-xl text-sm flex items-center gap-1.5 shadow-sm">
+                      <Icon className="text-[#126A31]" size={16} />
+                      <span className="text-gray-700 font-medium">{config.label}</span>
+                    </span>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-gray-400 italic">ไม่ได้ระบุไลฟ์สไตล์เพิ่มเติม</p>
+              )}
+            </div>
+          </section>
+        )}
 
         <div className="p-4 bg-red-50 rounded-2xl border border-red-200 flex gap-3">
           <span className="text-red-500 font-bold shrink-0">Note:</span>
@@ -306,19 +349,24 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
 
       <div className="flex flex-col md:flex-row gap-3 mt-2">
         <button
-          onClick={() => setStep(6)}
+          onClick={() => setStep(isResubmitting ? 3 : 6)}
           className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all order-2 md:order-1"
         >
           ย้อนกลับ (Back)
         </button>
         <button
-          disabled={!isAcceptAgreement || isSubmitting} // || timeLeft <= 0
+          disabled={!isAcceptAgreement || isSubmitting}
           onClick={handleFinalConfirm}
-          className="flex-1 py-4 bg-[#126A31] text-white rounded-2xl font-bold hover:bg-black shadow-lg shadow-green-100 transition-all disabled:bg-gray-300 order-1 md:order-2"
+          className={`flex-1 py-4 text-white rounded-2xl font-bold shadow-lg transition-all 
+            ${(!isAcceptAgreement || isSubmitting)
+              ? "bg-gray-300 cursor-not-allowed shadow-none" // สีตอนกดไม่ได้
+              : isResubmitting
+                ? "bg-amber-500 hover:bg-amber-700 shadow-amber-100" // สีส้มตอนกดได้
+                : "bg-[#126A31] hover:bg-[#093218] shadow-green-100" // สีเขียวตอนกดได้
+            }`}
         >
-          ยืนยันการจองจริง (Confirm)
-          {/* {isSubmitting ? "กำลังตรวจสอบสถานะห้อง..." : "ยืนยันการจองจริง (Confirm)"} */}
-          {isSubmitting && <LoadingOverlay message="กำลังตรวจสอบสถานะห้อง..." />}
+          {isSubmitting ? "Processing..." : isResubmitting ? "ส่งข้อมูลแก้ไข (Resubmit)" : "ยืนยันการจองจริง (Confirm)"}
+          {isSubmitting && <LoadingOverlay message="กำลังบันทึกข้อมูล..." />}
         </button>
       </div>
     </div >

@@ -37,8 +37,12 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export const BookingProvider = ({ children }: { children: ReactNode }) => {
   // console.log("Context Provider is Rendering!");
   // const router = useRouter();
-  
+
   const [isEditMode, setIsEditMode] = useState(false);
+  // const [editState, setEditState] = useState<{
+  //   section: 'resident' | 'room' | 'lifestyle' | null;
+  //   isEdit: boolean;
+  // }>({ section: null, isEdit: false });
 
   const [formResident, setFormResident] = useState<Resident>({
     id: 0,
@@ -62,7 +66,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     lifestyle: [],
     isEnabled: true,
 
-    address: [], 
+    address: [],
     guardians: [],
     profileImage: [],
     vehicleInfo: null,
@@ -121,6 +125,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     licensePlate: "",
     province: "",
     ownerName: "",
+    fileImages: "",
     // createdAt: "",
     // updatedAt: "",
   })

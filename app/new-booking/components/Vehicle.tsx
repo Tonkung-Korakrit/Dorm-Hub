@@ -1,12 +1,17 @@
+// app/new-booing/components/Vehicle.tsx
 "use client";
+
 import { Fragment, useEffect, useState, useRef } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
 import { Combobox, Transition } from '@headlessui/react';
 import { MdSwapVert, MdCheck, MdClose, MdCloudUpload } from "react-icons/md";
+import { BookingStatus } from "@/types/booking";
 
 export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
-  const { formResident, setFormResident, vehicle, setVehicle } = useBooking();
+  const { formResident, setFormResident, vehicle, setVehicle,
+    currentBooking, setCurrentBooking, isEditMode, setIsEditMode } = useBooking();
   const [mounted, setMounted] = useState(false);
+  const editId = new URLSearchParams(window.location.search).get("edit");
 
   const [provinceQuery, setProvinceQuery] = useState('');
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -25,6 +30,16 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     setMounted(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    if (currentBooking?.status === BookingStatus.REJECTED && currentBooking.cus_users.vehicleInfo) {
+      setVehicle(currentBooking.cus_users.vehicleInfo);
+      // ถ้ามี URL รูปเดิมจาก DB ก็เอามาใส่ Preview
+      if (currentBooking.cus_users.vehicleInfo.fileImages) {
+        setPreviewImage(currentBooking.cus_users.vehicleInfo.fileImages);
+      }
+    }
+  }, [currentBooking, setVehicle]);
 
   // ฟังก์ชันจัดการการเปลี่ยนทะเบียนรถ
   // const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -48,6 +63,22 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
       const imageUrl = URL.createObjectURL(file);
       setPreviewImage(imageUrl);
       // setVehicle(prev => ({ ...prev, registrationFile: file })); // ถ้าต้องการเก็บ File Object ลง Context
+    }
+  };
+
+  const handleNext = () => {
+    // ตรวจสอบความถูกต้องเบื้องต้น (ถ้ามีทะเบียน ต้องมีจังหวัดและรูป)
+    // if (vehicle.licensePlate && (!vehicle.province || !previewImage)) {
+    //   toast.error("กรุณาระบุข้อมูลรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ใช้รถ");
+    //   return;
+    // }
+
+    if (editId || isEditMode) {
+      // ถ้าเป็นโหมดแก้ไข ให้ข้ามไปหน้าสรุป (Step 7) เลย!
+      setStep(7);
+    } else {
+      // โหมดจองปกติ ไปเลือกวิทยาเขตต่อ (Step 4)
+      setStep(4);
     }
   };
 
@@ -230,7 +261,11 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
       <div className="flex gap-2 mt-12 text-[16px]">
         {/* <button onClick={() => setStep(2)} className="flex-1 bg-[#7D856C] text-white px-6 py-2 rounded-xl shadow-lg">Back</button> */}
         <button onClick={() => setStep(2)} className="flex-1 bg-[#7D856C] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all">Back</button>
-        <button onClick={() => setStep(4)} className="flex-1 bg-[#006633] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all">Next</button>
+        <button
+          onClick={handleNext}
+          className="flex-1 bg-[#006633] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all">
+          {isEditMode ? "Save & Return to Summary" : "Next"}
+        </button>
       </div>
     </div>
   );

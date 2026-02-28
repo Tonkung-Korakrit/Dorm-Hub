@@ -13,10 +13,16 @@ apiInstance.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BR
 
 const baseUrl = process.env.NEXTAUTH_URL || 'https://tudormbooking-production.up.railway.app/';
 // const senderName = "ฝ่ายบริหารหอพัก มหาวิทยาลัยธรรมศาสตร์";
-const senderName = "สำนักงานบริหารทรัพย์และกีฬา มหาวิทยาลัยธรรมศาสตร์";
+const senderName = "สำนักงานบริหารทรัพย์สิน และกีฬา ธรรมศาสตร์";
 const senderEmail = process.env.BREVO_USER as string;
 
 const cleanEmail = (email: string) => email.replace(/[\n\r\t\s]/g, "").trim();
+
+// --- สไตล์ส่วนที่ใช้ร่วมกัน (Common Components) ---
+const commonTableStyle = `width: 100%; border-collapse: collapse;`;
+const labelStyle = `padding: 8px 0; color: #64748b; font-size: 14px; width: 130px; vertical-align: top;`;
+const valueStyle = `padding: 8px 0; font-size: 14px; color: #1e293b; font-weight: 600;`;
+const cardStyle = `background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 25px; border-radius: 12px; margin-bottom: 30px;`;
 
 // --- 1. ฟังก์ชันส่งเมลแจ้งผลการตรวจ (CONFIRMED / REJECTED) ---
 export const sendStatusEmail = async (
@@ -27,7 +33,9 @@ export const sendStatusEmail = async (
 ) => {
   const targetEmail = cleanEmail(booking.cus_users.email);
   const isConfirmed = status === BookingStatus.COMPLETED;
+  const isRejected = status === BookingStatus.REJECTED;
   // const transporter = getTransporter();
+  if (!isConfirmed && !isRejected) return;
 
   const sendSmtpEmail = new Brevo.SendSmtpEmail();
   sendSmtpEmail.subject = isConfirmed
@@ -50,28 +58,37 @@ export const sendStatusEmail = async (
           ยินดีด้วย! หอพักมหาวิทยาลัยได้ตรวจสอบหลักฐานการชำระเงินของท่านเรียบร้อยแล้ว และขอ <b>ยืนยันสิทธิ์การเข้าพัก</b> ของท่านตามรายละเอียดดังนี้:
         </p>
         
-        <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
-          <h3 style="font-size: 14px; color: #64748b; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">ข้อมูลการเข้าพัก</h3>
-          <table style="width: 100%; font-size: 15px; border-collapse: collapse;">
+        <div style="${cardStyle}">
+          <h3 style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">รายละเอียดการจอง</h3>
+          <table style="${commonTableStyle}">
             <tr>
-              <td style="padding: 6px 0; color: #64748b; width: 140px;">หอพัก/โซน:</td>
-              <td style="padding: 6px 0; font-weight: 600;">${booking.room.dorm.campus.name} / ${booking.room.dorm.name}</td>
+              <td style="${labelStyle}">หอพัก/โซน:</td>
+              <td style="${valueStyle}">
+                ${booking.room.dorm.campus.name} / ${booking.room.dorm.name}
+              </td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">ห้องพัก:</td>
-              <td style="padding: 6px 0; font-weight: 600;">ห้อง ${booking.room.roomId} (ชั้น ${booking.room.floor})</td>
+              <td style="${labelStyle}">ห้องพัก:</td>
+              <td style="${valueStyle}">
+                ห้อง ${booking.room.roomId} (ชั้น ${booking.room.floor})
+              </td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">ประเภทห้อง:</td>
-              <td style="padding: 6px 0;">${booking.room.roomType} (${booking.type})</td>
+              <td style="${labelStyle}">ประเภท:</td>
+              <td style="${valueStyle}">
+                ${booking.room.roomType} <span style="color: #94a3b8; font-size: 12px;">(${booking.type})</span>
+              </td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">สถานะ:</td>
-              <td style="padding: 6px 0; color: #006432; font-weight: 600;">ยืนยันสำเร็จ (Confirmed)</td>
+              <td style="${labelStyle}">สถานะสิทธิ์:</td>
+              <td style="padding: 8px 0; font-size: 14px; color: #059669; font-weight: 700;">
+                ✓ ยืนยันสำเร็จ (Confirmed)
+              </td>
             </tr>
           </table>
+          
           ${coResidentNote ? `
-          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 13px; color: #0369a1;">
+          <div style="margin-top: 15px; padding: 12px; background-color: #f0f9ff; border-radius: 8px; font-size: 13px; color: #0369a1; line-height: 1.5;">
             <b>หมายเหตุ:</b> ${coResidentNote}
           </div>` : ''}
         </div>
@@ -90,101 +107,67 @@ export const sendStatusEmail = async (
         </div>
       </div>
 
+      <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">หากมีข้อสงสัย<br />ท่านสามารถสอบถามเพิ่มเติมผ่านทาง:</h4>
+          <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
+            <li>เบอร์โทรศัพท์: <a href="tel:020262345" style="color: #006432; text-decoration: none; font-weight: 600;">02-026-2345</a></li>
+            <li>Line@: <a href="https://line.me/ti/p/@baantuofficial" style="color: #006432; text-decoration: none; font-weight: 600;">@baantuofficial</a></li> 
+            <li>Email: <a href="mailto:marketing@psm.tu.ac.th" style="color: #006432; text-decoration: none; font-weight: 600;">marketing@psm.tu.ac.th</a></li>
+            <li>Facebook Page: <a href="https://www.facebook.com/psm.tu?locale=th_TH" target="_blank" style="color: #006432; text-decoration: none; font-weight: 600;">baantuofficial</a></li>
+          </ul>
+        </div>
+      </div>
+
       <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-        <p style="margin: 0 0 5px 0;">© 2026 ${senderName} | ระบบอัตโนมัติ กรุณาอย่าตอบกลับ</p>
+        <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+        <p style="margin: 0;">© 2026 ${senderName}</p>
       </div>
     </div>`;
-
-  // const htmlConfirmed = `
-  //   <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; padding: 0; border-radius: 24px; overflow: hidden;">
-  //     <div style="background-color: #006432; padding: 40px 20px; text-align: center;">
-  //       <h1 style="color: #ffffff; margin: 0; font-size: 28px;">ยืนยันการจองสำเร็จ</h1>
-  //       <p style="color: #d1fae5; margin-top: 10px; font-size: 16px;">เลขที่การจอง #${booking.id}</p>
-  //     </div>
-  //     <div style="padding: 30px;">
-  //       <p style="font-size: 18px;">เรียน คุณ <b>${booking.user.name_th}</b>,</p>
-  //       <p style="color: #4b5563;">ยินดีด้วย! ระบบได้ยืนยันสิทธิ์การเข้าพักของท่านเรียบร้อยแล้ว:</p>
-  //       <div style="background-color: #f8fafc; padding: 25px; border-radius: 16px; margin: 25px 0; border: 1px solid #f1f5f9;">
-  //         <p style="margin: 5px 0;"><b>หอพัก:</b> ${booking.room.zone.dorm.name}</p>
-  //         <p style="margin: 5px 0;"><b>โซน:</b> ${booking.room.zone.name}</p>
-  //         <p style="margin: 5px 0;"><b>ห้อง:</b> ${booking.room.roomId} (ชั้น ${booking.room.floor})</p>
-  //         <p style="margin: 5px 0;"><b>ประเภทห้อง:</b> ${booking.room.roomType}</p>
-  //         <p style="margin: 5px 0;"><b>ประเภทการจอง:</b> ${booking.type}</p>
-  //         ${coResidentNote ? `<p style="margin-top: 10px; color: #0369a1;">ℹ️ ${coResidentNote}</p>` : ''}
-  //       </div>
-  //       <h3 style="color: #006432;">🗓️ ขั้นตอนถัดไป</h3>
-  //       <ul style="font-size: 14px; color: #4b5563; line-height: 1.8;">
-  //         <li><b>การรับกุญแจ:</b> ติดต่อรับได้ที่สำนักงานหอพักในวันรายงานตัว</li>
-  //         <li><b>เอกสาร:</b> บัตรนักศึกษา หรือ บัตรประจำตัวประชาชนตัวจริง</li>
-  //       </ul>
-  //       <div style="text-align: center; margin-top: 30px;">
-  //         <a href="${baseUrl}/my-booking" style="background-color: #006432; color: white; padding: 14px 25px; text-decoration: none; border-radius: 12px; font-weight: bold; display: inline-block;">ดูรายละเอียดในระบบ</a>
-  //       </div>
-  //     </div>
-  //   </div>`;
 
   const htmlRejected = `
     <div style="font-family: 'Sarabun', -apple-system, sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #fee2e2; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
       <div style="background-color: #dc2626; padding: 30px 20px; text-align: center;">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งปัญหาการตรวจสอบการชำระเงิน</h2>
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งผลการตรวจสอบข้อมูลการจอง</h2>
         <p style="color: #fee2e2; margin-top: 8px; font-size: 14px;">รายการจอง #${booking.id} ต้องได้รับการแก้ไข</p>
       </div>
 
       <div style="padding: 40px 30px;">
         <p style="font-size: 16px; margin-bottom: 20px;">เรียน คุณ <b>${booking.cus_users.name_th}</b>,</p>
         <p style="line-height: 1.7; color: #4b5563; margin-bottom: 25px;">
-          จากการตรวจสอบหลักฐานการชำระเงินของท่านโดยเจ้าหน้าที่ <b>พบข้อมูลไม่ถูกต้องหรือไม่ครบถ้วน</b> 
+          จากการตรวจสอบ **ข้อมูลหรือหลักฐานการจอง** ของท่านโดยเจ้าหน้าที่ พบจุดที่ต้องดำเนินการแก้ไข 
           ทำให้ไม่สามารถยืนยันการจองได้ในขณะนี้
         </p>
         
         <div style="background-color: #fef2f2; border: 1px solid #fee2e2; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
-          <h3 style="font-size: 14px; color: #991b1b; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold;">❌ สาเหตุที่ปฏิเสธ:</h3>
-          <p style="font-size: 15px; color: #b91c1c; margin: 0; line-height: 1.6; background: #ffffff; padding: 15px; border-radius: 6px; border-left: 4px solid #dc2626;">
-            "${remark || 'หลักฐานการชำระเงินไม่ชัดเจน หรือข้อมูลไม่ตรงกับยอดที่ต้องชำระ'}"
-          </p>
+          <h3 style="font-size: 13px; color: #991b1b; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">❌ สิ่งที่ต้องแก้ไข / เหตุผล:</h3>
+          <div style="font-size: 15px; color: #b91c1c; margin: 0; line-height: 1.6; background: #ffffff; padding: 15px; border-radius: 6px; border-left: 4px solid #dc2626;">
+            ${remark || 'ข้อมูลไม่ถูกต้องครบถ้วน กรุณาตรวจสอบอีกครั้งในระบบ'}
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 30px;">
+          <a href="${baseUrl}/my-booking" style="background-color: #dc2626; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);">กดเพื่อเข้าแก้ไขข้อมูลทันที</a>
         </div>
 
         <p style="font-size: 14px; color: #64748b; margin-bottom: 25px;">
-          กรุณาตรวจสอบความถูกต้องของสลิปการโอนเงิน และดำเนินการอัปโหลดหลักฐานใหม่อีกครั้งภายในระยะเวลาที่กำหนด เพื่อรักษาเสถียรภาพสิทธิ์ในการจองห้องพักของท่าน
+          กรุณาดำเนินการแก้ไขข้อมูลให้ถูกต้องภายในระยะเวลา 3 วัน เพื่อรักษาเสถียรภาพสิทธิ์ในการจองห้องพักของท่าน
         </p>
 
-        <div style="padding-top: 20px; border-top: 1px solid #f1f5f9; font-size: 13px; color: #94a3b8;">
-          หากท่านมีข้อสงสัยเพิ่มเติม สามารถติดต่อสอบถามได้ที่ Line@: <b>@baantuofficial</b> หรือโทร 02-026-2345
+        <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">หากมีข้อสงสัย<br />ท่านสามารถสอบถามเพิ่มเติมผ่านทาง:</h4>
+          <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
+            <li>เบอร์โทรศัพท์: <a href="tel:020262345" style="color: #006432; text-decoration: none; font-weight: 600;">02-026-2345</a></li>
+            <li>Line@: <a href="https://line.me/ti/p/@baantuofficial" style="color: #006432; text-decoration: none; font-weight: 600;">@baantuofficial</a></li> 
+            <li>Email: <a href="mailto:marketing@psm.tu.ac.th" style="color: #006432; text-decoration: none; font-weight: 600;">marketing@psm.tu.ac.th</a></li>
+            <li>Facebook Page: <a href="https://www.facebook.com/psm.tu?locale=th_TH" target="_blank" style="color: #006432; text-decoration: none; font-weight: 600;">baantuofficial</a></li>
+          </ul>
         </div>
       </div>
 
       <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
-        <p style="margin: 0;">© 2026 ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
+        <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
       </div>
     </div>`;
-
-    //  <div style="text-align: center; margin-bottom: 30px;">
-    //       <a href="${baseUrl}/payment" style="background-color: #dc2626; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">อัปโหลดสลิปใหม่อีกครั้ง</a>
-    //     </div>
-
-  // const htmlRejected = `
-  //   <div style="font-family: sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #fee2e2; padding: 0; border-radius: 24px; overflow: hidden;">
-  //     <div style="background-color: #dc2626; padding: 40px 20px; text-align: center;">
-  //       <h1 style="color: #ffffff; margin: 0; font-size: 26px;">ชำระเงินไม่สำเร็จ</h1>
-  //       <p style="color: #fee2e2; margin-top: 10px; font-size: 14px;">รายการจอง #${booking.id} ถูกปฏิเสธ</p>
-  //     </div>
-  //     <div style="padding: 30px;">
-  //       <p style="font-size: 18px;">เรียน คุณ <b>${booking.user.name_th}</b>,</p>
-  //       <p style="color: #4b5563;">เจ้าหน้าที่ได้ตรวจสอบหลักฐานการชำระเงินของท่านแล้วพบว่าข้อมูลไม่ถูกต้อง</p>
-  //       <div style="background-color: #fef2f2; border: 1px solid #fee2e2; padding: 20px; border-radius: 16px; margin: 25px 0;">
-  //         <p style="margin: 5px 0;"><b>หอพัก:</b> ${booking.room.zone.dorm.name}</p>
-  //         <p style="margin: 5px 0;"><b>โซน:</b> ${booking.room.zone.name}</p>
-  //         <p style="margin: 5px 0;"><b>ห้อง:</b> ${booking.room.roomId} (ชั้น ${booking.room.floor})</p>
-  //         <p style="margin: 5px 0;"><b>ประเภทห้อง:</b> ${booking.room.roomType}</p>
-  //         <p style="margin: 5px 0;"><b>ประเภทการจอง:</b> ${booking.type}</p>  
-  //         <p style="margin: 0; color: #991b1b; font-weight: bold;">❌ เหตุผลที่ปฏิเสธ:</p>
-  //         <p style="margin: 10px 0 0 0; color: #b91c1c;">"${remark || 'หลักฐานไม่ชัดเจน กรุณาอัปโหลดใหม่อีกครั้ง'}"</p>
-  //       </div>
-  //       <div style="text-align: center; margin-top: 30px;">
-  //         <a href="${baseUrl}/payment" style="background-color: #dc2626; color: white; padding: 12px 25px; text-decoration: none; border-radius: 10px; font-weight: bold; display: inline-block;">อัปโหลดสลิปใหม่อีกครั้ง</a>
-  //       </div>
-  //     </div>
-  //   </div>`;
 
   sendSmtpEmail.htmlContent = isConfirmed ? htmlConfirmed : htmlRejected;
 
@@ -240,7 +223,7 @@ export const sendPaymentVerifyingEmail = async (
 
   //     <h3 style="font-size: 16px; color: #006432;">🗓️ ขั้นตอนถัดไป (What's Next?)</h3>
   //     <ul style="font-size: 14px; padding-left: 20px; line-height: 1.6;">
-  //       <li><b>รอการตรวจสอบ:</b> เจ้าหน้าที่จะตรวจสอบสลิปภายใน 24-48 ชั่วโมง (ในวันและเวลาทำการ)</li>
+  //       <li><b>รอการตรวจสอบ:</b> เจ้าหน้าที่จะตรวจสอบสลิปภายใน 24-48 ชั่วโมง (ในวัน และเวลาทำการ)</li>
   //       <li><b>การยืนยันสิทธิ์:</b> เมื่อตรวจสอบสำเร็จ ระบบจะส่งอีเมล <b>"ยืนยันสิทธิ์การเข้าพัก (Confirmed)"</b> ให้ท่านอีกครั้งหนึ่ง</li>
   //       <li><b>กรณีข้อมูลไม่ถูกต้อง:</b> หากยอดเงินไม่ตรงหรือสลิปไม่ชัดเจน เจ้าหน้าที่จะแจ้งผลการปฏิเสธผ่านทางอีเมลเพื่อให้ท่านดำเนินการแก้ไข</li>
   //     </ul>
@@ -251,9 +234,9 @@ export const sendPaymentVerifyingEmail = async (
   //     </div>
   //   </div>`;
 
-  const htmlPending = `
+  const htmlVerifying = `
     <div style="font-family: 'Sarabun', -apple-system, sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-      <div style="background-color: #00B7EB; padding: 30px 20px; text-align: center;">
+      <div style="background-color: #3b82f6; padding: 30px 20px; text-align: center;">
         <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งยืนยันการรับหลักฐานการชำระเงินค่ามัดจำ</h2>
         <p style="color: #d1fae5; margin-top: 8px; font-size: 14px;">${senderName}</p>
       </div>
@@ -266,24 +249,24 @@ export const sendPaymentVerifyingEmail = async (
           โดยเจ้าหน้าที่${senderName} โปรดรอการดำเนินการภายใน 1-2 วันทำการ
         </p>
         
-        <div style="background-color: #f8fafc; border: 1px solid #f1f5f9; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
+        <div style="${cardStyle}">
           <h3 style="font-size: 14px; color: #64748b; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">รายละเอียดการจอง</h3>
-          <table style="width: 100%; font-size: 15px; border-collapse: collapse;">
+          <table style="${commonTableStyle}">
             <tr>
-              <td style="padding: 6px 0; color: #64748b; width: 140px;">เลขที่อ้างอิง:</td>
-              <td style="padding: 6px 0; font-weight: 600;">#${booking.id}</td>
+              <td style="${labelStyle}">เลขที่อ้างอิง:</td>
+              <td style="${valueStyle}">#${booking.id}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">หอพัก/โซน:</td>
-              <td style="padding: 6px 0;">${DORM_LABELS.CAMPUS[booking.room.dorm.campus.name as keyof typeof DORM_LABELS.CAMPUS] || booking.room.dorm.campus.name} / ${booking.room.dorm.name}</td>
+              <td style="${labelStyle}">หอพัก/โซน:</td>
+              <td style="${valueStyle}">${DORM_LABELS.CAMPUS[booking.room.dorm.campus.name as keyof typeof DORM_LABELS.CAMPUS] || booking.room.dorm.campus.name} / ${booking.room.dorm.name}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">ห้องพัก:</td>
-              <td style="padding: 6px 0;">ห้อง ${booking.room.roomId} (ชั้น ${booking.room.floor})</td>
+              <td style="${labelStyle}">ห้องพัก:</td>
+              <td style="${valueStyle}">ห้อง ${booking.room.roomId} (ชั้น ${booking.room.floor})</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #64748b;">สถานะปัจจุบัน:</td>
-              <td style="padding: 6px 0; color: #9a3412; font-weight: 600;">อยู่ระหว่างการตรวจสอบ (Verified)</td>
+              <td style="${labelStyle}">สถานะปัจจุบัน:</td>
+              <td style="padding: 6px 0; color: #3b82f6; font-weight: 600;">อยู่ระหว่างการตรวจสอบข้อมูล (Verifying)</td>
             </tr>
           </table>
           ${coResidentNote ? `
@@ -297,10 +280,8 @@ export const sendPaymentVerifyingEmail = async (
         </div>
 
         <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
-          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">ข้อควรทราบ:</h4>
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">หากมีข้อสงสัย<br />ท่านสามารถสอบถามเพิ่มเติมผ่านทาง:</h4>
           <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
-            <li>หากข้อมูลถูกต้อง ระบบจะส่งอีเมลยืนยันสิทธิ์เข้าพัก (Confirmed) ให้ท่านอีกครั้ง</li>
-            <li>หากพบความผิดปกติของสลิป เจ้าหน้าที่จะแจ้งผลการปฏิเสธเพื่อให้ท่านแก้ไข</li>
             <li>เบอร์โทรศัพท์: <a href="tel:020262345" style="color: #006432; text-decoration: none; font-weight: 600;">02-026-2345</a></li>
             <li>Line@: <a href="https://line.me/ti/p/@baantuofficial" style="color: #006432; text-decoration: none; font-weight: 600;">@baantuofficial</a></li> 
             <li>Email: <a href="mailto:marketing@psm.tu.ac.th" style="color: #006432; text-decoration: none; font-weight: 600;">marketing@psm.tu.ac.th</a></li>
@@ -315,7 +296,7 @@ export const sendPaymentVerifyingEmail = async (
       </div>
     </div>`;
 
-  sendSmtpEmail.htmlContent = htmlPending;
+  sendSmtpEmail.htmlContent = htmlVerifying;
 
   // transporter.verify((error, success) => {
   //   if (error) {
@@ -328,6 +309,90 @@ export const sendPaymentVerifyingEmail = async (
   try {
     const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
     console.log("✅ [Brevo API Success]: ได้รับสลิปเรียบร้อย!", data.body.messageId);
+    return { success: true };
+  } catch (error: any) {
+    console.error("❌ [Brevo API Error]:", error.response?.body || error.message);
+    return { success: false, error: error.message };
+  }
+};
+
+export const sendResubmissionReceivedEmail = async (
+  booking: MailBookingData,
+) => {
+  const targetEmail = cleanEmail(booking.cus_users.email);
+  const sendSmtpEmail = new Brevo.SendSmtpEmail();
+
+  // ปรับ Subject ให้ชัดเจนว่าเป็นการรับข้อมูลที่ "แก้ไขแล้ว"
+  sendSmtpEmail.subject = `[RE-VERIFYING] แจ้งยืนยันการรับข้อมูลที่แก้ไขแล้ว - ห้อง ${booking.room.roomId}`;
+  sendSmtpEmail.sender = { "name": senderName, "email": senderEmail };
+  sendSmtpEmail.to = [{ "email": targetEmail, "name": booking.cus_users.name_th }];
+
+  console.log(`[GmailService] พยายามส่งเมล RE-VERIFYING ไปที่: ${targetEmail}`);
+
+  const htmlResubmission = `
+    <div style="font-family: 'Sarabun', -apple-system, sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      <div style="background-color: #F59E0B; padding: 30px 20px; text-align: center;">
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งยืนยันการรับข้อมูลที่แก้ไขแล้ว</h2>
+        <p style="color: #fef3c7; margin-top: 8px; font-size: 14px;">${senderName}</p>
+      </div>
+
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px; margin-bottom: 20px;">เรียน คุณ <b>${booking.cus_users.name_th}</b>,</p>
+        <p style="line-height: 1.7; color: #4b5563; margin-bottom: 30px;">
+          ระบบได้รับข้อมูลที่ท่านดำเนินการ <b>แก้ไข และส่งเข้ามาใหม่ (Resubmitted)</b> เรียบร้อยแล้ว 
+          ขณะนี้ข้อมูลดังกล่าวถูกส่งกลับเข้าสู่ระบบเพื่อให้เจ้าหน้าที่ตรวจสอบความถูกต้องอีกครั้ง 
+          โปรดรอการดำเนินการภายใน 1-2 วันทำการ
+        </p>
+        
+        <div style="${cardStyle}">
+          <h3 style="font-size: 14px; color: #b45309; margin: 0 0 15px 0; text-transform: uppercase; letter-spacing: 1px;">รายละเอียดการจอง (แก้ไขข้อมูล)</h3>
+          <table style="${commonTableStyle}">
+            <tr>
+              <td style="${labelStyle}">เลขที่อ้างอิง:</td>
+              <td style="${valueStyle}">#${booking.id}</td>
+            </tr>
+            <tr>
+              <td style="${labelStyle}">ห้องพัก:</td>
+              <td style="${valueStyle}">ห้อง ${booking.room.roomId} (ชั้น ${booking.room.floor})</td>
+            </tr>
+            <tr>
+              <td style="${labelStyle}">สถานะปัจจุบัน:</td>
+              <td style="padding: 6px 0; color: #d97706; font-weight: 600;">อยู่ระหว่างตรวจสอบข้อมูลที่แก้ไข (Verifying)</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin-bottom: 35px;">
+          <a href="${baseUrl}/my-booking" style="background-color: #d97706; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">ตรวจสอบสถานะการจองล่าสุด</a>
+        </div>
+
+        <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">ขั้นตอนถัดไป:</h4>
+          <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
+            <li>เจ้าหน้าที่จะตรวจสอบข้อมูลตามที่ท่านได้แก้ไขเข้ามาใหม่</li>
+            <li>หากข้อมูลถูกต้อง ท่านจะได้รับอีเมลยืนยันสิทธิ์หรือแจ้งสถานะถัดไปผ่านทางระบบ</li>
+          </ul>
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">หากมีข้อสงสัย<br />ท่านสามารถสอบถามเพิ่มเติมผ่านทาง:</h4>
+          <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
+            <li>เบอร์โทรศัพท์: <a href="tel:020262345" style="color: #006432; text-decoration: none; font-weight: 600;">02-026-2345</a></li>
+            <li>Line@: <a href="https://line.me/ti/p/@baantuofficial" style="color: #006432; text-decoration: none; font-weight: 600;">@baantuofficial</a></li> 
+            <li>Email: <a href="mailto:marketing@psm.tu.ac.th" style="color: #006432; text-decoration: none; font-weight: 600;">marketing@psm.tu.ac.th</a></li>
+            <li>Facebook Page: <a href="https://www.facebook.com/psm.tu?locale=th_TH" target="_blank" style="color: #006432; text-decoration: none; font-weight: 600;">baantuofficial</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+        <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+        <p style="margin: 0;">© 2026 ${senderName}</p>
+      </div>
+    </div>`;
+
+  sendSmtpEmail.htmlContent = htmlResubmission;
+
+  try {
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("✅ [Brevo API Success]: ส่งเมลแจ้งรับข้อมูลแก้ไขเรียบร้อย!", data.body.messageId);
     return { success: true };
   } catch (error: any) {
     console.error("❌ [Brevo API Error]:", error.response?.body || error.message);

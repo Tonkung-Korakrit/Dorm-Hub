@@ -43,6 +43,7 @@ export interface Vehicle {
   licensePlate: string;
   province: string;
   ownerName: string;
+  fileImages: string;
   // createdAt: Date;
   // updatedAt: Date;
 }
@@ -124,13 +125,16 @@ export interface Booking {
   status: BookingStatus;
   type: BookingType;
   createdAt: Date;
+  remark?: string;
 
   // expiresAt?: Date | null;
+  
   // userId: number;
   // roomId: number;
   // verifiedBy?: number | null;
   // verifier?: Admin | null;
   
+  // vehicle?: Vehicle;
   cus_users: Resident; 
   room: Room;
 }

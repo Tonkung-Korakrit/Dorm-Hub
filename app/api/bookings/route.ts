@@ -14,19 +14,15 @@ export async function POST(request: NextRequest) {
 
     // --- เริ่มกระบวนการจองภายใน Transaction ---
     const result = await prisma.$transaction(async (tx) => {
-
-      // 1. ดึงข้อมูลห้องที่ต้องการจอง
-      const targetRoom = await tx.room.findUnique({
-        where: { id: Number(room.id) },
-        select: {
-          id: true,
-          status: true,
-          capacity: true,
-          currentOccupancy: true,
-          isSuite: true,
-          parentId: true
-        }
-      });
+      // 1. ล็อกแถวข้อมูลห้องทันที (คนอื่นที่อ่านห้องเดียวกันด้วย FOR UPDATE จะต้องรอ)
+      // วิธีนี้จะทำให้คนอื่นที่พยายามเข้าถึงห้องเดียวกันต้อง "รอ" จนกว่าคนแรกจะจบ Transaction
+      const rooms: any[] = await tx.$queryRaw`
+        SELECT id, status, capacity, currentOccupancy, parentId 
+        FROM Room 
+        WHERE id = ${Number(room.id)} 
+        FOR UPDATE
+      `;
+      const targetRoom = rooms[0];
 
       if (!targetRoom) throw new Error("ไม่พบข้อมูลห้องพัก");
       if (targetRoom.status === RoomStatus.FULL) throw new Error("ห้องพักนี้เต็มแล้ว");
@@ -42,6 +38,10 @@ export async function POST(request: NextRequest) {
       let newOcc = targetRoom.currentOccupancy + 1;
       // let newStatus: RoomStatus = RoomStatus.AVAILABLE;
       let newStatus: RoomStatus = targetRoom.status;
+
+      if (type !== BookingType.CO_RESIDENT && newOcc > targetRoom.capacity) {
+        throw new Error("ขออภัย มีผู้ใช้งานท่านอื่นจองที่นั่งสุดท้ายไปก่อนหน้าคุณเพียงเสี้ยววินาที");
+      }
 
       const MAX_CO_RESIDENT_ADDITIONAL = 10;
       const CO_RESIDENT_LIMIT = room.capacity + MAX_CO_RESIDENT_ADDITIONAL;
@@ -67,38 +67,35 @@ export async function POST(request: NextRequest) {
       }
 
       // 4. อัปเดตข้อมูลห้องที่ผู้ใช้เลือก
-      const updatedRoom = await tx.room.update({
-        // await tx.room.update({
+      // const updatedRoom = await tx.room.update({
+      //   // await tx.room.update({
+      //   where: {
+      //     id: targetRoom.id,
+      //     // ด่านป้องกันสุดท้าย: ถ้าตอนที่กำลังจะเขียน ข้อมูลเปลี่ยนไปแล้ว ให้ Update ล้มเหลว
+      //     status: targetRoom.status,
+      //     currentOccupancy: targetRoom.currentOccupancy
+      //   },
+      //   data: {
+      //     currentOccupancy: newOcc,
+      //     status: newStatus,
+      //     // คนแรกที่จองห้องนี้จะเป็นคนกำหนด Lifestyle กลางของห้อง
+      //     ...(targetRoom.currentOccupancy === 0 && { lifestyleConfig: lifestyleArray })
+      //   },
+      // }).catch(() => {
+      //   // ถ้าจับ Error ตรงนี้ได้ แสดงว่ามีคนจองตัดหน้าไปเสี้ยววินาที
+      //   throw new Error("ขออภัย ห้องพักถูกจองไปแล้วโดยผู้ใช้อื่น กรุณาลองใหม่อีกครั้ง");
+      // });
+
+      // 2. อัปเดตข้อมูล (ไม่ต้องใส่เงื่อนไข status ใน where แล้ว เพราะเราล็อกแถวไว้แล้ว)
+      await tx.room.update({
         where: { id: targetRoom.id },
         data: {
           currentOccupancy: newOcc,
           status: newStatus,
-          // คนแรกที่จองห้องนี้จะเป็นคนกำหนด Lifestyle กลางของห้อง
-          ...(targetRoom.currentOccupancy === 0 && { lifestyleConfig: lifestyleArray })
         },
       });
 
       // 5. --- LOGIC พิเศษสำหรับ ZONE B (Suite Hierarchy) ---
-
-      // กรณี A: ถ้าผู้ใช้จอง "ห้องลูก" (Sub-room)
-      // if (targetRoom.parentId) {
-      //   // เช็คพี่น้องใน Suite เดียวกันทั้งหมด
-      //   const allSubRooms = await tx.room.findMany({
-      //     where: { parentId: targetRoom.parentId },
-      //     select: { status: true }
-      //   });
-
-      //   const isEverySubRoomFull = allSubRooms.every(r => r.status === RoomStatus.FULL);
-
-      //   // อัปเดตสถานะห้องแม่ (Suite)
-      //   await tx.room.update({
-      //     where: { id: targetRoom.parentId },
-      //     data: {
-      //       status: isEverySubRoomFull ? RoomStatus.FULL : RoomStatus.PENDING
-      //     }
-      //   });
-      // }
-
       // กรณี A: ถ้าผู้ใช้จอง "ห้องลูก" (Sub-room)
       if (targetRoom.parentId) {
         // ดึงข้อมูลพี่น้อง และห้องแม่มาคำนวณพร้อมกัน
@@ -120,10 +117,6 @@ export async function POST(request: NextRequest) {
             return r.status === RoomStatus.AVAILABLE;
           });
 
-          // เช็คสถานะห้องแม่: จะขึ้น PENDING ก็ต่อเมื่อ "ทั้ง A และ B" ไม่ว่างแล้ว
-          // const isRoomA_Busy = suiteData.subRooms.find(r => r.roomId.endsWith('A'))?.status !== RoomStatus.AVAILABLE;
-          // const isRoomB_Busy = suiteData.subRooms.find(r => r.roomId.endsWith('B'))?.status !== RoomStatus.AVAILABLE;
-
           // อัปเดตสถานะห้องแม่: Sync ทั้งจำนวนคน และสถานะ
           await tx.room.update({
             where: { id: targetRoom.parentId },
@@ -135,53 +128,62 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // กรณี B: ถ้าผู้ใช้จอง "ห้องแม่" (Suite) แบบเหมา (CHARTER)
-      // if (targetRoom.isSuite && type === BookingType.CHARTER) {
-      //   // สั่งปิดห้องลูกทุกห้องทันที
-      //   await tx.room.updateMany({
-      //     where: { parentId: targetRoom.id },
-      //     data: {
-      //       status: RoomStatus.PENDING,
-      //       currentOccupancy: 2 // สมมติว่าห้องลูกมีความจุ 2
-      //     }
-      //   });
-      // }
-
       // 6. สร้างใบ Booking
+      // const newBooking = await tx.booking.create({
+      //   data: {
+      //     userId: Number(user.id),
+      //     roomId: targetRoom.id,
+      //     // status: BookingStatus.PENDING,
+      //     booking_logs: {
+      //       create: {
+      //         status: BookingStatus.PENDING, // ต้องระบุสถานะเริ่มต้นเสมอ
+      //         createdAt: new Date(),
+      //       }
+      //     },
+      //     type: type as BookingType,
+      //     groupId: groupId || null,
+      //     // expiresAt: new Date(Date.now() + 10 * 60 * 1000), // หมดอายุใน 10 นาที
+      //   },
+
+      //   include: {
+      //     booking_logs: {
+      //       select: {
+      //         status: true,
+      //       },
+      //       orderBy: { createdAt: 'desc' },
+      //       take: 1
+      //     }
+      //   }
+      // });
+
+      // const bookingResponse = {
+      //   ...newBooking,
+      //   // ดึง status จาก log ตัวแรกออกมาแปะไว้ข้างบน
+      //   status: newBooking.booking_logs[0]?.status || BookingStatus.PENDING
+      // };
+
       const newBooking = await tx.booking.create({
         data: {
           userId: Number(user.id),
           roomId: targetRoom.id,
-          // status: BookingStatus.PENDING,
+          type: type as BookingType,
+          groupId: groupId || null,
           booking_logs: {
             create: {
-              status: BookingStatus.PENDING, // ต้องระบุสถานะเริ่มต้นเสมอ
+              status: BookingStatus.PENDING,
               createdAt: new Date(),
             }
           },
-          type: type as BookingType,
-          groupId: groupId || null,
-          // expiresAt: new Date(Date.now() + 10 * 60 * 1000), // หมดอายุใน 10 นาที
         },
-
         include: {
           booking_logs: {
-            select: {
-              status: true,
-            },
             orderBy: { createdAt: 'desc' },
             take: 1
           }
         }
       });
 
-      const bookingResponse = {
-        ...newBooking,
-        // ดึง status จาก log ตัวแรกออกมาแปะไว้ข้างบน
-        status: newBooking.booking_logs[0]?.status || BookingStatus.PENDING
-      };
-
-      return bookingResponse;
+      return newBooking;
     }, {
       timeout: 15000,
       isolationLevel: 'Serializable' // เพิ่มความเข้มงวดป้องกันการจองซ้อน

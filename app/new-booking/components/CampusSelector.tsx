@@ -153,90 +153,86 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
       <h1 className="text-[24px] font-semibold text-gray-700 mb-4 leading-tight">Room Information / <br />ข้อมูลห้องพัก</h1>
 
       <div className="space-y-4">
-        {!isEditMode && (
-          <>
-            <h4 className="text-[16px] font-semibold text-gray-700 mb-2">
-              Type of resident / ประเภทผู้พัก <span className="text-red-500">*</span>
-            </h4>
+        <h4 className="text-[16px] font-semibold text-gray-700 mb-2">
+          Type of resident / ประเภทผู้พัก <span className="text-red-500">*</span>
+        </h4>
 
-            <div className="relative">
-              <select
-                name="type"
-                value={currentBooking?.type || ""}
-                onChange={handleTypeChange}
-                className="w-full py-2 px-2 border bg-[#006633] text-white rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-green-400 shadow-md"
-              >
-                <option value="" disabled hidden>-- เลือกประเภทผู้พัก / Select resident type --</option>
-                {Object.values(BookingType).map((type) => (
-                  <option key={type} value={type}>
-                    {/* {BOOKING_TYPE_LABELS[type]} */}
-                    {DORM_LABELS.RESIDENT_TYPE[type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || type}
-                  </option>
-                ))}
-              </select>
-              <div className="absolute inset-y-0 right-1 flex items-center pointer-events-none">
-                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+        <div className="relative">
+          <select
+            name="type"
+            value={currentBooking?.type || ""}
+            onChange={handleTypeChange}
+            className="w-full py-2 px-2 border bg-[#006633] text-white rounded-xl appearance-none focus:outline-none focus:ring-2 focus:ring-green-400 shadow-md"
+          >
+            <option value="" disabled hidden>-- เลือกประเภทผู้พัก / Select resident type --</option>
+            {Object.values(BookingType).map((type) => (
+              <option key={type} value={type}>
+                {/* {BOOKING_TYPE_LABELS[type]} */}
+                {DORM_LABELS.RESIDENT_TYPE[type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || type}
+              </option>
+            ))}
+          </select>
+          <div className="absolute inset-y-0 right-1 flex items-center pointer-events-none">
+            <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Booking Detail - รายละเอียดประเภทการจอง */}
+        {currentBooking?.type && (
+          <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn">
+            <div className="flex gap-2">
+              <div className="mt-0.5">
+                <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                 </svg>
               </div>
+              <div>
+                <p className="text-[13px] font-bold text-amber-500 mb-1">รายละเอียดประเภทการจอง:</p>
+                <p className="text-[12px] text-gray-600 leading-relaxed">
+                  {DORM_LABELS.RESIDENT_TYPE_DESC[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE_DESC]}
+                </p>
+              </div>
             </div>
+          </div>
+        )}
 
-            {currentBooking?.type && (
-              <div className="mt-3 p-4 bg-amber-50 border border-amber-200 rounded-xl animate-fadeIn">
-                <div className="flex gap-2">
-                  <div className="mt-0.5">
-                    <svg className="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <div>
-                    <p className="text-[13px] font-bold text-amber-500 mb-1">รายละเอียดประเภทการจอง:</p>
-                    <p className="text-[12px] text-gray-600 leading-relaxed">
-                      {DORM_LABELS.RESIDENT_TYPE_DESC[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE_DESC]}
-                    </p>
-                  </div>
-                </div>
+        {/* ส่วน Search สำหรับ CO_RESIDENT */}
+        {currentBooking?.type === "CO_RESIDENT" && (
+          <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-300">
+            <h5 className="text-[16px] font-bold text-emerald-800 mb-3 flex items-center gap-2">
+              <MdPersonSearch size={20} />
+              Search for Room Owner / ค้นหาเจ้าของห้องหลัก
+            </h5>
+            <div className="space-y-3">
+              <label className="block text-[12px] text-emerald-700 mb-1 ml-1">Owner Student ID / รหัสนักศึกษาเจ้าของห้อง</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={ownerStudentId}
+                  onChange={(e) => setOwnerId(e.target.value)}
+                  placeholder="เช่น 6601xxxx"
+                  className="flex-1 px-4 py-2.5 bg-white border border-emerald-300 rounded-xl outline-none text-black text-sm"
+                />
+                <button onClick={handleVerifyOwner} className="px-2 py-2.5 bg-[#006633] text-white rounded-xl font-bold text-[12px]">Check</button>
               </div>
-            )}
-
-            {/* ส่วน Search สำหรับ CO_RESIDENT (UI เดิมของคุณ) */}
-            {currentBooking?.type === "CO_RESIDENT" && (
-              <div className="mt-6 p-4 bg-emerald-50 border border-emerald-200 rounded-2xl animate-in fade-in slide-in-from-top-4 duration-300">
-                <h5 className="text-[16px] font-bold text-emerald-800 mb-3 flex items-center gap-2">
-                  <MdPersonSearch size={20} />
-                  Search for Room Owner / ค้นหาเจ้าของห้องหลัก
-                </h5>
-                <div className="space-y-3">
-                  <label className="block text-[12px] text-emerald-700 mb-1 ml-1">Owner Student ID / รหัสนักศึกษาเจ้าของห้อง</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={ownerStudentId}
-                      onChange={(e) => setOwnerId(e.target.value)}
-                      placeholder="เช่น 6601xxxx"
-                      className="flex-1 px-4 py-2.5 bg-white border border-emerald-300 rounded-xl outline-none text-black text-sm"
-                    />
-                    <button onClick={handleVerifyOwner} className="px-2 py-2.5 bg-[#006633] text-white rounded-xl font-bold text-[12px]">Check</button>
-                  </div>
-                  {ownerInfo && (
-                    <div className="bg-white/60 p-3 rounded-lg border border-emerald-100 text-[13px] text-emerald-900">
-                      <p>✅ <b>พบข้อมูล:</b> โซน {ownerInfo.dorm || ""} - ห้อง {ownerInfo.roomId || ""}</p>
-                    </div>
-                  )}
+              {ownerInfo && (
+                <div className="bg-white/60 p-3 rounded-lg border border-emerald-100 text-[13px] text-emerald-900">
+                  <p>✅ <b>พบข้อมูล:</b> โซน {ownerInfo.dorm || ""} - ห้อง {ownerInfo.roomId || ""}</p>
                 </div>
-              </div>
-            )}
-          </>
+              )}
+            </div>
+          </div>
         )}
       </div>
-
       <hr className="my-2 border-gray-100" />
 
       {/* --- ส่วน Logic ซ่อน/แสดง เนื้อหาด้านล่าง --- */}
       {!currentBooking?.type ? (
         // 1. ถ้ายังไม่เลือก Type แสดงแค่ปุ่ม Back
         <div className="flex flex-col items-center py-6">
-          <p className="text-gray-400 text-sm mb-4 italic">กรุณาเลือกประเภทผู้พักเพื่อดำเนินการต่อ</p>
+          <p className="text-gray-400 text-sm mb-4 italic">Please select the guest type to proceed - กรุณาเลือกประเภทผู้พักเพื่อดำเนินการต่อ</p>
           <button onClick={() => setStep(3)} className="w-1/2 bg-[#7D856C] text-white py-3 rounded-2xl font-bold">Back</button>
         </div>
       ) : currentBooking.type === "CO_RESIDENT" ? (
@@ -255,9 +251,10 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
           </div>
         </div>
       ) : (
-        // 3. ถ้าเป็น CHARTER หรือ NOT_CHARTER แสดง Lifestyle + Campus (UI เดิมของคุณ)
+        // 3. ถ้าเป็น CHARTER หรือ NOT_CHARTER แสดง Lifestyle + Campus
         <>
-          {/* Lifestyle Section (UI เดิมเป๊ะ) */}
+          {/* {isEditMode && ( */}
+          {/* Lifestyle Section */}
           <section className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex items-center gap-2 mb-3">
               <h2 className="text-[16px] font-semibold text-gray-700">Inclusivity & Safety / ความหลากหลาย และความปลอดภัย</h2>
@@ -382,9 +379,9 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
           </div>
 
           {/* ปุ่ม Back สำหรับ Flow ปกติ */}
-          <div className="flex w-full mt-8 gap-2">
-            <button onClick={() => setStep(3)} className="flex-1 bg-[#7D856C] text-white py-3 rounded-2xl font-bold">Back</button>
-            {isEditMode && <button onClick={handleContinue} className="flex-1 bg-[#006633] text-white py-3 rounded-2xl font-bold shadow-lg">Save & Return</button>}
+          <div className={`flex w-[1/2] mt-8 gap-2`}>
+            <button onClick={() => setStep(3)} className="flex justify-start bg-[#7D856C] text-white px-[52px] py-3 rounded-2xl font-bold">Back</button>
+            {/* {isEditMode && <button onClick={handleContinue} className="flex-1 bg-[#006633] text-white text-[12px] py-3 rounded-2xl font-bold shadow-lg">Save & Return to Summary</button>} */}
           </div>
         </>
       )}

@@ -1,14 +1,18 @@
+// app/new-booking/components/Profile.tsx
 "use client";
 
 import { useEffect, useState, useRef } from "react";
 import { HiCamera, HiIdentification } from "react-icons/hi";
-import { MdClose } from "react-icons/md";
+import { MdClose, MdInfoOutline } from "react-icons/md";
 import toast from "react-hot-toast"; // แนะนำให้ใช้ toast ที่คุณมี
+import { useBooking } from "@/app/contexts/BookingContext";
+import { BookingStatus } from "@/types/booking";
 
 export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
+  const { formResident, setFormResident, isEditMode, setIsEditMode, currentBooking, setCurrentBooking } = useBooking();
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [idCardImage, setIdCardImage] = useState<string | null>(null);
-  
+
   // เพิ่ม State เก็บชื่อไฟล์เพื่อให้ UI อัปเดตทันที
   const [idFileName, setIdFileName] = useState<string>("");
 
@@ -34,7 +38,7 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     // 2. ตรวจสอบขนาดไฟล์ (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("ขนาดไฟล์ใหญ่เกินไป กรุณาอัปโหลดรูปไม่เกิน 5MB");
-      e.target.value = ""; 
+      e.target.value = "";
       return;
     }
 
@@ -62,33 +66,41 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
+      {currentBooking?.status === BookingStatus.REJECTED && (
+        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl">
+          <p className="text-amber-800 font-bold text-sm flex items-center gap-2 uppercase">
+            <MdInfoOutline size={18} /> Staff Feedback:
+          </p>
+          <p className="text-amber-900 text-sm mt-1">"{currentBooking.remark}"</p>
+        </div>
+      )}
+
       <h2 className="text-[24px] font-semibold text-gray-700">Student Profile /</h2>
       <h2 className="text-[24px] font-semibold text-gray-700 mb-4">รูปหน้าตรง และบัตรประชาชนนักศึกษา</h2>
 
       <div className="space-y-10">
         {/* --- ส่วนอัปโหลดรูปหน้าตรง --- */}
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายหน้าตรง<span className="text-red-500">*</span></p>
+          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายหน้าตรง</p> {/* <span className="text-red-500"> *</span> */}
           <p className="text-xs text-gray-400 mb-4">**ต้องเป็นรูปหน้าตรง เห็นใบหน้าชัดเจน เพื่อใช้สำหรับสแกนใบหน้าเข้าอาคารหอพัก</p>
-          
-          <input 
-            type="file" 
-            ref={faceInputRef} 
-            className="hidden" 
+
+          <input
+            type="file"
+            ref={faceInputRef}
+            className="hidden"
             accept="image/jpeg,image/png,image/webp"
             onChange={(e) => handleFileChange(e, 'face')}
           />
-          
-          <div 
+
+          <div
             onClick={() => !faceImage && faceInputRef.current?.click()}
-            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${
-              faceImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-            }`}
+            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${faceImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+              }`}
           >
             {faceImage ? (
               <>
                 <img src={faceImage} alt="Face Preview" className="w-full h-full object-cover" />
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); handleClearImage('face'); }}
                   className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
                 >
@@ -106,13 +118,13 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
 
         {/* --- ส่วนอัปโหลดบัตรประชาชน --- */}
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน<span className="text-red-500">*</span></p>
+          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน</p> {/* <span className="text-red-500"> *</span> */}
           <p className="text-xs text-gray-400 mb-4">*เฉพาะบัตรประจำตัวประชาชนเท่านั้น ไม่สามารถใช้เอกสารอื่นแทนได้</p>
-          
-          <input 
-            type="file" 
-            ref={idInputRef} 
-            className="hidden" 
+
+          <input
+            type="file"
+            ref={idInputRef}
+            className="hidden"
             accept="image/jpeg,image/png,image/webp"
             onChange={(e) => handleFileChange(e, 'id')}
           />
@@ -131,16 +143,15 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
               </div>
             </div> */}
 
-            <div 
+            <div
               onClick={() => !idCardImage && idInputRef.current?.click()}
-              className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${
-                idCardImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-              }`}
+              className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${idCardImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+                }`}
             >
               {idCardImage ? (
                 <>
                   <img src={idCardImage} alt="ID Card Preview" className="w-full h-full object-cover" />
-                  <button 
+                  <button
                     onClick={(e) => { e.stopPropagation(); handleClearImage('id'); }}
                     className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
                   >

@@ -9,9 +9,9 @@ import DatePicker from "./DatePickerWrapper";
 import "react-datepicker/dist/react-datepicker.css";
 import { th } from "date-fns/locale"; // สำหรับภาษาไทยในปฏิทิน
 import { Combobox, Transition } from '@headlessui/react';
-import { MdSwapVert, MdCheck } from "react-icons/md"; // ต้องลง @heroicons/react เพิ่ม
-import { set } from "react-datepicker/dist/date_utils";
-import { CitizenType } from "@/types/booking";
+import { MdSwapVert, MdCheck, MdInfoOutline } from "react-icons/md"; // ต้องลง @heroicons/react เพิ่ม
+// import { set } from "react-datepicker/dist/date_utils";
+import { BookingStatus, CitizenType } from "@/types/booking";
 
 // กำหนด Type สำหรับ Props ของ Component
 interface StudentInfoFormProps {
@@ -19,9 +19,10 @@ interface StudentInfoFormProps {
 }
 
 export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
-  const { formResident, setFormResident, isEditMode, setIsEditMode } = useBooking();
+  const { formResident, setFormResident, isEditMode, setIsEditMode, currentBooking, setCurrentBooking } = useBooking();
   const [query, setQuery] = useState('');
   const [errors, setErrors] = useState([]);
+  const isLocked = currentBooking?.status === BookingStatus.REJECTED;
 
   const filteredFaculty = query === ''
     ? FACULTY_LIST
@@ -40,6 +41,17 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     setMounted(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
+
+  useEffect(() => {
+    if (currentBooking && currentBooking.status === BookingStatus.REJECTED) {
+      // นำข้อมูลจาก DB มาใส่ในฟอร์มเพื่อให้ User แก้ไขเฉพาะจุด
+      setFormResident((prev) => ({
+        ...prev,
+        ...currentBooking.cus_users, // สมมติว่าใน currentBooking มีข้อมูล user แนบมา
+        // หรือดึง field อื่นๆ ที่จำเป็น
+      }));
+    }
+  }, [currentBooking, setFormResident]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value, type } = e.target;
@@ -133,14 +145,17 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     }
 
     setErrors([]);
-    if (isEditMode) {
-      // 2. ถ้ามาจากหน้า Summary ให้เด้งกลับทันทีหลังจากเลือกเตียงเสร็จ
-      setIsEditMode(false);
-      setStep(7); // กลับหน้า Summary
-    } else {
-      // 3. ถ้าเป็นการจองปกติ ให้ไปหน้าถัดไป (เช่น หน้าสรุป)
-      setStep(2);
-    }
+    // const isEditingFromRejected = currentBooking?.status === BookingStatus.REJECTED;
+    
+    setStep(2);
+    // if (isEditMode) {
+    //   // 2. ถ้ามาจากหน้า Summary ให้เด้งกลับทันทีหลังจากเลือกเตียงเสร็จ
+    //   setIsEditMode(false);
+    //   setStep(7); // กลับหน้า Summary
+    // } else {
+    //   // 3. ถ้าเป็นการจองปกติ ให้ไปหน้าถัดไป (เช่น หน้าสรุป)
+    //   setStep(2);
+    // }
   };
 
   // คำนวณวันที่ถอยหลังจากวันนี้ไป 18 ปี
@@ -149,6 +164,15 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
+      {currentBooking?.status === BookingStatus.REJECTED && currentBooking.remark && (
+        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl">
+          <p className="text-amber-800 font-bold text-sm uppercase flex items-center gap-2">
+            <MdInfoOutline size={18} /> Feedback from Staff:
+          </p>
+          <p className="text-amber-900 text-sm mt-1 font-thai">"{currentBooking.remark}"</p>
+        </div>
+      )}
+
       <h2 className="text-[24px] font-semibold text-gray-700 mb-4">
         Student Information / ข้อมูลนักศึกษา
       </h2>
@@ -317,9 +341,12 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
             <select
               className={`w-full border border-gray-300 rounded-lg px-3 py-2 
               focus:outline-none focus:ring-2 focus:ring-[#006633] text-white bg-[#006633]
-              transition-color placeholder:text-gray-400 ${errors.includes("gender") ? "border-red-500 border-2" : ""}`}
+              transition-color placeholder:text-gray-400 
+              ${isLocked ? "bg-gray-400 cursor-not-allowed" : "bg-[#006633]"}
+              ${errors.includes("gender") ? "border-red-500 border-2" : ""}`}
               value={formResident.gender || ""}
               name="gender"
+              disabled={isLocked}
               onChange={(e) => {
                 handleChange(e);
                 // เมื่อเปลี่ยนเพศ ให้ล้างคำนำหน้าเก่าทิ้ง เพื่อป้องกัน "นาย" ในเพศ "หญิง"
@@ -337,17 +364,19 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
 
           <div>
             <label className="block text-[16px] font-medium text-gray-700 mb-1">
-              Prefix / คำนำหน้าชื่อ <span className="text-red-500">*</span>
+              Title Name / คำนำหน้าชื่อ <span className="text-red-500">*</span>
             </label>
             <select
               className={`w-full border border-gray-300 rounded-lg px-3 py-2 
                 focus:outline-none focus:ring-2 focus:ring-[#006633] text-white bg-[#006633]
-                transition-color placeholder:text-gray-400 ${errors.includes("titleName") ? "border-red-500 border-2" : ""}`}
+                transition-color placeholder:text-gray-400 
+                ${isLocked ? "bg-gray-400 cursor-not-allowed" : "bg-[#006633]"}
+                ${errors.includes("titleName") ? "border-red-500 border-2" : ""}`}
               value={formResident.titleName || ""}
               name="titleName"
               onChange={handleChange}
               suppressHydrationWarning
-              disabled={!formResident.gender}
+              disabled={isLocked || !formResident.gender}
               required
             >
               <option value="" disabled hidden>-- Prefix --</option>
@@ -504,7 +533,7 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
               placeholderText="วัน/เดือน/ปี"
 
               // ปรับแต่งสไตล์ให้ Minimal (Tailwind) w-full
-              className={`w-[280px] sm:w-[336px] border border-gray-300 rounded-lg px-3 py-2 
+              className={`w-[286px] sm:w-[536px] md:w-[266px] lg:w-[336px] border border-gray-300 rounded-lg px-3 py-2 
               focus:outline-none focus:ring-2 focus:ring-[#006633] text-black bg-white
               transition-color placeholder:text-gray-400 ${errors.includes("birthDate") ? "border-red-500 border-2" : ""}`}
 
@@ -696,14 +725,15 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
       </div>
 
       {/* Button */}
-      <div className={`flex justify-end mt-6 ${isEditMode ? "text-[12px]" : "text-[16px]"}`}>
+      <div className={`flex justify-end w-[1/2] mt-6 font-bold ${isEditMode ? "text-[12px]" : "text-[16px]"}`}>
         <button
           type="button"
           onClick={handleNextStep}
           className="bg-[#006633] hover:bg-[#006699] text-white font-bold px-[52px] py-3 rounded-xl shadow transition flex items-center"
           suppressHydrationWarning
         >
-          {isEditMode ? "Save & Return to Summary" : "Next"}
+          {/* {isEditMode ? "Save & Return to Summary" : "Next"} */}
+          Next
         </button>
       </div>
     </div>

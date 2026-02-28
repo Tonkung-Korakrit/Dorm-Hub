@@ -1,3 +1,4 @@
+// api/admin/verify
 import { prisma } from "@/lib/prisma";
 import { BookingStatus } from "@/types/booking";
 import { NextRequest, NextResponse } from "next/server";
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     // 2. ใช้ Select แทน Include เพื่อดึงเฉพาะฟิลด์ที่ต้องใช้ใน Dashboard จริงๆ
     // วิธีนี้ช่วยลดขนาด JSON Payload และลดภาระของ Database
-    const pendingBookings = await prisma.booking.findMany({
+    const bookings = await prisma.booking.findMany({
       where: {
         // status: "VERIFYING", 
         booking_logs: {
@@ -30,6 +31,7 @@ export async function GET(request: NextRequest) {
           orderBy: {
             createdAt: "desc"
           },
+          // take: 3, // <--- ดึงแค่อันเดียว (อันที่ใหม่ที่สุด)
         },
         cus_users: {
           select: {
@@ -48,7 +50,12 @@ export async function GET(request: NextRequest) {
       skip: skip,  // ข้ามตามหน้า
     });
 
-    return NextResponse.json(pendingBookings);
+    const onlyPendingVerify = bookings.filter((booking) => {
+      const latestLog = booking.booking_logs[0];
+      return latestLog?.status === BookingStatus.VERIFYING;
+    });
+
+    return NextResponse.json(onlyPendingVerify);
   } catch (error) {
     console.error("Fetch Verify Error:", error);
     return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });

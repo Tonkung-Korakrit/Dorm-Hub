@@ -56,9 +56,18 @@ export default function AdminDashboard() {
     finally { setIsActioning(null); }
   };
 
-  const filtered = bookings.filter(b =>
-    b.user.name_th.includes(searchQuery) || b.user.studentId.includes(searchQuery)
-  );
+  // console.log("bookings: ", bookings);
+
+  const filtered = bookings.filter(b => {
+    // b.cus_users.name_th.includes(searchQuery) || b.cus_users.studentId.includes(searchQuery)
+    const userData = b.cus_users;
+
+    const name = userData?.name_th?.toLowerCase() || "";
+    const studentId = userData?.studentId?.toLowerCase() || "";
+    const query = searchQuery.toLowerCase();
+
+    return name.includes(query) || studentId.includes(query);
+  });
 
   const handleLogout = async () => {
     if (confirm("คุณต้องการออกจากระบบใช่หรือไม่?")) {
@@ -158,8 +167,8 @@ export default function AdminDashboard() {
                   {filtered.map((b) => (
                     <tr key={b.id} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="px-8 py-6">
-                        <div className="font-bold text-slate-900 leading-none mb-1">{b.user.name_th}</div>
-                        <div className="text-xs text-slate-400">{b.user.studentId}</div>
+                        <div className="font-bold text-slate-900 leading-none mb-1">{b.cus_users.name_th}</div>
+                        <div className="text-xs text-slate-400">{b.cus_users.studentId}</div>
                       </td>
                       <td className="px-8 py-6">
                         <div className="text-sm font-bold text-slate-700">Room {b.room.roomId}</div>
@@ -202,7 +211,7 @@ export default function AdminDashboard() {
                   {history.map((item, idx) => (
                     <div key={idx} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100/50 animate-in fade-in slide-in-from-bottom-2">
                       <div className="flex flex-col">
-                        <span className="font-bold text-[13px] text-slate-800">{item.user.name_th}</span>
+                        <span className="font-bold text-[13px] text-slate-800">{item.cus_users.name_th}</span>
                         <span className="text-[10px] text-slate-400 font-medium tracking-wide uppercase">Room {item.room.roomId}</span>
                       </div>
                       <StatusBadge status={item.actionStatus} />

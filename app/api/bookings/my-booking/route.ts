@@ -1,4 +1,7 @@
 // /app/api/bookings/my-booking/route.ts
+// export const dynamic = 'force-dynamic';
+// export const revalidate = 0;
+
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 // import { authOptions } from "@/app/api/auth/[...nextauth]/route";
@@ -59,6 +62,20 @@ export async function GET() {
             status: true,
             createdAt: true,
             updatedAt: true,
+            verifier: {
+              select: {
+                id: true,
+                staff_action_log: {
+                  select: {
+                    remark: true,
+                    createdAt: true,
+                  },
+                  orderBy: {
+                    createdAt: "desc" // ดึงสถานะล่าสุดของ Booking ใบนั้นๆ
+                  },
+                }
+              }
+            }
           },
           orderBy: {
             createdAt: "desc" // ดึงสถานะล่าสุดของ Booking ใบนั้นๆ
@@ -69,7 +86,7 @@ export async function GET() {
           select: {
             roomId: true,
             floor: true,
-            lifestyleConfig: true,
+            // lifestyleConfig: true,
             roomType: true,
             dorm: {
               select: {
@@ -91,6 +108,7 @@ export async function GET() {
             isScholarshipStudent: true,
             isDisabled: true,
             faculty_department: true,
+            lifestyle: true,
           }
         },
       },
@@ -109,7 +127,7 @@ export async function GET() {
       status: booking.booking_logs[0]?.status || BookingStatus.PENDING,
       type: booking.type,
       createdAt: booking.booking_logs[0]?.createdAt,
-      // expiresAt: booking.expiresAt,
+      remark: booking.booking_logs[0]?.verifier?.staff_action_log?.[0]?.remark || null,      // expiresAt: booking.expiresAt,
       // userId: booking.userId,
       room: {
         roomId: booking.room.roomId,
@@ -117,7 +135,7 @@ export async function GET() {
         dorm: booking.room.dorm.name,
         campus: booking.room.dorm.campus.name,
         roomType: booking.room.roomType,
-        lifestyleConfig: booking.room.lifestyleConfig || []
+        // lifestyleConfig: booking.room.lifestyleConfig || []
       },
       // studentId: booking.user.studentId,
       // name_th: booking.user.name_th,
@@ -133,7 +151,13 @@ export async function GET() {
         isScholarshipStudent: booking.cus_users.isScholarshipStudent,
         isDisabled: booking.cus_users.isDisabled,
         faculty_department: booking.cus_users.faculty_department,
+        lifestyle: booking.cus_users.lifestyle,
       }
+    // }, 
+    // {
+    //   headers: {
+    //     'Cache-Control': 'no-store, max-age=0',
+    //   }
     });
 
   } catch (error) {

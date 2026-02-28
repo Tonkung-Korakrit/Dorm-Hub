@@ -17,6 +17,7 @@ export function PaymentPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  // const expiryTimestamp = new Date(currentBooking.expiresAt).getTime();
 
   useEffect(() => {
     // เลื่อนหน้าไปด้านบนสุด เมื่อคอมโพเนนต์ mount
@@ -49,12 +50,6 @@ export function PaymentPage() {
   }, [currentBooking.id, isVerifying, isExpired]);
 
   // 1. ระบบนับเวลาถอยหลัง 10 นาที
-  // useEffect(() => {
-  //   if (timeLeft <= 0 || isVerifying) return;
-  //   const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-  //   return () => clearInterval(timer);
-  // }, [timeLeft, isVerifying]);
-
   useEffect(() => {
     if (isVerifying || isExpired) return;
 
@@ -66,6 +61,42 @@ export function PaymentPage() {
     const timer = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [timeLeft, isVerifying, isExpired, handleAutoCancel]);
+
+  // useEffect(() => {
+  //   if (isVerifying || isExpired) return;
+
+  //   const updateTimer = () => {
+  //     const now = new Date().getTime();
+  //     const distance = expiryTimestamp - now;
+  //     const secondsRemaining = Math.max(0, Math.floor(distance / 1000));
+
+  //     setTimeLeft(secondsRemaining);
+
+  //     if (secondsRemaining <= 0) {
+  //       handleAutoCancel(); // ฟังก์ชันยกเลิกจองอัตโนมัติ
+  //       return false; // สั่งให้หยุด Interval
+  //     }
+  //     return true;
+  //   };
+
+  //   // รันครั้งแรกทันทีที่โหลดหน้า
+  //   updateTimer();
+
+  //   // ตั้ง Interval
+  //   const timer = setInterval(() => {
+  //     const isActive = updateTimer();
+  //     if (!isActive) clearInterval(timer);
+  //   }, 1000);
+
+  //   // ดักจับเวลาผู้ใช้กลับมาที่แท็บ (Refresh เวลาให้ตรงเป๊ะ)
+  //   const handleFocus = () => updateTimer();
+  //   window.addEventListener('focus', handleFocus);
+
+  //   return () => {
+  //     clearInterval(timer);
+  //     window.removeEventListener('focus', handleFocus);
+  //   };
+  // }, [expiryTimestamp, isVerifying, isExpired]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -205,13 +236,14 @@ export function PaymentPage() {
     return (
       <div className="max-w-3xl mx-auto bg-white p-12 rounded-[3rem] shadow-2xl border border-gray-100 text-center">
         <MdCheckCircle className="text-[#126A31] text-8xl mx-auto mb-6 animate-bounce" />
-        <h1 className="text-2xl font-black text-gray-800 mb-2">ได้รับหลักฐานเรียบร้อย!</h1>
-        <p className="text-gray-500 mb-8">เจ้าหน้าที่กำลังตรวจสอบยอดเงินของคุณ ระบบจะแจ้งผลทางอีเมลภายใน 24 ชม.</p>
+        <h1 className="text-2xl font-black text-gray-800 mb-2">The evidence has been received / ได้รับหลักฐานเรียบร้อย!</h1>
+        <p className="text-gray-500">Our staff is currently reviewing your balance and other information. You will be notified of the result via email within 24 hours.</p>
+        <p className="text-gray-400 mb-8">เจ้าหน้าที่กำลังตรวจสอบยอดเงิน และข้อมูลอื่นๆ ของคุณ ระบบจะแจ้งผลทางอีเมลภายใน 24 ชม</p>
 
         <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 mb-8 text-left">
-          <p className="text-sm text-emerald-800 font-bold mb-2">ข้อมูลการตรวจสอบ:</p>
+          <p className="text-sm text-emerald-800 font-bold mb-2">Inspection data - ข้อมูลการตรวจสอบ:</p>
           <ul className="text-sm text-emerald-700 space-y-1">
-            <li>• สถานะ: <span className="font-bold">รอการยืนยัน (VERIFYING)</span></li>
+            <li>• สถานะ: <span className="font-bold">VERIFYING - เจ้าหน้าที่กำลังตรวจสอบ</span></li>
             <li>• อีเมลแจ้งเตือน: {formResident.email}</li>
           </ul>
         </div>
@@ -225,9 +257,9 @@ export function PaymentPage() {
 
   return (
     <div className="max-w-2xl mx-auto bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100">
-      <div className="text-center mb-8">
-        <h2 className="text-[24px] font-semibold text-gray-700 mb-4">Pay a deposit</h2>
-        <p className="text-gray-400 text-sm">กรุณาชำระเงิน และอัปโหลดสลิปเพื่อยืนยันสิทธิ์การจองห้องพัก</p>
+      <div className="text-left mb-8">
+        <h1 className="text-[24px] font-bold text-gray-700 mb-4 leading-tight">Pay a deposit / ชำระเงินค่ามัดจำ</h1>
+        <p className="text-gray-400 text-sm">Please make the payment and upload the receipt to confirm your room reservation - กรุณาชำระเงิน และอัปโหลดสลิปเพื่อยืนยันสิทธิ์การจองห้องพัก</p>
       </div>
 
       {/* Timer Bar */}
@@ -245,7 +277,7 @@ export function PaymentPage() {
         </div>
 
         <div className="text-center">
-          <p className="text-sm text-gray-500 mb-1">ยอดชำระทั้งสิ้น</p>
+          <p className="text-sm text-gray-500 mb-1">Total payment - ยอดชำระทั้งสิ้น</p>
           <p className="text-4xl font-black text-[#126A31]">{formRoom.price?.toLocaleString()} <span className="text-lg font-normal text-gray-400">THB</span></p>
         </div>
       </div>

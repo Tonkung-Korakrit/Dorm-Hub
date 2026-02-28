@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
 import useSWR from 'swr';
-import { Dorm } from "@/types/booking";
+import { Dorm, GenderType } from "@/types/booking";
 import { DORM_LABELS } from "@/lib/constants";
 import { ZoneCardSkeleton } from "@/app/loading/components/ิbook/ZoneCardSkeleton";
 import { customFetch } from "@/lib/api";
@@ -42,18 +42,18 @@ export function DormSelector({ setStep }: DormSelectorProps) {
     // console.log(`Filtering userGender: ${userGender}, userPrefix: ${userPrefix}`);
 
     // กรณีโซนสำหรับผู้ชาย (MALE) -> อนุญาตเฉพาะคำนำหน้า "นาย"
-    if (userGender === "MALE" && userPrefix === "Mr.") {
+    if ((userGender === GenderType.MALE || userGender === GenderType.LGBTQ) && userPrefix === "Mr.") {
       return zoneGender === "MALE";
     }
 
     // กรณีโซนสำหรับผู้หญิง (FEMALE) -> อนุญาตเฉพาะ "นางสาว" หรือ "นาง"
-    if (userGender === "FEMALE" && userPrefix === "Mrs." || userPrefix === "Ms.") {
+    if ((userGender === GenderType.FEMALE || userGender === GenderType.LGBTQ) && (userPrefix === "Mrs." || userPrefix === "Ms.")) {
       return zoneGender === "FEMALE";
     }
 
     // กรณีโซนหอรวม หรือเพศทางเลือก (ถ้ามี)
     // return zoneGender === "OTHER" || zoneGender === "LGBTQ";
-    return true;
+    // return true;
   });
 
   useEffect(() => {
@@ -99,7 +99,7 @@ export function DormSelector({ setStep }: DormSelectorProps) {
         {/* ({DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}) */}
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 text-[16px] px-2 py-2 bg-green-50 border border-green-300 rounded-xl animate-fadeIn">
+      <div className="grid grid-cols-1 gap-x-12 text-[16px] px-2 py-2 bg-green-50 border border-green-300 rounded-xl animate-fadeIn">
         <div className="flex flex-col gap-1">
           <span className="font-bold text-black shrink-0">Gender / เพศ :</span>
           <span className="text-gray-700">
@@ -108,15 +108,15 @@ export function DormSelector({ setStep }: DormSelectorProps) {
           </span>
         </div>
 
-        <div className="md:col-span-2 flex flex-col md:flex-row md:gap-2 mt-1">
-          <span className="font-bold text-black">Type of student / ประเภทของผู้พัก :</span>
+        <div className="flex flex-col gap-1 mt-1">
+          <span className="font-bold text-black shrink-0">Type of student / ประเภทของผู้พัก :</span>
           <span className="text-gray-700">
             {/* {currentBooking.type} */}
             {DORM_LABELS.RESIDENT_TYPE[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking.type}
           </span>
         </div>
 
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1 mt-1">
           <span className="font-bold text-black shrink-0">Selected Campus / วิทยาเขต :</span>
           <span className="text-gray-700">
             {/* {formRoom.campus} */}
@@ -143,7 +143,7 @@ export function DormSelector({ setStep }: DormSelectorProps) {
                 return (
                   <div
                     key={id}
-                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-100 text-[#126A31] text-[13px] rounded-xl shadow-sm transition-all duration-200 group" //hover:border-[#126A31]/30
+                    className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-100 text-[#126A31] text-[10px] md:text-[14px] rounded-xl shadow-sm transition-all duration-200 group" //hover:border-[#126A31]/30
                   >
                     {/* แสดง Icon พร้อมสีที่เป็นเอกลักษณ์ opacity-80 group-hover:opacity-100*/}
                     <Icon size={16} className="text-[#126A31]" />
