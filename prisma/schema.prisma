@@ -293,6 +293,7 @@ model Booking {
   groupId   String? // รหัสกลุ่ม (กรณีจองเหมาห้อง)
 
   booking_logs Booking_log[]
+  payments     Payment[]
 
   @@index([userId])
   @@index([roomId])
@@ -328,6 +329,35 @@ enum BookingType {
   CHARTER // เหมาห้อง
   NOT_CHARTER // ไม่เหมาห้อง (จองรายคน)
   CO_RESIDENT // จองแบบอยู่ร่วม
+}
+
+model Payment {
+  id             String        @id @default(uuid()) // ใช้ UUID เพื่อความปลอดภัยในการส่งค่าไป Gateway
+  bookingId      Int
+  booking        Booking       @relation(fields: [bookingId], references: [id])
+  
+  amount         Decimal       // จำนวนเงินมัดจำ
+  currency       String        @default("THB")
+  
+  status         PaymentStatus @default(PENDING)
+  method         String        @default("PROMPTPAY") // เก็บไว้เผื่ออนาคตรองรับ Credit Card
+  
+  // ข้อมูลจาก Gateway (สำคัญมากสำหรับตรวจสอบ)
+  external_id    String?       @unique // เช่น Charge ID จาก Omise หรือ Reference No. จากธนาคาร
+  qr_payload     String?       @db.Text // เก็บข้อมูลที่ใช้เจน QR Code
+  
+  paidAt         DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([bookingId])
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  EXPIRED
 }
 
 enum Role {

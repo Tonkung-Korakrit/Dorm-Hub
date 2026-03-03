@@ -70,6 +70,8 @@ export async function POST(request: NextRequest) {
 
       if (!isOwner) throw new Error("คุณไม่มีสิทธิ์ยกเลิกรายการจองนี้");
 
+      const finalStatus = isExpired ? BookingStatus.EXPIRED : BookingStatus.CANCELLED;
+
       // 4. Logic การคืนห้อง (เหมือนเดิมของนาย - เป๊ะแล้ว)
       const newOcc = current.type === BookingType.CHARTER ? 0 : Math.max(0, current.room.currentOccupancy - 1);
       
@@ -85,11 +87,18 @@ export async function POST(request: NextRequest) {
         });
       }
 
+      if (isExpired) {
+        await tx.payment.updateMany({
+          where: { bookingId: current.id, status: 'PENDING' },
+          data: { status: 'EXPIRED' }
+        });
+      }
+
       // 5. บันทึก Log การยกเลิก
       await tx.booking_log.create({
         data: {
           bookingId: current.id,
-          status: BookingStatus.CANCELLED
+          status: finalStatus
         }
       });
 

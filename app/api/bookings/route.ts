@@ -4,10 +4,24 @@ import { RoomStatus, BookingType, BookingStatus } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
-    const { user, room, type, groupId } = await request.json();
+    const body = await request.json();
+    // console.log("📌 Body received from k6:", body);
 
-    if (!user?.id || !room?.id) {
-      return NextResponse.json({ error: "Missing required data" }, { status: 400 });
+    const { user, room, type, groupId } = body;
+
+    // if (!user?.id || !room?.id) {
+    //   return NextResponse.json({ error: "Missing required data" }, { status: 400 });
+    // }
+
+    const uId = user?.id || user?.userId;
+    const rId = room?.id;
+
+    if (isNaN(uId) || isNaN(rId)) {
+      console.log("❌ Invalid ID detected:", { uId, rId });
+      return NextResponse.json({
+        error: "ID ผู้ใช้หรือ ID ห้องพักไม่ถูกต้อง",
+        received: { userId: uId, roomId: rId }
+      }, { status: 400 });
     }
 
     const lifestyleArray = user.lifestyle || [];
@@ -162,6 +176,8 @@ export async function POST(request: NextRequest) {
       //   status: newBooking.booking_logs[0]?.status || BookingStatus.PENDING
       // };
 
+      const depositAmount = room.price || 5000;
+
       const newBooking = await tx.booking.create({
         data: {
           userId: Number(user.id),
@@ -174,9 +190,27 @@ export async function POST(request: NextRequest) {
               createdAt: new Date(),
             }
           },
+
+          // เพิ่มการสร้าง Payment ตรงนี้เลย
+          payments: {
+            create: {
+              amount: depositAmount,
+              currency: "THB",
+              status: "PENDING",
+              method: "PROMPTPAY",
+              // ในขั้นตอนนี้เรายังไม่มี external_id จาก Gateway 
+              // เพราะเรายังไม่ได้ยิงไปหา Omise/ธนาคาร 
+              // เราจะสร้างไว้รอ แล้วค่อยไปอัปเดต qr_payload ที่หน้า /payment
+            },
+          },
         },
+        
         include: {
           booking_logs: {
+            orderBy: { createdAt: 'desc' },
+            take: 1
+          },
+          payments: {
             orderBy: { createdAt: 'desc' },
             take: 1
           }

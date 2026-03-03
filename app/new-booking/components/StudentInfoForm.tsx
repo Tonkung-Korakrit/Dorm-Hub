@@ -162,6 +162,8 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
   const today = new Date();
   const maxAllowedDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
 
+  console.log("currentBooking in StudenInfoForm: ", currentBooking);
+
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
       {currentBooking?.status === BookingStatus.REJECTED && currentBooking.remark && (

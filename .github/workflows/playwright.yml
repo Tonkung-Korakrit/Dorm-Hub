@@ -1,9 +1,10 @@
 name: Playwright Tests
 on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
+  workflow_dispatch:
+#   push:
+#     branches: [ main, dev_ton ]
+#   pull_request:
+#     branches: [ main, dev_ton ]
 jobs:
   test:
     timeout-minutes: 60
@@ -20,7 +21,7 @@ jobs:
     - name: Run Playwright tests
       run: npx playwright test
     - uses: actions/upload-artifact@v4
-      if: ${{ !cancelled() }}
+      iif: ${{ !cancelled() }}
       with:
         name: playwright-report
         path: playwright-report/

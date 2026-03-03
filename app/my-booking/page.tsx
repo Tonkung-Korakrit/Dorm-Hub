@@ -17,8 +17,10 @@ import { FaUsersLine } from "react-icons/fa6";
 import { Booking, BookingStatus } from "@/types/booking";
 import { customFetch } from "@/lib/api";
 import { RiHomeSmileFill } from "react-icons/ri";
+import { useBooking } from "../contexts/BookingContext";
 
 export default function StudentBooking() {
+  // const { Booking } = useBooking();
   const [booking, setBooking] = useState<Booking>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -347,52 +349,52 @@ export default function StudentBooking() {
               </div>
             </div>
             {/* <p className="text-[10px] text-gray-400">Current Status: {booking.status}</p> */}
-            {["PENDING", "VERIFYING", "CANCELLED", "REJECTED"].includes(booking.status) && (
+            {["PENDING", "VERIFYING", "CANCELLED", "REJECTED", "EXPIRED"].includes(booking.status) && (
               <div className={`flex flex-col md:flex-row justify-between items-center gap-4 -mx-4 md:-mx-10 px-4 md:px-10 pb-6 md:pb-4 rounded-b-2xl transition-colors duration-300
-    ${booking.status === "CANCELLED" ? "bg-gray-50/80 border-gray-100" :
-                  booking.status === "REJECTED" ? "bg-amber-50/40 border-amber-100" : "bg-red-50/30 border-red-50"}
-  `}>
+              ${(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "bg-gray-50/80 border-gray-100" :
+                  booking.status === BookingStatus.REJECTED ? "bg-amber-50/40 border-amber-100" : "bg-red-50/30 border-red-50"}
+              `}>
 
                 {/* --- ส่วนข้อความ (Left Side) --- */}
                 <div className="flex items-start gap-3 flex-1">
                   <div className={`mt-2 p-2 rounded-lg 
-        ${booking.status === "CANCELLED" ? "bg-gray-200 text-gray-500" :
-                      booking.status === "REJECTED" ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-500"}`}>
-                    {booking.status === "CANCELLED" ? <RiHomeSmileFill size={20} /> : <MdInfoOutline size={20} />}
+                      ${(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "bg-gray-200 text-gray-500" :
+                      booking.status === BookingStatus.REJECTED ? "bg-amber-100 text-amber-600" : "bg-red-100 text-red-500"}`}>
+                    {(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? <RiHomeSmileFill size={20} /> : <MdInfoOutline size={20} />}
                   </div>
 
                   <div className="text-left pt-2">
                     <h5 className={`font-bold text-[14px] mb-1 uppercase tracking-wider flex items-center gap-2 
-          ${booking.status === "CANCELLED" ? "text-gray-600" :
-                        booking.status === "REJECTED" ? "text-amber-700" : "text-gray-900"}`}>
-                      {booking.status === "CANCELLED" ? "New Booking" :
-                        booking.status === "REJECTED" ? "Action Required" : "Cancellation"}
+                      ${(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "text-gray-600" :
+                        booking.status === BookingStatus.REJECTED ? "text-amber-700" : "text-gray-900"}`}>
+                      {(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "New Booking" :
+                        booking.status === BookingStatus.REJECTED ? "Action Required" : "Cancellation"}
                       <span className="text-gray-400 font-medium font-thai">
-                        / {booking.status === "CANCELLED" ? "เริ่มจองใหม่" :
-                          booking.status === "REJECTED" ? "กรุณาแก้ไขข้อมูล" : "สละสิทธิ์การจอง"}
+                        / {(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "เริ่มจองใหม่" :
+                          booking.status === BookingStatus.REJECTED ? "กรุณาแก้ไขข้อมูล" : "สละสิทธิ์การจอง"}
                       </span>
                     </h5>
 
                     <div className="flex flex-col gap-1">
-                      {booking.status === "CANCELLED" && (
+                      {(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) && (
                         <p className="text-[12px] text-gray-600 font-medium leading-relaxed">
                           Your booking has been cancelled. You can now make a new reservation.
                           <span className="block text-[11px] text-gray-400 italic font-thai">รายการจองถูกยกเลิกแล้ว คุณสามารถเริ่มทำรายการจองใหม่ได้ทันที</span>
                         </p>
                       )}
-                      {booking.status === "PENDING" && (
+                      {booking.status === BookingStatus.PENDING && (
                         <p className="text-[12px] text-gray-700 font-semibold leading-relaxed">
                           Relinquish your booking to return the room to the system.
                           <span className="block text-[11px] text-gray-400 italic font-medium font-thai">สละสิทธิ์เพื่อคืนห้องพักกลับเข้าสู่ระบบ เพื่อให้ผู้อื่นสามารถจองต่อได้</span>
                         </p>
                       )}
-                      {booking.status === "VERIFYING" && (
+                      {booking.status === BookingStatus.VERIFYING && (
                         <p className="text-[12px] text-gray-700 font-semibold leading-relaxed">
                           Note: Deposit is non-refundable upon cancellation.
                           <span className="block text-[11px] text-gray-400 italic font-medium font-thai">เนื่องจากชำระเงินแล้ว การยกเลิกตอนนี้จะทำให้ 'ไม่ได้รับเงินมัดจำคืน'</span>
                         </p>
                       )}
-                      {booking.status === "REJECTED" && (
+                      {booking.status === BookingStatus.REJECTED && (
                         <div className="mt-1 p-3 bg-white/60 border border-amber-200 rounded-xl shadow-sm">
                           <p className="text-[11px] font-bold text-amber-800 uppercase mb-1">Reason from Admin:</p>
                           <p className="text-[13px] text-amber-900 font-medium leading-relaxed font-thai">
@@ -406,7 +408,7 @@ export default function StudentBooking() {
 
                 {/* --- ส่วนปุ่ม (Right Side) --- */}
                 <div className="w-full md:w-auto flex flex-col sm:flex-row gap-3">
-                  {(booking.status === "PENDING" || booking.status === "VERIFYING") && (
+                  {(booking.status === BookingStatus.PENDING || booking.status === BookingStatus.VERIFYING) && (
                     <button
                       onClick={openCancelModal}
                       disabled={isCancelling}
@@ -417,9 +419,9 @@ export default function StudentBooking() {
                     </button>
                   )}
 
-                  {booking.status === "PENDING" && (
+                  {booking.status === BookingStatus.PENDING && (
                     <button
-                      onClick={() => router.push('/new-booking')}
+                      onClick={() => router.push(`/payment/${booking.id}`)}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-2.5 text-white bg-[#91b838] hover:bg-[#7a9b2f] rounded-xl text-sm font-black transition-all shadow-lg shadow-green-100"
                     >
                       <MdPayment size={18} />
@@ -427,7 +429,7 @@ export default function StudentBooking() {
                     </button>
                   )}
 
-                  {booking.status === "CANCELLED" && (
+                  {(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) && (
                     <button
                       onClick={() => router.push('/new-booking')}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-10 py-3 bg-[#91b838] hover:bg-[#7a9b2f] text-white rounded-xl text-sm font-black transition-all shadow-md"
@@ -437,7 +439,7 @@ export default function StudentBooking() {
                     </button>
                   )}
 
-                  {booking.status === "REJECTED" && (
+                  {booking.status === BookingStatus.REJECTED && (
                     <button
                       onClick={() => router.push(`/new-booking?edit=${booking.id}`)}
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-10 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-sm font-black transition-all shadow-lg shadow-amber-100"

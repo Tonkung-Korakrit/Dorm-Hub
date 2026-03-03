@@ -1,3 +1,6 @@
+## วิธีติดตั้ง
+npm init playwright@latest
+
 ## เขียนเพื่อทำให้กด แล้วจะเจนเป็นโค้ด:
 npx playwright codegen https://tudormbooking-production.up.railway.app/
 

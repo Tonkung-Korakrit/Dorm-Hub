@@ -1,0 +1,27 @@
+ติดตั้ง ngork
+npm install ngrok -g 
+
+ตั้งค่า config
+ngrok config add-authtoken รหัส-Webhook secret ของ ngork
+ngrok config add-authtoken 3AOZEFN08L0FETNc8psTbRdwhTi_3Hc7foLPH9oVpo5bniFCH
+
+วิธีพิมพ์คำสั่ง ngrok เพื่อให้การชำระเงินค่ามัดจำ รันบน localhost:3000 ได้
+ngrok http 3000 
+
+---------------------------------------------------------------
+
+Recovery codes
+The below codes are used to recover your account in case you lose access to your MFA authenticator.
+Save these recovery codes as securely as a password. We recommend using a password manager such as 1Password, KeePassXC, or bitwarden.
+If you cannot find these codes, you will lose access to your account.
+
+N6TFBTUE9G
+V2CTBR6Z7G
+94FWTAGCGA
+VG8TVFP42G
+6GFTDFUYHB
+YSEXUQCX7C
+E2RBCXBJRH
+C9CAMBAD5E
+U3H9TPXKVT
+V8WDUP8A5U

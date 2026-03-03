@@ -90,6 +90,22 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
 
       console.log("data in BookingSummary: ", data);
 
+      if (data.success) {
+        // 2. เพิ่มการยิงไปสร้าง Charge ที่ Omise ทันที
+        await fetch("/api/bookings/payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            bookingId: data.booking.id,
+            // amount: formRoom.price
+            amount: 10
+          }),
+        });
+
+        // 3. ไปที่หน้าชำระเงิน
+        isResubmitting ? router.push("/my-booking") : router.push(`/payment/${data.booking.id}`); // ไปหน้า Payment
+      }
+
       setCurrentBooking((prev: any) => ({
         ...prev,
         id: data.booking.id,
@@ -102,7 +118,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         // room: data.booking.room,
       }));
 
-      isResubmitting ? router.push("/my-booking") : setStep(8); // ไปหน้า Payment
+      // isResubmitting ? router.push("/my-booking") : setStep(8); // ไปหน้า Payment
     } catch (err: any) {
       // alert(err.message);
       setBookingError({

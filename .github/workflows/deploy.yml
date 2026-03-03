@@ -2,7 +2,10 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main" ] # รันเมื่อมีการ push ขึ้น branch main เท่านั้น
+    # branches: [ "main" ] # รันเมื่อมีการ push ขึ้น branch main เท่านั้น
+    branches:
+    - "main"
+    - "dev_ton"
 
 jobs:
   build-and-deploy:

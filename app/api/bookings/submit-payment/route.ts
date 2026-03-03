@@ -1,6 +1,7 @@
+// api/bookings/submit-payment
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { BookingStatus, BookingType, RoomStatus } from "@prisma/client";
+import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@prisma/client";
 import { sendPaymentVerifyingEmail } from "@/lib/mail";
 
 export async function POST(request: NextRequest) {
@@ -28,26 +29,13 @@ export async function POST(request: NextRequest) {
 
       if (!currentBooking) throw new Error("ไม่พบข้อมูลการจอง");
 
-      // อัปเดตสถานะการจองเป็น VERIFYING
-      const updatedBooking = await tx.booking.update({
-        where: { id: Number(bookingId) },
-        data: {
-          booking_logs: {
-            create: {
-              status: BookingStatus.VERIFYING,
-              createdAt: new Date()
-            }
-          }
-        },
-        include: {
-          cus_users: { select: { name_th: true, email: true } },
-          room: {
-            include: {
-              dorm: { include: { campus: true } }
-            }
-          }
-        }
-      });
+      // 🛡️ เพิ่ม Authorization Check (ตัวอย่าง)
+      // if (currentBooking.cus_users.studentId !== loggedInStudentId) throw new Error("Unauthorized");
+
+      // --- เช็คสถานะก่อนดำเนินการ ---
+      // if (currentBooking.room.status === RoomStatus.FULL && currentBooking.type !== BookingType.CO_RESIDENT) {
+      //   throw new Error("ขออภัย ห้องพักนี้เต็มเรียบร้อยแล้ว");
+      // }
 
       // Logic คำนวณสถานะห้องพัก
       const { type, room } = currentBooking;
@@ -69,6 +57,33 @@ export async function POST(request: NextRequest) {
         // กรณีจองปกติ (Individual): ถ้าเต็มความจุเตียงปกติแล้ว ให้เป็น FULL
         finalRoomStatus = RoomStatus.FULL;
       }
+
+      // อัปเดตสถานะการจองเป็น VERIFYING
+      const updatedBooking = await tx.booking.update({
+        where: { id: Number(bookingId) },
+        data: {
+          booking_logs: {
+            create: {
+              status: BookingStatus.VERIFYING,
+              createdAt: new Date()
+            }
+          }
+        },
+        include: {
+          cus_users: { select: { name_th: true, email: true } },
+          room: {
+            include: {
+              dorm: { include: { campus: true } }
+            }
+          }
+        }
+      });
+
+      // อัปเดตตาราง Payment ให้สอดคล้องกัน
+      await tx.payment.updateMany({
+        where: { bookingId: Number(bookingId), status: PaymentStatus.PENDING },
+        data: { status: PaymentStatus.SUCCESS } // หรือตามสถานะใน Enum ของคุณ
+      });
 
       // --- 1.2 อัปเดตสถานะห้องปัจจุบัน (ห้องลูก หรือ ห้องเดี่ยว) ---
       await tx.room.update({
@@ -137,6 +152,7 @@ export async function POST(request: NextRequest) {
       timeout: 15000,
       isolationLevel: 'Serializable' // เพิ่มความเข้มงวดป้องกันการจองซ้อน
     });
+
 
     // --- 2. Notification (แนะนำให้ await บน Cloud เพื่อป้องกัน Process โดนตัด) ---
     try {

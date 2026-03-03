@@ -39,7 +39,7 @@ export default function ConfirmModal({
               {titleParts[0]}
             </h3>
             {titleParts[1] && (
-              <p className="text-[13px] font-medium text-gray-400">
+              <p className="text-[12px] font-medium text-gray-400">
                 {titleParts[1]}
               </p>
             )}
@@ -47,7 +47,7 @@ export default function ConfirmModal({
 
           {/* Message: ตัวหนังสือโปร่งสบายตา */}
           <div className="space-y-4">
-            <p className="text-[12px] leading-[1.8] text-gray-500 whitespace-pre-line px-2">
+            <p className="text-[10px] leading-[1.8] text-gray-500 whitespace-pre-line px-2">
               {message}
             </p>
           </div>
@@ -58,7 +58,7 @@ export default function ConfirmModal({
           <button
             onClick={onConfirm}
             disabled={isLoading}
-            className={`w-full py-3 rounded-2xl font-bold text-[13px] transition-all active:scale-[0.98] ${type === "danger"
+            className={`w-full py-3 rounded-2xl font-bold text-[12px] transition-all active:scale-[0.98] ${type === "danger"
                 ? "bg-red-500 text-white shadow-lg shadow-red-200"
                 : "bg-gray-900 text-white shadow-lg shadow-gray-200"
               } disabled:opacity-50`}

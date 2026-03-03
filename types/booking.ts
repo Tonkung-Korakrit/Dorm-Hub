@@ -1,5 +1,5 @@
 // types/booking.ts
-import { RoomStatus, BookingType, BookingStatus, Role, GenderType, File_info, AddressType, RoomType, CitizenType } from "@prisma/client";
+import { RoomStatus, BookingType, BookingStatus, Role, GenderType, File_info, AddressType, RoomType, CitizenType, PaymentStatus } from "@prisma/client";
 
 export interface Resident {
   id: number;
@@ -111,7 +111,7 @@ export interface OwnerInfo {
   // roomNumber: string;
 }
 
-export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType, CitizenType };
+export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType, CitizenType, PaymentStatus };
 
 export interface BookRoomFormProps {
   user: Resident;
