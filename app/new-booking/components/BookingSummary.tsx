@@ -2,13 +2,11 @@
 "use client";
 
 import { useBooking } from "@/app/contexts/BookingContext";
-import { Checkbox } from "@headlessui/react";
 import { useState, useEffect } from "react";
-import { MdCheck, MdOutlinePerson, MdOutlineStyle } from "react-icons/md";
-// import { MdTimer } from "react-icons/md";
+import { MdCheck, MdOutlinePerson } from "react-icons/md";
 import { DORM_LABELS } from "@/lib/constants";
 import { LoadingOverlay } from "@/app/loading/components/LoadingOverlay";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
 import ConfirmModal from "@/app/loading/components/ConfirmModal";
 import { BookingStatus } from "@/types/booking";
 import { useRouter } from 'next/navigation';
@@ -42,19 +40,9 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
   }, []);
 
   const handleEdit = (targetStep: number) => {
-    setIsEditMode(true); // เปิดโหมดแก้ไข
-    setStep(targetStep); // ส่งกลับไปยังหน้าที่ต้องการแก้
+    setIsEditMode(true);
+    setStep(targetStep);
   };
-
-  // const handleEdit = (targetStep: number, section?: string) => {
-  //   setIsEditMode(true);
-  //   // ตัวอย่าง: ถ้าอยากแก้ Lifestyle ให้ส่ง section=lifestyle ไปด้วย
-  //   // คุณอาจจะต้องใช้ router.push หรือถ้า setStep เป็น state ภายใน ก็สามารถรับ parameter เพิ่มได้
-  //   setStep(targetStep);
-  //   if (section) {
-  //     window.history.replaceState(null, '', `?section=${section}`);
-  //   }
-  // };
 
   const handleFinalConfirm = async () => {
     setIsSubmitting(true);
@@ -76,7 +64,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
       });
 
       const data = await res.json();
-      // if (!res.ok) throw new Error(data.error);
       if (!data.success) {
         // ดักจับ Error ที่มาจาก Error Throw ใน Transaction
         // เช่น "ห้องพักนี้เต็มแล้ว" หรือ "มีคนชิงจองตัดหน้าคุณไปแล้ว"
@@ -88,21 +75,20 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         return;
       }
 
-      console.log("data in BookingSummary: ", data);
+      // console.log("data in BookingSummary: ", data);
 
       if (data.success) {
-        // 2. เพิ่มการยิงไปสร้าง Charge ที่ Omise ทันที
-        await fetch("/api/bookings/payment", {
+        // เพิ่มการยิงไปสร้าง Charge ที่ Omise ทันที
+        await customFetch("/api/bookings/payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             bookingId: data.booking.id,
-            // amount: formRoom.price
-            amount: 10
+            amount: formRoom.price
+            // amount: 20
           }),
         });
 
-        // 3. ไปที่หน้าชำระเงิน
         isResubmitting ? router.push("/my-booking") : router.push(`/payment/${data.booking.id}`); // ไปหน้า Payment
       }
 
@@ -112,15 +98,13 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         status: data.booking.status,
         type: data.booking.type,
         createdAt: data.booking.createdAt,
-        userId: data.booking.user?.id,
-        // user: data.booking.user,
-        roomId: data.booking.room?.id,
-        // room: data.booking.room,
+        cus_users: data.booking.cus_users,
+        room: data.booking.room,
       }));
 
       // isResubmitting ? router.push("/my-booking") : setStep(8); // ไปหน้า Payment
+      
     } catch (err: any) {
-      // alert(err.message);
       setBookingError({
         isOpen: true,
         title: "Connection Error / เกิดข้อผิดพลาด",
@@ -138,12 +122,11 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           isOpen={bookingError.isOpen}
           onConfirm={() => {
             setBookingError(null);
-            // ถ้าอยากให้ดีขึ้น: สั่งดึงข้อมูลห้องใหม่ (Mutate SWR) ตรงนี้เลย
-            // เพื่อให้ Grid อัปเดตเป็นสีแดงตามความจริง
+            // ถ้าอยากให้ดีขึ้น: สั่งดึงข้อมูลห้องใหม่ (Mutate SWR) ตรงนี้เลย เพื่อให้ Grid อัปเดตเป็นสีแดงตามความจริง
             // mutate();
             setStep(6);
           }}
-          type="danger"      // ใช้สีแดงเพื่อความเร่งด่วน
+          type="danger"
           title={bookingError.title}
           message={bookingError.message}
           confirmText="Select New Room / เลือกห้องใหม่"
@@ -174,7 +157,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-bold text-lg text-[#006432]">1. Student Information</h3>
             <button
-              // onClick={() => setStep(1)} 
               onClick={() => handleEdit(1)}
               className="text-sm text-blue-500 hover:text-blue-700 font-semibold"
             >
@@ -190,7 +172,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           </div>
         </section>
 
-        {/* 0. รายละเอียดการจอง (booking detail) */}
+        {/* รายละเอียดการจอง (booking detail) */}
         {/* <section>
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-bold text-lg text-[#006432]">4. Booking Detail</h3>
@@ -214,11 +196,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
           <section>
             <div className="flex justify-between items-center mb-2">
               <h3 className="font-bold text-lg text-[#006432]">2. Booking & Room Detail</h3>
-              {/* <button
-              onClick={() => setStep(currentBooking?.type === "CO_RESIDENT" ? 4 : 4)}
-              className="text-sm text-blue-500 hover:text-blue-700 font-semibold">
-              Edit
-            </button> */}
               {!isResubmitting && (
                 <button onClick={() => setStep(4)} className="text-sm text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
               )}
@@ -229,8 +206,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
                 <p><span className="text-gray-500">Booking Type:</span> {DORM_LABELS.RESIDENT_TYPE[currentBooking?.type as keyof typeof DORM_LABELS.RESIDENT_TYPE] || currentBooking?.type}</p>
                 <p><span className="text-gray-500">Campus (Dorm):</span> {DORM_LABELS.CAMPUS[formRoom.campus as keyof typeof DORM_LABELS.CAMPUS] || formRoom.campus}</p>
                 <p><span className="text-gray-500">Zone & Floor:</span> {formRoom?.dorm?.name} & Floor {formRoom.floor}</p>
-                {/* <p><span className="text-gray-500">Type:</span> {currentBooking?.type}</p> */}
-                {/* <p><span className="text-gray-500">Room Type:</span> {formRoom.roomType}</p> */}
                 <p><span className="text-gray-500">Room Type:</span> {DORM_LABELS.ROOM_TYPES[formRoom.roomType as keyof typeof DORM_LABELS.ROOM_TYPES]?.label || formRoom.roomType}</p>
                 <p><span className="text-gray-500">Monthly Price:</span> <span className="font-bold text-gray-800">{formRoom.price?.toLocaleString()} THB/MONTH</span></p>
               </div>
@@ -243,13 +218,14 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
                 </div>
               </div>
               {currentBooking?.type === "CO_RESIDENT" && ownerInfo && (
-                <div className="flex items-center gap-4 bg-gray-50/50 p-4 rounded-3xl border border-gray-100 w-full md:w-auto">
+                <div className="flex items-center gap-4 bg-gray-50/50 px-2 py-2 rounded-3xl border border-gray-100 w-full md:w-auto">
                   <div className="w-12 h-12 bg-[#126A31] rounded-2xl flex items-center justify-center text-white shadow-inner">
                     <MdOutlinePerson size={24} />
                   </div>
                   <div>
                     <p className="text-[10px] font-bold text-green-700 uppercase">Staying with</p>
-                    <p className="text-sm font-black text-gray-800">{ownerInfo.name || "Owner ID: " + ownerInfo.studentId}</p>
+                    <p className="text-sm font-black text-gray-800">{ownerInfo.name}</p>
+                    <p className="text-sm font-bold text-gray-500">{ownerInfo.studentId}</p>
                     <p className="text-[10px] text-gray-400">Verified Resident</p>
                   </div>
                 </div>
@@ -265,15 +241,6 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
               <h3 className="font-bold text-lg text-[#006432] mb-3 flex items-center gap-2">
                 3. Lifestyle Preference
               </h3>
-              {/* <button
-              onClick={() => handleEdit(4)}
-              className="text-sm text-blue-500 hover:text-blue-700 font-semibold"
-              >
-                Edit
-              </button> */}
-              {/* {!isResubmitting && (
-                  <button onClick={() => setStep(4)} className="text-sm text-blue-500 hover:text-blue-700 font-semibold">Edit</button>
-                )} */}
             </div>
             <div className="flex flex-wrap gap-2">
               {formResident?.lifestyle?.length > 0 ? (
@@ -308,11 +275,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
         <div className="mt-2">
           <label
             htmlFor="agreement"
-            className={`flex items-start gap-4 pt-2 pr-2 pl-2 pb-5 transition-all duration-200 cursor-pointer group `}
-          // ${isAcceptAgreement
-          //   ? "bg-green-50/50 border-green-200 shadow-sm"
-          //   : "bg-gray-50 border-gray-100 hover:border-gray-200"
-          // }`}
+            className={`flex items-start gap-4 pt-2 pr-2 pl-2 pb-5 transition-all duration-200 cursor-pointer group`}
           >
             {/* Custom Checkbox Wrapper */}
             <div className="relative flex items-center mt-1">
@@ -365,7 +328,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
 
       <div className="flex flex-col md:flex-row gap-3 mt-2">
         <button
-          onClick={() => setStep(isResubmitting ? 3 : 6)}
+          onClick={() => setStep(isResubmitting ? 3 : !ownerInfo.studentId ? 6 : 4)}
           className="flex-1 py-4 bg-gray-100 text-gray-600 rounded-2xl font-bold hover:bg-gray-200 transition-all order-2 md:order-1"
         >
           ย้อนกลับ (Back)
@@ -382,7 +345,7 @@ export function BookingSummary({ setStep }: BookingSummaryProps) {
             }`}
         >
           {isSubmitting ? "Processing..." : isResubmitting ? "ส่งข้อมูลแก้ไข (Resubmit)" : "ยืนยันการจองจริง (Confirm)"}
-          {isSubmitting && <LoadingOverlay message="กำลังบันทึกข้อมูล..." />}
+          {isSubmitting && <LoadingOverlay message="Saving data...." />}
         </button>
       </div>
     </div >

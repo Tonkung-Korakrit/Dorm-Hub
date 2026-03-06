@@ -1,16 +1,20 @@
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { getServerSession } from "next-auth/next";
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route";
-import { cookies } from 'next/headers';
-import { jwtVerify } from 'jose';
-import { authOptions } from '@/lib/auth';
+import { getCurrentUser } from '@/lib/auth-utils';
+import { BookingStatus } from '@/types/booking';
 
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // 1. ดึงข้อมูลยืนยันตัวตน (Identity Retrieval)
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
+    }
+
     const { id } = await params;
     const bookingId = parseInt(id);
 
@@ -18,37 +22,14 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid Booking ID' }, { status: 400 });
     }
 
-    // 1. ดึงข้อมูลยืนยันตัวตน (Identity Retrieval)
-    const cookieStore = await cookies();
-    const token = cookieStore.get('token')?.value;
-    const session = await getServerSession(authOptions);
-
-    // ถ้าไม่มีหลักฐานการ Login เลย ให้ปฏิเสธการเข้าถึง
-    if (!session && !token) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    // 2. 🔑 Decode JWT (ถ้ามี)
-    let userId: string | undefined;
-    if (token) {
-      try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        userId = payload.username as string; // username = studenId 
-      } catch (e) {
-        console.error("JWT Verify Error in API:", e);
-      }
-    }
-
     // 3. 🔍 Query พร้อมเช็คสิทธิ์ความเป็นเจ้าของ (Ownership Check)
     // เราจะไม่ดึง Log มาตรงๆ แต่เราจะดึงผ่าน Booking ที่เช็คสิทธิ์แล้ว
     const booking = await prisma.booking.findFirst({
       where: {
         id: bookingId,
-        OR: [
-          { cus_users: { studentId: userId || "none" } },
-          { cus_users: { email: session?.user?.email || "none" } }
-        ]
+        cus_users: {
+          OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+        }
       },
       select: {
         booking_logs: {
@@ -67,7 +48,7 @@ export async function GET(
     const latestLog = booking.booking_logs[0];
 
     return NextResponse.json({
-      bookingStatus: latestLog?.status || 'PENDING',
+      bookingStatus: latestLog?.status || BookingStatus.PENDING,
       updatedAt: latestLog?.createdAt
     });
 

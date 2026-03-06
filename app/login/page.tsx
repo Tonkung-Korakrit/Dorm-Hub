@@ -1,8 +1,10 @@
 // app/login/page.tsx
 export default function LoginPage() {
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <p className="text-gray-500">Login Page is under construction...</p>
+    <div className="flex flex-col items-center justify-center min-h-[80vh] px-4">
+      <div className="w-full max-w-md bg-white/90 backdrop-blur-md rounded-[2.5rem] shadow-xl p-8 border border-white/20">
+        <p className="text-gray-500">Login Page is under construction...</p>
+      </div>
     </div>
   );
 }

@@ -37,14 +37,14 @@ export default async function BookingSuccessPage({
 
   // 3. Decode Custom Token เพื่อเอา userId
   // 3. Decode Token เฉพาะ "เมื่อมี token อยู่จริง" เท่านั้น
-  let userId: string | undefined;
+  let studentId: string | undefined;
 
   if (token) {
     try {
       const secret = new TextEncoder().encode(process.env.JWT_SECRET);
       const { payload } = await jwtVerify(token, secret);
       console.log("🔑 JWT Payload found:", payload);
-      userId = payload.username as string;
+      studentId = payload.studentId as string;
     } catch (err) {
       console.error("⚠️ Token verify failed, but session might still work");
       // ไม่ต้อง redirect ตรงนี้ เพราะเดี๋ยวเราจะไปลองเช็ค session.user.email ใน Prisma ต่อ
@@ -65,7 +65,7 @@ export default async function BookingSuccessPage({
       OR: [
         {
           cus_users: {
-            studentId: userId || "no-username"
+            studentId: studentId || "no-username"
           }
         }, // ถ้าไม่มี Token ให้ใส่ค่าที่ไม่มีในระบบ (เช่น -1) เพื่อให้เงื่อนไขนี้ไม่เป็นจริง
         {
@@ -123,6 +123,7 @@ export default async function BookingSuccessPage({
               <div>
                 <p className="text-green-700/80 font-bold uppercase text-[10px] tracking-widest">Paid Amount</p>
                 <p className="text-sm font-black text-emerald-500">฿ {booking.payments[0]?.amount.toLocaleString()}<span className="text-gray-700 font-semibold"> THB</span></p>
+                {/* <p className="text-sm font-black text-emerald-500">฿ 20<span className="text-gray-700 font-semibold"> THB</span></p> */}
               </div>
             </div>
 

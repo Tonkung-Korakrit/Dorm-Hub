@@ -1,78 +1,76 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { RoomStatus, BookingType, BookingStatus } from "@prisma/client";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose"; // เปลี่ยนมาใช้ jose ให้เหมือน Middleware
-import { getToken } from "next-auth/jwt";
-
-// เตรียมกุญแจ (ต้องเหมือน Middleware)
-const SECRET_USER = new TextEncoder().encode(process.env.JWT_SECRET);
+import { getCurrentUser } from "@/lib/auth-utils";
+import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/types/booking";
 
 export async function POST(request: NextRequest) {
   try {
     const { bookingId, isExpired } = await request.json();
 
     // 1. ตรวจสอบตัวตน (Hybrid Auth)
-    const cookieStore = await cookies();
-    const userToken = cookieStore.get("token")?.value;
-    const nextAuthToken = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
+    // const cookieStore = await cookies();
+    // const userToken = cookieStore.get("token")?.value;
+    // const nextAuthToken = await getToken({ req: request, secret: process.env.NEXTAUTH_SECRET });
 
-    // let studentId: string | null = null;
-    let userId: number | null = null;
-    let studentIdFromToken: string | null = null;
+    // let userId: number | null = null;
+    // let studentIdFromToken: string | null = null;
 
-    if (userToken) {
-      // ใช้ jose ไขกุญแจให้เหมือน Middleware
-      const { payload } = await jwtVerify(userToken, SECRET_USER);
-      // จุดเช็ค: ถ้าใน Login ใส่ { id: username } ตรงนี้ต้องใช้ payload.username
+    // if (userToken) {
+    //   const { payload } = await jwtVerify(userToken, SECRET_USER);
+      // จุดเช็ค: ถ้าใน Login ใส่ { id: studentId } ตรงนี้ต้องใช้ payload.studentId
       // console.log("✅ JWT Payload:", payload);
       //   JWT Payload: {
-      //   username: '6509650203',
+      //   studentId: '6509650203',
       //   role: 'STUDENT',
       //   provider: 'TU',
       //   iat: 1771483739,
       //   exp: 1771487339
       // }
-      // studentId = payload.username as string;
-      studentIdFromToken = payload.username as string;
-    } else if (nextAuthToken) {
-      // console.log("✅ nextAuthToken:", nextAuthToken);
-      // studentId = nextAuthToken.studentId as string;
-      userId = Number(nextAuthToken.id);
-      studentIdFromToken = nextAuthToken.studentId as string;
-    }
+    //   studentIdFromToken = payload.studentId as string;
+    // } else if (nextAuthToken) {
+    //   userId = Number(nextAuthToken.id);
+    //   studentIdFromToken = nextAuthToken.studentId as string;
+    // }
 
-    // if (!studentId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!userId && !studentIdFromToken) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // if (!userId && !studentIdFromToken) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "คุณไม่มีสิทธิ์ยกเลิกรายการจองนี้" }, { status: 401 });
     }
 
     const result = await prisma.$transaction(async (tx) => {
       // 2. ดึงข้อมูลการจองมาเช็ค "ความเป็นเจ้าของ"
       const current = await tx.booking.findUnique({
-        where: { id: Number(bookingId) },
+        where: { 
+          id: Number(bookingId),
+          cus_users: {
+            OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+          }
+        },
         include: { 
           room: true,
-          cus_users: {
-            select: {
-              studentId: true,
-            },
-          } // ดึงข้อมูลเจ้าของมาเช็ค
+          // cus_users: {
+          //   select: {
+          //     studentId: true,
+          //   },
+          // } // ดึงข้อมูลเจ้าของมาเช็ค
         }
       });
 
       if (!current) throw new Error("ไม่พบข้อมูลการจอง");
 
       // 3. ด่านตรวจความเป็นเจ้าของ (ป้องกันคนแอบแก้ ID ในหน้าบ้านแล้วกด Cancel)
-      const isOwner = 
-        (userId && current.userId === userId) || 
-        (studentIdFromToken && current.cus_users.studentId === studentIdFromToken);
-
-      if (!isOwner) throw new Error("คุณไม่มีสิทธิ์ยกเลิกรายการจองนี้");
+      // const isOwner = 
+      //   (userId && current.userId === userId) || 
+      //   (studentIdFromToken && current.cus_users.studentId === studentIdFromToken);
 
       const finalStatus = isExpired ? BookingStatus.EXPIRED : BookingStatus.CANCELLED;
 
-      // 4. Logic การคืนห้อง (เหมือนเดิมของนาย - เป๊ะแล้ว)
+      // 4. Logic การคืนห้อง
       const newOcc = current.type === BookingType.CHARTER ? 0 : Math.max(0, current.room.currentOccupancy - 1);
       
       await tx.room.update({
@@ -89,8 +87,8 @@ export async function POST(request: NextRequest) {
 
       if (isExpired) {
         await tx.payment.updateMany({
-          where: { bookingId: current.id, status: 'PENDING' },
-          data: { status: 'EXPIRED' }
+          where: { bookingId: current.id, status: BookingStatus.PENDING },
+          data: { status: PaymentStatus.EXPIRED }
         });
       }
 

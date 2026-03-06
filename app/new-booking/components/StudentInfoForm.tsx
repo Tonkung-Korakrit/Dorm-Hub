@@ -1,17 +1,16 @@
-// book/components/StudentInfoForm.tsx
+// app/new-booking/components/StudentInfoForm.tsx
 "use client";
 
 import React, { useEffect, ChangeEvent, Dispatch, SetStateAction, useState } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
 import toast from 'react-hot-toast';
-// import { GenderType } from "@prisma/client";
 import DatePicker from "./DatePickerWrapper";
 import "react-datepicker/dist/react-datepicker.css";
-import { th } from "date-fns/locale"; // สำหรับภาษาไทยในปฏิทิน
+import { th } from "date-fns/locale";
 import { Combobox, Transition } from '@headlessui/react';
-import { MdSwapVert, MdCheck, MdInfoOutline } from "react-icons/md"; // ต้องลง @heroicons/react เพิ่ม
-// import { set } from "react-datepicker/dist/date_utils";
+import { MdSwapVert, MdCheck, MdInfoOutline } from "react-icons/md";
 import { BookingStatus, CitizenType } from "@/types/booking";
+import { customFetch } from "@/lib/custom-api";
 
 // กำหนด Type สำหรับ Props ของ Component
 interface StudentInfoFormProps {
@@ -23,12 +22,22 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
   const [query, setQuery] = useState('');
   const [errors, setErrors] = useState([]);
   const isLocked = currentBooking?.status === BookingStatus.REJECTED;
+  const [isChecking, setIsChecking] = useState(false);
+  const [errorValidate, setErrorValidate] = useState({
+    citizenNumber: "",
+    studentId: "",
+    email: "",
+  });
 
   const filteredFaculty = query === ''
     ? FACULTY_LIST
     : FACULTY_LIST.filter((faculty) =>
       faculty.name.toLowerCase().replace(/\s+/g, '').includes(query.toLowerCase().replace(/\s+/g, ''))
     );
+
+  // คำนวณวันที่ถอยหลังจากวันนี้ไป 18 ปี
+  const today = new Date();
+  const maxAllowedDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
 
   useEffect(() => {
     // เลื่อนหน้าไปด้านบนสุด เมื่อคอมโพเนนต์ mount
@@ -42,13 +51,13 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, []);
 
+  // กรณีการจองโดนปฏิเสธมาให้ แก้ไขเฉพาะข้อมูลส่วนตัวของ user
   useEffect(() => {
     if (currentBooking && currentBooking.status === BookingStatus.REJECTED) {
       // นำข้อมูลจาก DB มาใส่ในฟอร์มเพื่อให้ User แก้ไขเฉพาะจุด
       setFormResident((prev) => ({
         ...prev,
-        ...currentBooking.cus_users, // สมมติว่าใน currentBooking มีข้อมูล user แนบมา
-        // หรือดึง field อื่นๆ ที่จำเป็น
+        ...currentBooking.cus_users,
       }));
     }
   }, [currentBooking, setFormResident]);
@@ -71,16 +80,36 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     }));
   };
 
+  const checkUniqueValue = async (fieldName, value) => {
+    if (!value) return;
+
+    setIsChecking(true);
+    try {
+      const res = await customFetch(`/api/validate?type=${fieldName}&value=${value}`);
+      const data = await res.json();
+
+      if (data.isExist) {
+        if (!errors.includes(fieldName)) {
+          setErrors(prev => [...prev, fieldName]);
+        }
+        setErrorValidate(prev => ({ ...prev, [fieldName]: data.message }));
+      } else {
+        setErrors(prev => prev.filter(item => item !== fieldName));
+        setErrorValidate(prev => ({ ...prev, [fieldName]: data.message }));
+      }
+    } catch (err) {
+      console.error("Check unique error", err);
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
   const handleNextStep = () => {
     // รายการฟีลด์ที่ต้องตรวจสอบก่อนอนุญาตให้ไปขั้นตอนถัดไป
     const requiredFields = [
       "citizenType", "citizenNumber", "studentId", "gender", "faculty_department",
       "titleName", "name_th", "name_en", "email", "birthDate", "mobilePhone",
     ];
-
-    const passportLength = [7, 8, 9];
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phoneRegex = /^[0-9]{10}$/;
 
     const missingFields = requiredFields.filter(field => !formResident[field]);
     if (missingFields.length > 0) {
@@ -92,6 +121,24 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
       });
       return;
     }
+
+    // เช็คว่าใน errors array มีฟิลด์ที่เกี่ยวกับความซ้ำ (ที่เราเซ็ตไว้ตอน onBlur) หรือไม่
+    const hasUniqueErrors = errors.some(err =>
+      ["citizenNumber", "studentId", "email"].includes(err)
+    );
+
+    if (hasUniqueErrors) {
+      toast.error('ข้อมูลบางอย่างถูกใช้งานไปแล้ว โปรดแก้ไขในไฮไลต์สีแดง', {
+        position: 'top-center',
+        duration: 2000,
+        id: 'unique-data-error',
+      });
+      return;
+    }
+
+    const passportLength = [7, 8, 9];
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const phoneRegex = /^[0-9]{10}$/;
 
     if (formResident.citizenType === CitizenType.CITIZEN_ID && formResident.citizenNumber.length !== 13) {
       toast.error('เลขบัตรประชาชนต้องมี 13 หลัก', {
@@ -145,9 +192,8 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     }
 
     setErrors([]);
-    // const isEditingFromRejected = currentBooking?.status === BookingStatus.REJECTED;
-    
     setStep(2);
+
     // if (isEditMode) {
     //   // 2. ถ้ามาจากหน้า Summary ให้เด้งกลับทันทีหลังจากเลือกเตียงเสร็จ
     //   setIsEditMode(false);
@@ -158,11 +204,7 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
     // }
   };
 
-  // คำนวณวันที่ถอยหลังจากวันนี้ไป 18 ปี
-  const today = new Date();
-  const maxAllowedDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate());
-
-  console.log("currentBooking in StudenInfoForm: ", currentBooking);
+  // console.log("currentBooking in StudenInfoForm: ", currentBooking);
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
@@ -204,7 +246,6 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
               className={`w-full sm:w-2/3 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none 
               transition-color focus:ring-2 focus:ring-[#006633] text-black placeholder:text-gray-400 
               ${errors.includes("citizenNumber") ? "border-red-500 border-2" : ""}`}
-              // เปลี่ยน Placeholder ตามประเภทที่เลือก
               placeholder={formResident.citizenType === CitizenType.PASSPORT ? "Passport Number (7-9 characters)" : "เลขบัตรประชาชน 13 หลัก"}
               name="citizenNumber"
               type="text"
@@ -237,8 +278,13 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
                   if (!errors.includes("citizenNumber")) {
                     setErrors([...errors, "citizenNumber"]);
                   }
-                } else {
-                  setErrors(errors.filter((item) => item !== "citizenNumber"));
+                }
+                // else {
+                //   setErrors(errors.filter((item) => item !== "citizenNumber"));
+                // }
+                else {
+                  // ถ้า Format ผ่าน ค่อยไปเช็ค Unique ที่ Database (Server-side validation)
+                  checkUniqueValue("citizenNumber", value);
                 }
               }}
               title={formResident.citizenType === CitizenType.PASSPORT ? "Please enter your passport number correctly (7-9 digits)." : "กรุณากรอกเลขบัตรประชาชนให้ถูกต้อง (13 หลัก)"} // เพิ่ม title เพื่อช่วยแนะนำผู้ใช้
@@ -247,7 +293,7 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
             />
             {errors.includes("citizenNumber") && (
               <p className="text-red-500 text-xs mt-1 animate-pulse">
-                * กรุณากรอกเลขบัตรประจำตัวประชาชน หรือ Passport numberให้ถูกต้อง
+                * {errorValidate.citizenNumber || "กรุณากรอกเลขบัตรประจำตัวประชาชน หรือ Passport numberให้ถูกต้อง"}
               </p>
             )}
           </div>
@@ -281,8 +327,13 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
                 if (!errors.includes("studentId")) {
                   setErrors([...errors, "studentId"]);
                 }
-              } else {
-                setErrors(errors.filter((item) => item !== "studentId"));
+              }
+              // else {
+              //   setErrors(errors.filter((item) => item !== "studentId"));
+              // }
+              else {
+                // ถ้า Format ผ่าน ค่อยไปเช็ค Unique ที่ Database (Server-side validation)
+                checkUniqueValue("studentId", value);
               }
             }}
             suppressHydrationWarning
@@ -290,7 +341,7 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
           />
           {errors.includes("studentId") && (
             <p className="text-red-500 text-xs mt-1 animate-pulse">
-              * กรุณากรอกเลขทะเบียนนักศึกษาให้ถูกต้อง (10 หลัก)
+              * {errorValidate.studentId || "กรุณากรอกเลขทะเบียนนักศึกษาให้ถูกต้อง (10 หลัก)"}
             </p>
           )}
         </div>
@@ -632,8 +683,13 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
 
               if (isInvalid) {
                 if (!errors.includes("email")) setErrors([...errors, "email"]);
-              } else {
-                setErrors(errors.filter((item) => item !== "email"));
+              }
+              // else {
+              //   setErrors(errors.filter((item) => item !== "email"));
+              // }
+              else {
+                // ถ้า Format ผ่าน ค่อยไปเช็ค Unique ที่ Database (Server-side validation)
+                checkUniqueValue("email", value);
               }
             }}
             suppressHydrationWarning
@@ -641,7 +697,7 @@ export function StudentInfoForm({ setStep }: StudentInfoFormProps) {
           />
           {errors.includes("email") && (
             <p className="text-red-500 text-xs mt-1 animate-pulse">
-              * รูปแบบอีเมลไม่ถูกต้อง (เช่น example@email.com)
+              * {errorValidate.email || "รูปแบบอีเมลไม่ถูกต้อง (เช่น example@email.com)"}
             </p>
           )}
         </div>

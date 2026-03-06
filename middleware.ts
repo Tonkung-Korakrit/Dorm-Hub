@@ -1,3 +1,4 @@
+// middleware.ts
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { jwtVerify } from 'jose';
@@ -42,6 +43,10 @@ export async function middleware(request: NextRequest) {
       customPayload = payload;
     }
   } catch (err) {
+    // if (pathname.startsWith('/api')) {
+    //   return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // }
+    
     // กรณีบัตรเน่า/หมดอายุ/โดนปลอม ให้ทำลายบัตรและดีดออก
     // 1. กำหนดหน้าที่จะเด้งไป (ตรวจสอบให้ตรงกับหน้า Login ของคุณ)
     const isTargetingAdmin = pathname.startsWith('/admin');
@@ -85,7 +90,7 @@ export async function middleware(request: NextRequest) {
   if (isUserProtectedPath && !isAuthenticated) {
     // return NextResponse.redirect(new URL('/', request.url));
     const loginUrl = new URL('/', request.url);
-    loginUrl.searchParams.set('reason', 'unauthorized'); // <--- เพิ่มตรงนี้
+    loginUrl.searchParams.set('reason', 'unauthorized');
     return NextResponse.redirect(loginUrl);
   }
 

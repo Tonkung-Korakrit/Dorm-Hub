@@ -2,63 +2,50 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-// import axios from "axios";
-// import { useRouter } from 'next/navigation';
-import { signIn, signOut } from "next-auth/react";
+import { signIn } from "next-auth/react";
+import { LoginSkeleton } from "./loading/components/login/LoginSkeleton";
+import { LoadingOverlay } from "./loading/components/LoadingOverlay";
+import { StatusPopup } from "./loading/components/StatusPopup";
+
 import { FcGoogle } from "react-icons/fc";
 import { PiEyesFill } from "react-icons/pi";
 import { RiEyeCloseLine } from "react-icons/ri";
 import Image from "next/image";
-import { LoginSkeleton } from "./loading/components/login/LoginSkeleton";
-import { StatusPopup } from "./loading/components/StatusPopup";
-import { LoadingOverlay } from "./loading/components/LoadingOverlay";
 import toast from 'react-hot-toast';
-import { useSearchParams } from "next/navigation";
-import ConfirmModal from "./loading/components/ConfirmModal";
-import { customFetch } from "@/lib/api";
 
-/**
- * Component ย่อยสำหรับจัดการ Logic ทั้งหมดที่เกี่ยวกับ Search Params
- * เพื่อให้เป็นไปตามกฎของ Next.js ที่ต้องอยู่ใน Suspense Boundary
- */
 function LoginContent() {
   const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [popupStatus, setPopupStatus] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [username, setUsername] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
-  // const [showPopup, setShowPopup] = useState<boolean>(false);
-  // const [errorMessage, setErrorMessage] = useState<string>("");
-  // const router = useRouter();
-  // const [showExpiredModal, setShowExpiredModal] = useState(false);
 
-  const searchParams = useSearchParams();
-  const reason = searchParams.get('reason');
+  // const [isSessionExpired, setIsSessionExpired] = useState(false);
+  // const searchParams = useSearchParams();
+  // const reason = searchParams.get('reason');
 
   useEffect(() => {
     setIsMounted(true);
 
     // ตรวจสอบว่าโดนดีดกลับมาเพราะ Session หมดอายุหรือไม่
-    if (reason === 'expired') {
-      setIsSessionExpired(true);
+    // if (reason === 'expired') {
+    //   setIsSessionExpired(true);
 
-      // redirect: false เพื่อไม่ให้มันเด้งไปหน้าอื่นเองซ้ำซ้อน
-      signOut({ redirect: false });
-      
-      // ลบ Query Parameter ออกเพื่อให้ URL คลีนและไม่แสดง Modal ซ้ำเมื่อ Refresh
-      const newUrl = window.location.pathname;
-      window.history.replaceState(null, '', newUrl);
-    }
-  }, [reason]);
+    //   // redirect: false เพื่อไม่ให้มันเด้งไปหน้าอื่นเองซ้ำซ้อน
+    //   signOut({ redirect: false });
+
+    //   // ลบ Query Parameter ออกเพื่อให้ URL คลีนและไม่แสดง Modal ซ้ำเมื่อ Refresh
+    //   const newUrl = window.location.pathname;
+    //   window.history.replaceState(null, '', newUrl);
+    // }
+  }, []);
 
   const handleLoginByTU = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      // const res = await axios.post("../api/auth/login", { username, password });
-      const res = await customFetch("/api/auth/login", {
+      const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
@@ -80,14 +67,9 @@ function LoginContent() {
           window.location.href = "/my-booking";
         }, 700);
       } else {
-        // setErrorMessage("ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง");
-        // setShowPopup(true);
         setPopupStatus({ type: "error", message: "ชื่อผู้ใช้ หรือรหัสผ่านของท่านไม่ถูกต้อง กรุณาติดต่อ LINE ICT TU Helpdesk https://lin.ee/vBxlVav" });
       }
     } catch (error: any) {
-      // const msg = error.response?.data?.message || "เข้าสู่ระบบไม่สำเร็จ กรุณาตรวจสอบข้อมูลอีกครั้ง";
-      // setErrorMessage(msg);
-      // setShowPopup(true);
       setPopupStatus({ type: "error", message: "ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่" });
     } finally {
       setIsLoading(false);
@@ -100,22 +82,6 @@ function LoginContent() {
 
   return (
     <>
-      {/* <Suspense fallback={null}>
-            <SessionCheck onExpired={() => setIsSessionExpired(true)} />
-          </Suspense> */}
-
-      <ConfirmModal
-        isOpen={isSessionExpired}
-        onClose={() => setIsSessionExpired(false)}
-        onConfirm={() => setIsSessionExpired(false)}
-        type="warning"
-        title="Login Expired / เซสชันการเข้าสู่ระบบหมดอายุ"
-        message={"Your login session has expired. Please sign in again to continue.\nเซสชันการเข้าสู่ระบบของคุณหมดอายุแล้ว โปรดเข้าสู่ระบบอีกครั้งเพื่อดำเนินการต่อ"}
-        confirmText="Got it / รับทราบ"
-        isLoading={false}
-        showCancel={false}
-      />
-
       <div className="relative w-full max-w-[400px] aspect-[6/10]">
         <div className="absolute left-[8px] w-full h-full">
           <Image
@@ -123,8 +89,6 @@ function LoginContent() {
             alt="Card Login"
             fill
             sizes="366px"
-            // className="object-contain z-0 bg-center bg-no-repeat"
-            // className="absolute inset-0 left-[20px] w-full h-full"
             priority
           />
         </div>
@@ -237,9 +201,7 @@ export default function ExternalLogin() {
   return (
     // <div className="flex items-center justify-center min-h-[80vh] relative pt-10 sm:pt-4">
     <div className="flex items-center justify-center min-h-[80vh] relative pt-[44px] sm:pt-[12px]">
-      {/* สำคัญมาก: useSearchParams จะต้องอยู่ภายใต้ Suspense เสมอ 
-        เพื่อให้ Next.js สามารถ Build แบบ Static ได้โดยไม่ระเบิด
-      */}
+      {/* สำคัญมาก: useSearchParams จะต้องอยู่ภายใต้ Suspense เสมอ เพื่อให้ Next.js สามารถ Build แบบ Static ได้โดยไม่ระเบิด */}
       <Suspense fallback={<LoginSkeleton />}>
         <LoginContent />
       </Suspense>

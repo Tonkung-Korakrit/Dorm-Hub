@@ -12,7 +12,7 @@ import { Resident } from "@/types/booking";
 
 interface CustomJwtPayload {
   email?: string;
-  username?: string;
+  studentId?: string;
 }
 
 export default async function BookRoomPage() {
@@ -72,7 +72,7 @@ export default async function BookRoomPage() {
     try {
       const decoded = jwt.verify(token, jwtSecret) as CustomJwtPayload;
       user = await prisma.cus_users.findUnique({
-        where: { studentId: decoded.username },
+        where: { studentId: decoded.studentId },
         select: {
           id: true,
           role: true,

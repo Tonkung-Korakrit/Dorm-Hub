@@ -2,6 +2,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { PaymentStatus } from '@/types/booking';
+import { getCurrentUser } from '@/lib/auth-utils';
 // import { PaymentStatus } from '@prisma/client';
 
 // แนะนำให้เช็คความถูกต้องของ Key ก่อนเรียกใช้งาน
@@ -14,11 +15,26 @@ export async function POST(req: Request) {
   try {
     const { bookingId, amount } = await req.json();
 
+    if (!bookingId) {
+      return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
+    }
+
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
+    }
+
     // 1. ตรวจสอบว่ามี Booking นี้อยู่จริง และยังไม่ได้จ่ายเงิน
     const booking = await prisma.booking.findUnique({
-      where: { id: bookingId },
-      include: { 
-        payments: { where: { status: PaymentStatus.PENDING } } 
+      where: {
+        id: bookingId,
+        cus_users: {
+          OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+        }
+      },
+      include: {
+        payments: { where: { status: PaymentStatus.PENDING } }
       }
     });
 
@@ -50,9 +66,9 @@ export async function POST(req: Request) {
     // 4. บันทึกข้อมูลการชำระเงินลง Database
     // ใช้ upsert เพื่อที่ว่าถ้าเขากดเจน QR ซ้ำ จะได้ไม่เกิด record ขยะเยอะเกินไป
     const payment = await prisma.payment.upsert({
-      where: { 
+      where: {
         // ถ้าคุณมี external_id อยู่แล้วให้ใช้ค้นหา แต่ถ้ายังไม่มีให้สร้างใหม่ผ่าน bookingId
-        id: booking.payments[0]?.id || 'new-payment-uuid' 
+        id: booking.payments[0]?.id || 'new-payment-uuid'
       },
       update: {
         external_id: charge.id,
@@ -76,8 +92,8 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("Omise Error:", error);
-    return NextResponse.json({ 
-      error: error.message || 'Payment initialization failed' 
+    return NextResponse.json({
+      error: error.message || 'Payment initialization failed'
     }, { status: 500 });
   }
 }

@@ -1,20 +1,25 @@
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { RoomStatus, BookingType, BookingStatus } from "@prisma/client";
+import { getCurrentUser } from "@/lib/auth-utils";
+import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/types/booking";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    // console.log("📌 Body received from k6:", body);
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
 
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
+    }
+
+    const body = await request.json();
     const { user, room, type, groupId } = body;
+
+    const uId = user?.id || user?.userId;
+    const rId = room?.id;
 
     // if (!user?.id || !room?.id) {
     //   return NextResponse.json({ error: "Missing required data" }, { status: 400 });
     // }
-
-    const uId = user?.id || user?.userId;
-    const rId = room?.id;
 
     if (isNaN(uId) || isNaN(rId)) {
       console.log("❌ Invalid ID detected:", { uId, rId });
@@ -39,7 +44,7 @@ export async function POST(request: NextRequest) {
       const targetRoom = rooms[0];
 
       if (!targetRoom) throw new Error("ไม่พบข้อมูลห้องพัก");
-      if (targetRoom.status === RoomStatus.FULL) throw new Error("ห้องพักนี้เต็มแล้ว");
+      if (type !== BookingType.CO_RESIDENT && targetRoom.status === RoomStatus.FULL) throw new Error("ห้องพักนี้เต็มแล้ว");
 
       // 2. ตรวจสอบเงื่อนไขการจองแบบเหมา (CHARTER)
       if (type === BookingType.CHARTER) {
@@ -196,7 +201,7 @@ export async function POST(request: NextRequest) {
             create: {
               amount: depositAmount,
               currency: "THB",
-              status: "PENDING",
+              status: PaymentStatus.PENDING,
               method: "PROMPTPAY",
               // ในขั้นตอนนี้เรายังไม่มี external_id จาก Gateway 
               // เพราะเรายังไม่ได้ยิงไปหา Omise/ธนาคาร 
@@ -204,7 +209,7 @@ export async function POST(request: NextRequest) {
             },
           },
         },
-        
+
         include: {
           booking_logs: {
             orderBy: { createdAt: 'desc' },

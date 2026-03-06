@@ -107,7 +107,12 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
 
-  session: { strategy: "jwt" },
+  // session: { strategy: "jwt" },
+  session: {
+    strategy: "jwt",
+    maxAge: 1 * 60 * 60, // ตัวอย่าง: 1 hour
+    // maxAge: 60, // test 1 min
+  },
 
   callbacks: {
     async jwt({ token, user, account, trigger, session }) {
@@ -130,23 +135,23 @@ export const authOptions: NextAuthOptions = {
         );
       }
 
-    //   if (trigger === "update" && session) {
-    //     // เอาค่าใหม่ที่ส่งมาจากหน้าบ้าน (ผ่าน session object) มาแปะทับ
-    //     if (session.studentId) token.studentId = session.studentId;
-    //     if (session.role) token.role = session.role;
+      //   if (trigger === "update" && session) {
+      //     // เอาค่าใหม่ที่ส่งมาจากหน้าบ้าน (ผ่าน session object) มาแปะทับ
+      //     if (session.studentId) token.studentId = session.studentId;
+      //     if (session.role) token.role = session.role;
 
-    //     // สำคัญ: ต้องสร้าง myToken ใหม่ด้วยเพื่อให้ Middleware ได้ค่าล่าสุดไปใช้
-    //     token.myToken = jwt.sign(
-    //       {
-    //         email: token.email,
-    //         provider: token.provider,
-    //         role: token.role,
-    //         studentId: token.studentId,
-    //       },
-    //       process.env.JWT_SECRET as string,
-    //       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
-    //     );
-    //   }
+      //     // สำคัญ: ต้องสร้าง myToken ใหม่ด้วยเพื่อให้ Middleware ได้ค่าล่าสุดไปใช้
+      //     token.myToken = jwt.sign(
+      //       {
+      //         email: token.email,
+      //         provider: token.provider,
+      //         role: token.role,
+      //         studentId: token.studentId,
+      //       },
+      //       process.env.JWT_SECRET as string,
+      //       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" }
+      //     );
+      //   }
       return token;
     },
 

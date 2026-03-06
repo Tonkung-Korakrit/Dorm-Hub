@@ -4,26 +4,25 @@
 import React, { useState, useEffect, ChangeEvent, Dispatch, SetStateAction } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
 import { BookingType, Resident } from "@/types/booking";
-import { MdCheck, MdCheckCircle, MdInfo, MdPersonSearch } from "react-icons/md";
+import { MdCheck, MdPersonSearch } from "react-icons/md";
 import { DORM_LABELS } from "@/lib/constants";
-import { StatusPopup } from "@/app/loading/components/StatusPopup";
 import { LoadingOverlay } from "@/app/loading/components/LoadingOverlay";
 import toast from "react-hot-toast";
 import { PiRainbowCloud } from "react-icons/pi";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
+// import { StatusPopup } from "@/app/loading/components/StatusPopup";
 
 // กำหนด Interface สำหรับ Props
 interface CampusSelectorProps {
   setStep: Dispatch<SetStateAction<number>>;
-  // onSelectRegion: (region: string) => void;
 }
 
 export function CampusSelector({ setStep }: CampusSelectorProps) {
   const { formResident, setFormResident, formRoom, setFormRoom, currentBooking, setCurrentBooking, ownerInfo, setOwnerInfo, isEditMode, setIsEditMode } = useBooking();
   const [ownerStudentId, setOwnerId] = useState("");
-  const [showStatus, setShowStatus] = useState<{ type: "success" | "error"; title?: string; message: string } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  // const [ownerInfo, setOwnerInfo] = useState<any>(null);
+  const [errors, setErrors] = useState([]);
+  // const [showStatus, setShowStatus] = useState<{ type: "success" | "error"; title?: string; message: string } | null>(null);
 
   useEffect(() => {
     // เลื่อนหน้าไปด้านบนสุดเมื่อคอมโพเนนต์ mount
@@ -44,33 +43,38 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
   };
 
   const handleVerifyOwner = async () => {
-    if (!ownerStudentId) return alert("กรุณากรอกรหัสนักศึกษาครับ");
+    if (!ownerStudentId) {
+      toast.error('กรุณากรอกรหัสนักศึกษาของผู้เหมาห้องด้วยครับ', {
+        position: 'top-center',
+        duration: 2000,
+        id: 'incomplete-studentId',
+      });
+      // alert("กรุณากรอกรหัสนักศึกษาครับ");
+      return;
+    }
+
     setIsLoading(true);
     setOwnerInfo(null);
-    setShowStatus(null);
+    // setShowStatus(null);
     try {
       const res = await customFetch(`/api/bookings/check-owner?studentId=${ownerStudentId}`);
       const data = await res.json();
-
       // console.log(data)
 
       if (res.ok && data.success) {
-
         setOwnerInfo((prev: any) => ({
           ...prev,
-          studentId: data.booking.user.studentId,
-          name: data.booking.user.name_th,
-          zoneName: data.booking.room.zone.name,
-          // roomNumber: data.booking.room.roomId,
+          studentId: data.booking.cus_users.studentId,
+          name: data.booking.cus_users.name_th,
+          dorm: data.booking.room.dorm.name,
           roomId: data.booking.room.roomId,
         }));
 
-        // อัปเดตข้อมูลห้องใน Form ของเราทันที
         setFormRoom((prev: any) => ({
           ...prev,
           id: data.booking.room.id,
-          campus: data.booking.room.zone.dorm.name,
-          zone: data.booking.room.zone,
+          campus: data.booking.room.dorm.campus.name,
+          dorm: data.booking.room.dorm.name,
           floor: data.booking.room.floor,
           roomId: data.booking.room.roomId,
           price: data.booking.room.price,
@@ -78,22 +82,36 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
         }));
 
         // alert("พบข้อมูลเจ้าของห้องเรียบร้อยครับ!");
-        toast.success("พบข้อมูลเจ้าของห้องแล้ว", { id: "verify-success" });
+        toast.success("พบข้อมูลเจ้าของห้องแล้ว", {
+          position: 'top-center',
+          duration: 2000,
+          id: "verify-success",
+        });
       } else {
-        setShowStatus({
-          type: "error",
-          title: "ไม่พบข้อมูลการจอง",
-          message: data.message || "ไม่พบข้อมูลการจองแบบเหมาห้อง (Charter) ของรหัสนักศึกษานี้ในระบบ",
+        // setShowStatus({
+        //   type: "error",
+        //   title: "ไม่พบข้อมูลการจอง",
+        //   message: data.message || "ไม่พบข้อมูลการจองแบบเหมาห้อง (Charter) ของรหัสนักศึกษานี้ในระบบ",
+        // });
+        toast.error("ไม่พบข้อมูลการจองแบบเหมาห้อง (Charter) ของรหัสนักศึกษานี้ในระบบ", {
+          position: 'top-center',
+          duration: 2000,
+          id: "verify-failed"
         });
         setOwnerInfo(null);
       }
     } catch (error) {
       console.error("Verify Error:", error);
       // alert("เกิดข้อผิดพลาดในการตรวจสอบข้อมูล");
-      setShowStatus({
-        type: "error",
-        title: "เกิดข้อผิดพลาด",
-        message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง",
+      // setShowStatus({
+      //   type: "error",
+      //   title: "เกิดข้อผิดพลาด",
+      //   message: "ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง",
+      // });
+      toast.error("เกิดข้อผิดพลาด ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ในขณะนี้ กรุณาลองใหม่ภายหลัง", {
+        position: 'top-center',
+        duration: 2000,
+        id: "server-error"
       });
       setIsLoading(false);
     } finally {
@@ -104,7 +122,6 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
   const REGIONS = ["rangsit", "thaprachan", "lampang", "pattaya"];
 
   const handleSelectRegion = (selectedRegion: string) => {
-    // onSelectRegion(region); // เรียกใช้ Function เพื่อเปลี่ยน Step แทน
     setFormRoom((prev: any) => ({ ...prev, campus: selectedRegion }));
     setStep(5);
   };
@@ -134,19 +151,19 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
     });
   };
 
-  const handleContinue = () => {
-    // 1. ถ้าอยู่ในโหมดแก้ไข (มาจากหน้า Summary)
-    if (isEditMode) {
-      // ปิดโหมดแก้ไขและส่งกลับหน้าสรุปทันที
-      setIsEditMode(false);
-      setStep(7); // เลข Step ของหน้า Summary
-      toast.success("อัปเดตไลฟ์สไตล์เรียบร้อย");
-    } else {
-      // 2. ถ้าเป็น Flow ปกติ (กำลังจองครั้งแรก)
-      // ตรวจสอบเงื่อนไขตามปกติ แล้วไปหน้าเลือกห้อง (Step 5)
-      setStep(5);
-    }
-  };
+  // const handleContinue = () => {
+  //   // 1. ถ้าอยู่ในโหมดแก้ไข (มาจากหน้า Summary)
+  //   if (isEditMode) {
+  //     // ปิดโหมดแก้ไขและส่งกลับหน้าสรุปทันที
+  //     setIsEditMode(false);
+  //     setStep(7); // เลข Step ของหน้า Summary
+  //     toast.success("อัปเดตไลฟ์สไตล์เรียบร้อย");
+  //   } else {
+  //     // 2. ถ้าเป็น Flow ปกติ (กำลังจองครั้งแรก)
+  //     // ตรวจสอบเงื่อนไขตามปกติ แล้วไปหน้าเลือกห้อง (Step 5)
+  //     setStep(5);
+  //   }
+  // };
 
   return (
     <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
@@ -209,17 +226,43 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
               <label className="block text-[12px] text-emerald-700 mb-1 ml-1">Owner Student ID / รหัสนักศึกษาเจ้าของห้อง</label>
               <div className="flex gap-2">
                 <input
+                  className="flex-1 px-4 py-2.5 bg-white border border-emerald-300 rounded-xl outline-none text-black text-sm"
+                  placeholder="เช่น 6601xxxx"
                   type="text"
+                  name="ownerStudentId"
                   value={ownerStudentId}
                   onChange={(e) => setOwnerId(e.target.value)}
-                  placeholder="เช่น 6601xxxx"
-                  className="flex-1 px-4 py-2.5 bg-white border border-emerald-300 rounded-xl outline-none text-black text-sm"
+                  minLength={10}
+                  maxLength={10}
+                  onInput={(e) => {
+                    e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+                  }}
+                  onBlur={(e) => {
+                    const value = e.target.value;
+                    let isInvalid = false;
+                    if (value && value.length !== 10) isInvalid = true;
+                    if (isInvalid) {
+                      if (!errors.includes("studentId")) {
+                        setErrors([...errors, "studentId"]);
+                      }
+                    }
+                    else {
+                      setErrors(errors.filter((item) => item !== "studentId"));
+                    }
+                  }}
+                  suppressHydrationWarning
                 />
                 <button onClick={handleVerifyOwner} className="px-2 py-2.5 bg-[#006633] text-white rounded-xl font-bold text-[12px]">Check</button>
               </div>
+              {errors.includes("studentId") && (
+                <p className="text-red-500 text-xs mt-1 animate-pulse">
+                  * กรุณากรอกเลขทะเบียนนักศึกษาของผู้เหมาห้องให้ถูกต้อง (10 หลัก)
+                </p>
+              )}
               {ownerInfo && (
-                <div className="bg-white/60 p-3 rounded-lg border border-emerald-100 text-[13px] text-emerald-900">
-                  <p>✅ <b>พบข้อมูล:</b> โซน {ownerInfo.dorm || ""} - ห้อง {ownerInfo.roomId || ""}</p>
+                <div className="bg-white/60 p-3 rounded-lg border border-emerald-100 text-[12px] text-emerald-900">
+                  <p>✅ <b>พบข้อมูล: </b>เจ้าของ {ownerInfo.name || ""}</p>
+                  <p>หอพักโซน {ownerInfo.dorm || ""} - ห้อง {ownerInfo.roomId || ""}</p>
                 </div>
               )}
             </div>
@@ -232,7 +275,7 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
       {!currentBooking?.type ? (
         // 1. ถ้ายังไม่เลือก Type แสดงแค่ปุ่ม Back
         <div className="flex flex-col items-center py-6">
-          <p className="text-gray-400 text-sm mb-4 italic">Please select the guest type to proceed - กรุณาเลือกประเภทผู้พักเพื่อดำเนินการต่อ</p>
+          <p className="text-gray-400 text-sm mb-4 italic">Please select the resident type to proceed - กรุณาเลือกประเภทผู้พักเพื่อดำเนินการต่อ</p>
           <button onClick={() => setStep(3)} className="w-1/2 bg-[#7D856C] text-white py-3 rounded-2xl font-bold">Back</button>
         </div>
       ) : currentBooking.type === "CO_RESIDENT" ? (
@@ -253,7 +296,6 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
       ) : (
         // 3. ถ้าเป็น CHARTER หรือ NOT_CHARTER แสดง Lifestyle + Campus
         <>
-          {/* {isEditMode && ( */}
           {/* Lifestyle Section */}
           <section className="mb-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="flex items-center gap-2 mb-3">
@@ -270,7 +312,6 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
                 }`}
             >
               {/* แถบสีรุ้งเล็กๆ ด้านข้างเพื่อให้ดูมี Vibe LGBTQ+ แบบเรียบหรู */}
-              {/* <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-red-400 via-yellow-400 via-green-400 via-blue-400 to-purple-400 opacity-70"></div> */}
               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b from-red-400 via-green-400 to-purple-400 opacity-70"></div>
 
               <div className={`p-4 rounded-2xl transition-colors ${formResident?.lifestyle?.includes("LGBTQ_FRIENDLY") ? 'bg-[#006432] text-white' : 'bg-gray-100 text-gray-400'
@@ -361,7 +402,7 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
             </div>
           </section>
 
-          {/* Campus Selection (UI เดิมเป๊ะ) */}
+          {/* Campus Selection */}
           <div className="mt-8">
             <h2 className="text-[16px] font-bold text-gray-800 mb-6">Desired campus / เลือกวิทยาเขต*</h2>
             <div className="flex flex-col gap-10 max-w-2xl">
@@ -381,7 +422,6 @@ export function CampusSelector({ setStep }: CampusSelectorProps) {
           {/* ปุ่ม Back สำหรับ Flow ปกติ */}
           <div className={`flex w-[1/2] mt-8 gap-2`}>
             <button onClick={() => setStep(3)} className="flex justify-start bg-[#7D856C] text-white px-[52px] py-3 rounded-2xl font-bold">Back</button>
-            {/* {isEditMode && <button onClick={handleContinue} className="flex-1 bg-[#006633] text-white text-[12px] py-3 rounded-2xl font-bold shadow-lg">Save & Return to Summary</button>} */}
           </div>
         </>
       )}

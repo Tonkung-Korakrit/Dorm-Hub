@@ -4,28 +4,12 @@ import {
   MdWbSunny,
   MdNightsStay,
   MdVolumeOff,
-  // MdPeopleOutline,
   MdAutoAwesome,
-  // MdCleaningServices,
-  // MdAcUnit,
-  // MdLeafMode,
-  // MdBlock,
-  // MdVpnKey,
   MdGroups,
-  // MdPlace,
-  // MdRestaurant,
-  // MdApartment,
-  // MdOutlineBed,
-  // MdWc,
-  // MdMeetingRoom,
   MdElevator,
   MdOutlineEmojiPeople,
-  // MdSentimentSatisfied,
   MdEnergySavingsLeaf,
-  // MdOutlineHome,
-  // MdChair,
   MdSmokeFree,
-  MdSelfImprovement,
   MdVolunteerActivism,
   MdOutlineBrightness2,
   MdOutlineDoNotTouch,
@@ -34,7 +18,6 @@ import {
 
 import { PiRainbowCloud } from "react-icons/pi";
 import { FaHandsWash, FaShower } from "react-icons/fa";
-// import { GiSecretDoor } from "react-icons/gi";
 import { SiAwssecretsmanager } from "react-icons/si";
 import { SlGameController } from "react-icons/sl";
 import { FaFaceSmileBeam } from "react-icons/fa6";
@@ -78,7 +61,6 @@ export const DORM_LABELS = {
   LIFESTYLE: {
     // --- 1. ช่วงเวลาการใช้ชีวิต (Sleep Cycle) ---
     EARLY_SLEEPER: {
-    // MORNING: {
       label: "Early Sleeper - นอนเร็ว (ก่อนเที่ยงคืน)",
       icon: MdWbSunny
     },
@@ -109,10 +91,6 @@ export const DORM_LABELS = {
     },
 
     // --- 4. การใช้เครื่องปรับอากาศ (AC Preference) ---
-    // AC_COLD: {
-    //   label: "Air-Con Lover - ชอบอากาศเย็น",
-    //   icon: MdAcUnit
-    // },
     AC_ECO: {
       label: "Eco-Friendly - ประหยัดพลังงาน",
       icon: MdEnergySavingsLeaf 
@@ -125,19 +103,16 @@ export const DORM_LABELS = {
 
     // --- 5. สภาพแวดล้อมและสุขภาพ (Health & Environment) ---
     SMOKE_FREE: {
-    // NON_SMOKER: {
       label: "Smoke-Free - ไม่ชอบกลิ่น/ควันบุหรี่",
       icon: MdSmokeFree
     },
 
     // --- 6. ข้อปฏิบัติเฉพาะ (Practices & Dietary) ---
     PRAYER_ROUTINE: {
-    // RELIGIOUS_PRACTICE: {
       label: "Daily Rituals - มีการสวดมนต์/ทำสมาธิทุกวัน",
       icon: LiaPrayingHandsSolid
     },
     HALAL_LIFESTYLE: {
-    // HALAL_FRIENDLY: {
       label: "Halal Conscious - เข้าใจวิถีฮาลาล",
       icon: MdVolunteerActivism
     },
@@ -147,10 +122,12 @@ export const DORM_LABELS = {
       label: "Need Darkness - นอนต้องปิดไฟมืดสนิท",
       icon: MdOutlineBrightness2
     },
+
     STRICTLY_PERSONAL: {
       label: "Personal Space - ไม่แชร์ของใช้ส่วนตัว",
       icon: MdOutlineDoNotTouch
     },
+
     SCENT_SENSITIVE: {
       label: "Scent-Sensitive - แพ้กลิ่นหอม/กลิ่นฉุน",
       icon: MdOutlineAir
@@ -166,7 +143,7 @@ export const DORM_LABELS = {
     AC_PRIVATE_BATHROOM: {
       label: "AC_PRIVATE_BATHROOM - (แอร์ + ห้องน้ำในตัว)",
       icon: RiHomeSmileFill,
-      color: "bg-[#126A31]" // สีเขียวเข้มสำหรับห้องพักหลัก
+      color: "bg-[#126A31]" 
     },
 
     AC_SHARED_BATHROOM: {
@@ -190,7 +167,7 @@ export const DORM_LABELS = {
     TOILET: {
       label: "ห้องน้ำ && อาบน้ำ (Bathroom)",
       icon: FaShower,
-      color: "bg-gray-700" // สีเทาสำหรับพื้นที่ส่วนกลาง
+      color: "bg-gray-700"
     },
 
     WASH: {

@@ -52,8 +52,8 @@ export default async function PaymentPage({
       currentPayment = await prisma.payment.create({
         data: {
           bookingId: booking.id,
-          // amount: booking.room.price || 5000, // ใช้ราคาห้องหรือค่ามัดจำที่ตั้งไว้
-          amount: 10, // test
+          amount: booking.room.price || 5000, // ใช้ราคาห้องหรือค่ามัดจำที่ตั้งไว้
+          // amount: 20, // test
           status: 'PENDING',
           qr_payload: mockQrUrl,
           external_id: `temp_${Date.now()}` // ID อ้างอิงชั่วคราว
@@ -135,8 +135,8 @@ export default async function PaymentPage({
               <p className="text-[11px] uppercase tracking-widest text-gray-400 font-bold mb-1">Total payment</p>
               <div className="flex items-center justify-center gap-2">
                 <span className="text-4xl font-black text-[#126A31]">
-                  {/* {Number(currentPayment.amount).toLocaleString()} */}
-                  10 (Test)
+                  {Number(currentPayment.amount).toLocaleString()}
+                  {/* 20 (Test) */}
                 </span>
                 <span className="text-lg font-bold text-gray-300">THB</span>
               </div>

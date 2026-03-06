@@ -6,37 +6,17 @@ import { BookingStatus } from "@/types/booking";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { sendResubmissionReceivedEmail } from "@/lib/mail";
+import { getCurrentUser } from "@/lib/auth-utils";
 
 export async function PUT(request: Request) {
   try {
     let userId: number | null = null;
 
-    // --- แบบที่ 1: ถ้า Next-Auth ไม่เจอ ให้เช็คจาก Custom Token (API มอ) ---
-    const cookieStore = await cookies();
-    // ลองเช็คทุกชื่อที่เป็นไปได้ (ลองเปิด F12 ดูชื่อจริงอีกทีนะ)
-    const token = cookieStore.get("token")?.value;
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
 
-    if (token) {
-      try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        userId = Number(payload.id);
-        console.log("✅ Authenticated via: University API (JWT)");
-      } catch (err) {
-        console.error("❌ JWT Verify Error:", err);
-      }
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
     }
-    if (!userId) {
-      // --- แบบที่ 2: เช็คจาก Next-Auth (Google Login) ---
-      const session = await getServerSession(authOptions);
-
-      if (session?.user?.id) {
-        userId = Number(session.user.id);
-        console.log("✅ Authenticated via: Next-Auth (Google)");
-      }
-    }
-
-    if (!userId) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
     const { bookingId, user, vehicle } = await request.json();
 
@@ -47,7 +27,9 @@ export async function PUT(request: Request) {
       const existing = await tx.booking.findFirst({
         where: {
           id: Number(bookingId),
-          userId: userId, // 🔒 สำคัญมาก: ป้องกันการแอบแก้ของคนอื่น
+          cus_users: {
+            OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+          }
         }
       });
 

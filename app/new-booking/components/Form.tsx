@@ -1,8 +1,7 @@
-// /new-booking/BookRoomForm.tsx
+// app/new-booking/components/Form.tsx
 "use client";
 
 import { useState, useEffect, ChangeEvent, SetStateAction, useRef } from "react";
-// import { useRouter } from "next/navigation";
 import { useBooking } from "@/app/contexts/BookingContext";
 import { StudentInfoForm } from "./StudentInfoForm";
 import { CampusSelector } from "./CampusSelector";
@@ -22,7 +21,7 @@ import { RoomGridSelection } from "./RoomGridSelection";
 import { BookingSummary } from "./BookingSummary";
 import { PaymentPage } from "./Payment";
 import { FormBookSkeleton } from "@/app/loading/components/ิbook/FormBookSkeleton";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
 import { MdInfoOutline } from "react-icons/md";
 // import router from "next/router";
 
@@ -33,8 +32,8 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   // const router = useRouter();
 
-  const searchParams = useSearchParams(); // 2. สร้างตัวแปร searchParams
-  const editId = searchParams.get("edit"); // ดึงค่า ?edit=ID
+  const searchParams = useSearchParams();
+  const editId = searchParams.get("edit");
 
   useEffect(() => {
     if (user) setFormResident(user);
@@ -74,7 +73,7 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
             //   setStep(2);
             // }
           }
-          return; // จบการทำงานถ้าเป็นเคส Edit
+          return;
         }
 
         // ใช้ customFetch ที่เราทำไว้เพื่อให้จัดการ 401 (Expired) ให้ในตัว
@@ -85,9 +84,9 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
           setCurrentBooking(data);
 
           // ถ้าเช็คแล้วว่ามีการจองค้างอยู่ (PENDING) ให้ดีดไปหน้า 8 ทันที
-          if (data?.status === BookingStatus.PENDING) {
-            setStep(8);
-          }
+          // if (data?.status === BookingStatus.PENDING) {
+          //   setStep(8);
+          // }
         }
       } catch (err) {
         console.error("ไม่สามารถโหลดข้อมูลได้:", err);
@@ -96,7 +95,7 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
 
     // เรียกใช้งานครั้งเดียวตอน Mount
     if (isMounted) fetchBooking();
-  }, [editId, isMounted]); // [] คือทำงานครั้งเดียวตอนโหลดหน้าเว็บ
+  }, [editId, isMounted]);
 
   // แสดง Skeleton ขณะกำลัง Load
   if (!isMounted || !user) {
@@ -106,7 +105,7 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   return (
     <div className="w-full h-screen flex flex-col bg-transparent overflow-hidden">
 
-      {/* ⚠️ ส่วนแจ้งเตือนกรณี REJECTED (ใส่เพิ่มด้านบนฟอร์ม) */}
+      {/* ส่วนแจ้งเตือนกรณี REJECTED (ใส่เพิ่มด้านบนฟอร์ม) */}
       {editId && step < 8 && (
         <div className="max-w-4xl mx-auto w-full px-6 mt-4">
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-4 shadow-sm animate-in fade-in slide-in-from-top-4">
@@ -128,10 +127,6 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
         <div className="absolute left-0 top-[64px] sm:top-[64px] md:top-[72px] w-[87.5%] sm:w-[87.5%] md:w-[85%] xl:w-[77.5%] h-[6px] sm:h-[8px] md:h-[12px] bg-[#8ACCA1] z-0" />
 
         {/* --- เส้นความคืบหน้า (Active Progress Line) --- */}
-        {/* <div
-          className="absolute left-0 top-[64px] sm:top-[72px] h-[6px] sm:h-[12px] bg-[#006432] z-0 transition-all duration-700 ease-in-out"
-          style={{ width: step === 1 ? '15%' : step === 2 ? '40%' : step === 3 ? '65%' : '90%' }}
-        /> */}
         <div
           className={`absolute left-0 top-[64px] sm:top-[64px] md:top-[72px] h-[6px] sm:h-[8px] md:h-[12px] bg-[#006432] z-0 transition-all duration-700 ease-in-out 
             ${step === 1 ? 'w-[15%] sm:w-[15%] md:w-[15%] lg:w-[18%] xl:w-[22%]' : ''}
@@ -206,15 +201,14 @@ export default function BookRoomForm({ user }: BookRoomFormProps) {
   );
 }
 
-// --- Helper StepIcon ปรับแต่งให้มี Double Ring ตามภาพ image_8944f7.png ---
-
+// --- Helper StepIcon ---
 function StepIcon({ icon, label, active, current, onClick }: { icon: any, label: string, active?: boolean, current?: boolean, onClick?: () => void }) {
   return (
     <div
       className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300
         ${active ? "cursor-pointer hover:scale-105" : "cursor-default"} 
       `}
-      onClick={active ? onClick : undefined} // 2. ให้กดได้เฉพาะ Step ที่ active แล้ว (หรือจะให้กดได้หมดก็ได้)
+      onClick={active ? onClick : undefined} // ให้กดได้เฉพาะ Step ที่ active แล้ว (หรือจะให้กดได้หมดก็ได้)
     >
       {/* วงกลมไอคอน */}
       <div className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all duration-300 relative

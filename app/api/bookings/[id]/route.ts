@@ -5,43 +5,18 @@ import { jwtVerify } from "jose";
 import { BookingStatus } from "@/types/booking";
 import { authOptions } from "@/lib/auth";
 import { getServerSession } from "next-auth";
+import { getCurrentUser } from "@/lib/auth-utils";
 
 export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ id: string }> } // 1. กำหนดเป็น Promise
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     // 1. ตรวจสอบสิทธิ์ (Security First!)
-    let userId: number | null = null;
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
 
-    // --- แบบที่ 1: ถ้า Next-Auth ไม่เจอ ให้เช็คจาก Custom Token (API มอ) ---
-    const cookieStore = await cookies();
-    // ลองเช็คทุกชื่อที่เป็นไปได้ (ลองเปิด F12 ดูชื่อจริงอีกทีนะ)
-    const token = cookieStore.get("token")?.value;
-
-    if (token) {
-      try {
-        const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-        const { payload } = await jwtVerify(token, secret);
-        userId = Number(payload.id);
-        console.log("✅ Authenticated via: University API (JWT)");
-      } catch (err) {
-        console.error("❌ JWT Verify Error:", err);
-      }
-    }
-    if (!userId) {
-      // --- แบบที่ 2: เช็คจาก Next-Auth (Google Login) ---
-      const session = await getServerSession(authOptions);
-
-      if (session?.user?.id) {
-        userId = Number(session.user.id);
-        console.log("✅ Authenticated via: Next-Auth (Google)");
-      }
-    }
-
-    // ถ้าตรวจทั้ง 2 อย่างแล้วยังไม่เจอ ใครก็ไม่รู้แล้วเนี่ย ดีดออกไป!
-    if (!userId) {
-      return NextResponse.json({ message: "Unauthorized: ไม่พบข้อมูลการเข้าสู่ระบบ" }, { status: 401 });
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
     }
 
     // 2. ดึงข้อมูลการจอง (ต้องเป็นของ User คนนี้เท่านั้น)
@@ -50,12 +25,14 @@ export async function GET(
     const booking = await prisma.booking.findFirst({
       where: {
         id: bookingId,
-        userId: userId, // 🔒 ป้องกันคนอื่นมาแอบดู
+        cus_users: {
+          OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+        }
       },
       include: {
         cus_users: {
           include: {
-            vehicleInfo: true, // ดึงข้อมูลรถมาด้วย
+            vehicleInfo: true,
           }
         },
         room: {
@@ -94,13 +71,12 @@ export async function GET(
     // 3. จัด Format ข้อมูลเล็กน้อยเพื่อให้ Frontend ใช้ง่าย
     const latestLog = booking.booking_logs[0];
 
-    // 💡 Note: เนื่องจาก Schema นายเก็บ remark ไว้ใน Staff_action_log 
-    // ถ้านายยังไม่ได้เชื่อม BookingId เข้าไป พี่แนะนำให้ไปหาทางดึงมา 
-    // แต่เบื้องต้นส่งข้อมูลก้อนนี้กลับไปก่อนครับ
+    // 💡 Note: เนื่องจาก Schema เก็บ remark ไว้ใน Staff_action_log 
+    // ถ้ายังไม่ได้เชื่อม BookingId เข้าไป แนะนำให้ไปหาทางดึงมา 
     const responseData = {
       ...booking,
       status: latestLog?.status || BookingStatus.REJECTED,
-      remark: latestLog?.verifier?.staff_action_log?.[0].remark, // ถ้าในอนาคตนายเก็บ remark ใน Booking_log จะดีมาก
+      remark: latestLog?.verifier?.staff_action_log?.[0].remark,
     };
 
     return NextResponse.json(responseData);

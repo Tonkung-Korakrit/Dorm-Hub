@@ -50,7 +50,7 @@ export async function POST(req) {
 
       // 3. สร้าง Token
       const token = jwt.sign(
-        { username: user.studentId, role: user.role, provider: "TU" },
+        { studentId: user.studentId, role: user.role, provider: "TU" },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN || '1h' }
       );

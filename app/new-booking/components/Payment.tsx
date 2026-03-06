@@ -5,7 +5,7 @@ import { useBooking } from "@/app/contexts/BookingContext";
 import { MdCheckCircle, MdTimer, MdQrCodeScanner, MdEmail, MdErrorOutline, MdCloudUpload, MdClose } from "react-icons/md";
 import { RiLineFill } from "react-icons/ri";
 import { LoadingOverlay } from "@/app/loading/components/LoadingOverlay";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
 
 export function PaymentPage() {
   const { formResident, formRoom, currentBooking } = useBooking();
@@ -338,7 +338,7 @@ export function PaymentPage() {
           className="w-full py-4 bg-[#126A31] text-white rounded-2xl font-bold hover:bg-black transition-all shadow-lg shadow-green-100"
         >
           จำลองการจ่ายเงิน และอัปโหลดสลีปโอนเงินสำเร็จ (Simulate Success)
-          {isLoading && <LoadingOverlay message="กำลังบันทึกข้อมูลการจอง..." />}
+          {isLoading && <LoadingOverlay message="Saving booking information...." />}
         </button>
       </div>
     </div >

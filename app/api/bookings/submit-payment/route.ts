@@ -1,8 +1,9 @@
 // api/bookings/submit-payment
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@prisma/client";
 import { sendPaymentVerifyingEmail } from "@/lib/mail";
+import { getCurrentUser } from "@/lib/auth-utils";
+import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/types/booking";
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,11 +13,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
     }
 
+    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
+    }
+
     // --- 1. Database Transaction ---
     const result = await prisma.$transaction(async (tx) => {
       // ดึงข้อมูลการจองพร้อมข้อมูลที่เกี่ยวข้องทั้งหมด
       const currentBooking = await tx.booking.findUnique({
-        where: { id: Number(bookingId) },
+        where: {
+          id: Number(bookingId),
+          cus_users: {
+            OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
+          }
+        },
         include: {
           cus_users: { select: { name_th: true, email: true } },
           room: {

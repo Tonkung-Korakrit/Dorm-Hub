@@ -166,14 +166,3 @@ export interface Staff {
   employeeId: string | null;
   role: Role;
 }
-
-// export { 
-//   RoomStatus, 
-//   BookingType, 
-//   BookingStatus, 
-//   Role, 
-//   GenderType, 
-//   // profileImage, 
-//   AddressType, 
-//   RoomType 
-// } from "@prisma/client";

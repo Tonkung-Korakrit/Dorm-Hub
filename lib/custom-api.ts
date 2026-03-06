@@ -1,4 +1,4 @@
-// lib/api-client.ts
+// lib/api-check-session.ts
 export async function customFetch(url: string, options: RequestInit = {}) {
   try {
     const res = await fetch(url, options);
@@ -7,7 +7,11 @@ export async function customFetch(url: string, options: RequestInit = {}) {
       if (typeof window !== "undefined") {
         // เช็คก่อนว่าตอนนี้อยู่ที่หน้าแรกอยู่แล้วหรือเปล่า เพื่อป้องกันการ Infinite Redirect
         if (window.location.pathname !== "/") {
-          window.location.href = "/?reason=expired";
+           // ทางเลือกที่ 2: ถ้าอยากดีดไปหน้าแรกทันที (แบบที่คุณเขียน)
+          // window.location.href = "/?reason=expired";
+
+          // ทางเลือกที่ 1: ถ้าอยากให้ Modal เด้ง (ต้องมี SessionGuard ใน Layout)
+          window.dispatchEvent(new Event('session-expired'));
         }
       }
     }

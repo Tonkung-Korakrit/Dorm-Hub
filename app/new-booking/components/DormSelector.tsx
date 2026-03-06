@@ -7,7 +7,7 @@ import useSWR from 'swr';
 import { Dorm, GenderType } from "@/types/booking";
 import { DORM_LABELS } from "@/lib/constants";
 import { ZoneCardSkeleton } from "@/app/loading/components/ิbook/ZoneCardSkeleton";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
 
 const zoneImages: Record<string, string> = {
   B: "/images/zones/B.png",

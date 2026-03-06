@@ -1,3 +1,4 @@
+// loading/components/ConfirmModal.tsx
 import { MdWarning, MdLogout } from "react-icons/md";
 
 interface ConfirmModalProps {
@@ -26,20 +27,20 @@ export default function ConfirmModal({
 
       {/* Modal Card: มนและเรียบง่าย */}
       <div className="relative bg-white w-full max-w-[340px] rounded-[2.5rem] shadow-sm border border-gray-100/50 animate-in zoom-in-95 duration-300">
-        <div className="p-10 text-center">
+        <div className="pt-8 pb-4 px-8 text-center">
           {/* Icon: ขนาดเล็กลง ดูมินิมอล */}
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-6 ${type === "danger" ? "bg-red-50 text-red-400" : "bg-amber-50 text-amber-400"
+          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${type === "danger" ? "bg-red-500 text-white" : "bg-amber-500 text-white"
             }`}>
-            {type === "danger" ? <MdLogout size={24} /> : <MdWarning size={24} />}
+            {type === "danger" ? <MdLogout size={32} /> : <MdWarning size={32} />}
           </div>
 
           {/* Title: เน้นความสะอาด */}
-          <div className="space-y-1 mb-6">
-            <h3 className="text-base font-bold text-gray-800 tracking-tight">
+          <div className="space-y-1 mb-2">
+            <h3 className="text-[18px] font-bold text-gray-800 tracking-tight">
               {titleParts[0]}
             </h3>
             {titleParts[1] && (
-              <p className="text-[12px] font-medium text-gray-400">
+              <p className="text-[14px] font-medium text-gray-600">
                 {titleParts[1]}
               </p>
             )}
@@ -60,7 +61,7 @@ export default function ConfirmModal({
             disabled={isLoading}
             className={`w-full py-3 rounded-2xl font-bold text-[12px] transition-all active:scale-[0.98] ${type === "danger"
                 ? "bg-red-500 text-white shadow-lg shadow-red-200"
-                : "bg-gray-900 text-white shadow-lg shadow-gray-200"
+                : "bg-amber-500 text-white shadow-lg shadow-gray-200"
               } disabled:opacity-50`}
           >
             {isLoading ? "Processing..." : confirmText}

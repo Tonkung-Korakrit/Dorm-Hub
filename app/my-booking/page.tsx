@@ -2,22 +2,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  MdLogout, MdInfoOutline, MdCircle, MdClose, MdPayment,
-  MdEdit
-} from "react-icons/md";
-import { signOut, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { LoginSkeleton } from "../loading/components/login/LoginSkeleton";
-import ConfirmModal from "../loading/components/ConfirmModal";
+import { signOut } from "next-auth/react";
+
 import { DORM_LABELS } from "@/lib/constants";
+import ConfirmModal from "../loading/components/ConfirmModal";
 import { LoadingOverlay } from "../loading/components/LoadingOverlay";
+import { LoginSkeleton } from "../loading/components/login/LoginSkeleton";
+
 import { FaUser } from "react-icons/fa";
 import { FaUsersLine } from "react-icons/fa6";
 import { Booking, BookingStatus } from "@/types/booking";
-import { customFetch } from "@/lib/api";
+import { customFetch } from "@/lib/custom-api";
 import { RiHomeSmileFill } from "react-icons/ri";
-import { useBooking } from "../contexts/BookingContext";
+import { MdLogout, MdInfoOutline, MdCircle, MdClose, MdPayment, MdEdit } from "react-icons/md";
 
 export default function StudentBooking() {
   // const { Booking } = useBooking();
@@ -28,18 +26,6 @@ export default function StudentBooking() {
   const [isLogout, setIsLogout] = useState(false);
   const router = useRouter();
   const [isRedirecting, setIsRedirecting] = useState(false);
-
-  // const searchParams = useSearchParams();
-  // setError(searchParams.get('error'));
-
-  // const { data: session, status } = useSession();
-
-  // useEffect(() => {
-  //   if (status === "unauthenticated") {
-  //     // บังคับ Hard Refresh ไปหน้าแรกเพื่อล้างสถานะที่ค้างอยู่
-  //     window.location.href = "/";
-  //   }
-  // }, [status]);
 
   const [modalConfig, setModalConfig] = useState<{
     isOpen: boolean;
@@ -63,10 +49,6 @@ export default function StudentBooking() {
     const fetchBooking = async () => {
       try {
         const res = await customFetch("/api/bookings/my-booking");
-        if (res.status === 401) {
-          router.push("/");
-          return;
-        }
         const data = await res.json();
         setBooking(data);
       } catch (err) {
@@ -84,7 +66,6 @@ export default function StudentBooking() {
     setModalConfig({
       isOpen: true,
       type: "danger",
-      // ใช้รูปแบบ "English / ภาษาไทย" เพื่อให้ฟังก์ชัน split ใน Component ทำงานได้
       title: "Sign Out / ออกจากระบบ",
       message: "Are you sure you want to sign out of your account?\n" +
         "คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบในขณะนี้?",
@@ -101,7 +82,7 @@ export default function StudentBooking() {
           router.push("/");
         } catch (error) {
           console.error(error);
-          setIsLogout(false); // ถ้า error ให้เอา loading ออก
+          setIsLogout(false);
         }
       },
     });
@@ -113,7 +94,6 @@ export default function StudentBooking() {
     setModalConfig({
       isOpen: true,
       type: "warning",
-      // หัวข้อ 2 ภาษา
       title: "Confirm Cancellation / ยืนยันการยกเลิก",
       message: isPaid
         ? "Important: Deposit is Non-Refundable\n" +
@@ -124,7 +104,7 @@ export default function StudentBooking() {
         "This room will be returned to the system for others to book.\n\n" +
         "คุณแน่ใจหรือไม่ว่าต้องการยกเลิกการจองนี้? ห้องพักจะถูกคืนเข้าสู่ระบบเพื่อให้ผู้ใช้อื่นจองต่อ",
       confirmText: "Confirm Cancellation / ยืนยันการยกเลิก",
-      cancelText: "Keep Booking / รักษาการจอง", // เพิ่มเผื่อมีปุ่มยกเลิกใน Config
+      cancelText: "Keep Booking / รักษาการจอง",
       action: handleCancelBookingAction,
     });
   };
@@ -165,7 +145,7 @@ export default function StudentBooking() {
         return "bg-red-500 text-white border-red-100";
       case "EXPIRED":
         return "bg-slate-500 text-white border-orange-100";
-      default: // CANCELLED หรืออื่นๆ
+      default:
         return "bg-slate-500 text-white border-slate-100";
     }
   };
@@ -181,12 +161,10 @@ export default function StudentBooking() {
     }
   };
 
-  // if (isLoading) return <DashboardSkeleton />;
   if (isLoading || isRedirecting) return <LoginSkeleton />;
 
   // console.log("Booking: ", booking);
 
-  // --- Main Wrapper ---
   return (
     <div className="min-h-screen py-10">
       {isLogout && <LoadingOverlay message="Logging out...." />}
@@ -249,7 +227,7 @@ export default function StudentBooking() {
                   Loading...
                 </div>
               ) : (
-                "จองห้องพักทันที"
+                "Book your room now - จองห้องพักทันที"
               )}
             </button>
           </div>
@@ -284,11 +262,6 @@ export default function StudentBooking() {
                   </div>
 
                   <div className="flex flex-wrap justify-center md:justify-start gap-2.5">
-                    {/* <Tag label={`Floor / ชั้น: ${booking.room.floor}`} />
-                    <Tag label={`Zone / โซน: ${booking.room.dorm}`} />
-                    <Tag label={`Campus / วิทยาเขต: ${DORM_LABELS.CAMPUS[booking.room.campus as keyof typeof DORM_LABELS.CAMPUS] || booking.room.campus}`} isGreen />
-                    <Tag label={`Room Type / ประเภทห้อง: ${DORM_LABELS.ROOM_TYPES[booking.room.roomType as keyof typeof DORM_LABELS.ROOM_TYPES]?.label || booking.room.roomType}`} /> */}
-                    
                     <Tag label={`Floor / ชั้น: ${booking.room.floor}`} />
                     <Tag label={`Zone / โซน: ${booking.room.dorm}`} />
                     <Tag
@@ -348,8 +321,8 @@ export default function StudentBooking() {
                 </div>
               </div>
             </div>
-            {/* <p className="text-[10px] text-gray-400">Current Status: {booking.status}</p> */}
-            {["PENDING", "VERIFYING", "CANCELLED", "REJECTED", "EXPIRED"].includes(booking.status) && (
+
+            {(["PENDING", "VERIFYING", "CANCELLED", "REJECTED", "EXPIRED"].includes(booking.status)) && (
               <div className={`flex flex-col md:flex-row justify-between items-center gap-4 -mx-4 md:-mx-10 px-4 md:px-10 pb-6 md:pb-4 rounded-b-2xl transition-colors duration-300
               ${(booking.status === BookingStatus.CANCELLED || booking.status === BookingStatus.EXPIRED) ? "bg-gray-50/80 border-gray-100" :
                   booking.status === BookingStatus.REJECTED ? "bg-amber-50/40 border-amber-100" : "bg-red-50/30 border-red-50"}
@@ -415,7 +388,7 @@ export default function StudentBooking() {
                       className="w-full md:w-auto flex items-center justify-center gap-2 px-8 py-2.5 text-red-500 bg-white hover:bg-red-50 border border-red-100 rounded-xl text-sm font-black transition-all active:scale-95 disabled:opacity-50"
                     >
                       {isCancelling ? <LoadingOverlay message="Cancelling..." /> : <MdClose size={18} />}
-                      Cancel Booking
+                      Cancel Booking / ยกเลิกการจอง?
                     </button>
                   )}
 
@@ -457,6 +430,7 @@ export default function StudentBooking() {
         {/* <div className="mt-10 text-center">
           <p className="text-[10px] text-gray-300 font-medium uppercase tracking-widest">Thammasat University Dormitory Management</p>
         </div> */}
+
       </div>
     </div >
   );
@@ -489,7 +463,6 @@ function InfoRow({ label, value }: { label: string, value: any }) {
 
   return (
     <div className="flex justify-between items-baseline gap-6 py-2 border-b border-gray-100 last:border-0">
-      {/* Label (เหมือนเดิม) */}
       <dt className="text-[10px] font-bold text-gray-500 uppercase tracking-wider shrink-0 w-1/3 leading-tight">
         {labelParts.map((part, index) => (
           <span key={index} className="block">
@@ -515,18 +488,6 @@ function InfoRow({ label, value }: { label: string, value: any }) {
     </div>
   );
 }
-
-// function Tag({ label, isGreen = false }: { label: string, isGreen?: boolean }) {
-//   return (
-//     <span className={`px-3 py-1 rounded-lg text-[10px] font-bold uppercase border transition-all 
-//       ${isGreen
-//         ? "bg-[#006633] text-white border-[#006633]"
-//         : "bg-white text-gray-500 border-gray-200"
-//       }`}>
-//       {label}
-//     </span>
-//   );
-// }
 
 function Tag({ label, className = "bg-white text-gray-500 border-gray-200" }: { label: string, className?: string }) {
   return (
