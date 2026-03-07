@@ -55,3 +55,4 @@ node_modules/
 /playwright/.auth/
 
 tests/e2e/screenshots/
+booking.spec.ts
