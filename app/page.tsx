@@ -3,9 +3,9 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { LoginSkeleton } from "./loading/components/login/LoginSkeleton";
-import { LoadingOverlay } from "./loading/components/LoadingOverlay";
-import { StatusPopup } from "./loading/components/StatusPopup";
+import { LoginSkeleton } from "@/components/Loading/login/LoginSkeleton";
+import { LoadingOverlay } from "@/components/Loading/LoadingOverlay";
+import { StatusPopup } from "@/components/Loading/StatusPopup";
 
 import { FcGoogle } from "react-icons/fc";
 import { PiEyesFill } from "react-icons/pi";

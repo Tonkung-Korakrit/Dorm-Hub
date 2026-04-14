@@ -1,7 +1,9 @@
+// api/bookings/[id]/status/route.ts
+
 import { prisma } from '@/lib/prisma';
 import { NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth-utils';
-import { BookingStatus } from '@/types/booking';
+import { BookingStatus } from '@/utils/types';
+import { getAuthSession } from '@/services/identify';
 
 export async function GET(
   req: Request,
@@ -9,7 +11,7 @@ export async function GET(
 ) {
   try {
     // 1. ดึงข้อมูลยืนยันตัวตน (Identity Retrieval)
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
@@ -22,7 +24,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid Booking ID' }, { status: 400 });
     }
 
-    // 3. 🔍 Query พร้อมเช็คสิทธิ์ความเป็นเจ้าของ (Ownership Check)
+    // 3. Query พร้อมเช็คสิทธิ์ความเป็นเจ้าของ (Ownership Check)
     // เราจะไม่ดึง Log มาตรงๆ แต่เราจะดึงผ่าน Booking ที่เช็คสิทธิ์แล้ว
     const booking = await prisma.booking.findFirst({
       where: {

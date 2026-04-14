@@ -2,15 +2,24 @@
 "use client";
 
 import { Fragment, useEffect, useState, useRef } from "react";
-import { useBooking } from "@/app/contexts/BookingContext";
 import { Combobox, Transition } from '@headlessui/react';
+import { BookingStatus } from "@/utils/types";
+
+// context
+import { useBooking } from "@/app/contexts/BookingContext";
+
+// component
+import Container from "@/components/Container";
+
+// hook
+import { useScrollTop } from "@/hooks/useScrollTop";
+
+// icons
 import { MdSwapVert, MdCheck, MdClose, MdCloudUpload } from "react-icons/md";
-import { BookingStatus } from "@/types/booking";
 
 export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
-  const { formResident, setFormResident, vehicle, setVehicle,
-    currentBooking, setCurrentBooking, isEditMode, setIsEditMode } = useBooking();
-  const [mounted, setMounted] = useState(false);
+  const { vehicle, setVehicle, currentBooking, isEditMode, setIsEditMode } = useBooking();
+  // const [mounted, setMounted] = useState(false);
   const editId = new URLSearchParams(window.location.search).get("edit");
 
   const [provinceQuery, setProvinceQuery] = useState('');
@@ -26,10 +35,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
       p.name_en.toLowerCase().includes(provinceQuery.toLowerCase())
     );
 
-  useEffect(() => {
-    setMounted(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  useScrollTop();
 
   useEffect(() => {
     if (currentBooking?.status === BookingStatus.REJECTED && currentBooking.cus_users.vehicleInfo) {
@@ -66,7 +72,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     }
   };
 
-  const handleNext = () => {
+  const handleNextStep = () => {
     // ตรวจสอบความถูกต้องเบื้องต้น (ถ้ามีทะเบียน ต้องมีจังหวัดและรูป)
     // if (vehicle.licensePlate && (!vehicle.province || !previewImage)) {
     //   toast.error("กรุณาระบุข้อมูลรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ใช้รถ");
@@ -82,9 +88,18 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     }
   };
 
+  const handleBackStep = () => {
+    setStep(2)
+  }
+
   return (
-    <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
-      <h2 className="text-[24px] font-semibold text-gray-700 mb-4">Vehicle Registration / ข้อมูลรถยนต์</h2>
+    <Container
+      title="Student Profile / รูปหน้าตรง และบัตรประชาชนนักศึกษา"
+      rejected={currentBooking?.status === BookingStatus.REJECTED}
+      handleNextStep={handleNextStep}
+      handleBackStep={handleBackStep}
+      isEditMode={isEditMode}
+    >
 
       {/* คำเตือนสีแดง */}
       <div className="text-center text-red-500 text-[14px] font-bold space-y-1 mb-10 italic">
@@ -124,21 +139,6 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
           />
           <p className="text-[10px] text-gray-400 font-medium">ระบุหมวดอักษรและเลขทะเบียนโดยไม่ต้องเว้นวรรค</p>
         </div>
-
-        {/* อัปโหลดรายการจดทะเบียน */}
-        {/* <div>
-          <p className="text-[14px] font-bold text-gray-700 mb-4 italic">Upload a photo of the vehicle registration file. / อัพโหลดภาพถ่ายรายการจดทะเบียนรถหน้าล่าสุด</p>
-          <div className="flex items-center mb-4">
-            <label className="bg-[#4CAF50] text-white px-6 py-2 rounded-l-lg cursor-pointer font-bold shrink-0">
-              Choose File
-              <input type="file" className="hidden" />
-            </label>
-            <div className="bg-gray-100 flex-grow py-2 px-4 rounded-r-lg text-gray-400 text-sm overflow-hidden whitespace-nowrap">
-              Ads ... .png
-            </div>
-          </div>
-          <div className="w-full h-40 bg-gray-200 rounded-3xl"></div>
-        </div> */}
 
         {/* อัปโหลดรายการจดทะเบียน */}
         <div>
@@ -190,7 +190,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
 
           <span className="text-[12px] text-red-500">*สามารถพิมพ์เพื่อค้นหาได้ ไม่ต้องเลื่อนหาเองให้ปวดตา</span>
 
-          {mounted ? (
+          {/* {mounted ? ( */}
             <Combobox
               value={vehicle?.province || ""}
               onChange={(val) => setVehicle(prev => ({ ...prev, province: val }))}
@@ -251,23 +251,9 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
                 </Transition>
               </div>
             </Combobox>
-          ) : (
-            <div className="w-full h-[42px] bg-green-900/10 border border-gray-300 rounded-lg animate-pulse" />
-          )}
         </div>
       </div>
-
-      {/* ปุ่มควบคุม */}
-      <div className="flex gap-2 mt-12 text-[16px]">
-        {/* <button onClick={() => setStep(2)} className="flex-1 bg-[#7D856C] text-white px-6 py-2 rounded-xl shadow-lg">Back</button> */}
-        <button onClick={() => setStep(2)} className="flex-1 bg-[#7D856C] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all">Back</button>
-        <button
-          onClick={handleNext}
-          className="flex-1 bg-[#006633] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all">
-          {isEditMode ? "Save & Return to Summary" : "Next"}
-        </button>
-      </div>
-    </div>
+    </Container>
   );
 }
 

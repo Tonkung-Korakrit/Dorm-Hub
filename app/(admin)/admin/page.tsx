@@ -1,11 +1,11 @@
+// app/(admin)/admin/page.tsx
+
 import { getServerSession } from "next-auth";
-// import { authOptions } from "@/app/api/auth/[...nextauth]/route"; // ตรวจสอบ path ของคุณด้วย
 import { redirect } from "next/navigation";
-// import { AdminDashboardContent } from "./components/AdminDashboardContent";
 import { prisma } from "@/lib/prisma";
-import { authOptions } from "@/lib/auth";
+import { authOptions } from "@/services/auth";
 import AdminDashboard from "./dashboard/page";
-import { BookingStatus } from "@/types/booking";
+import { BookingStatus } from "@/utils/types";
 
 // บังคับให้หน้าหน้าเช็คข้อมูลสดเสมอ ป้องกันปัญหา Build Error ใน Docker
 export const dynamic = "force-dynamic";

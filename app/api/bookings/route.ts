@@ -1,25 +1,22 @@
+// api/bookings/upload-proof
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/types/booking";
+import { BookingStatus, BookingType, RoomStatus } from "@/utils/types";
 
 export async function POST(request: NextRequest) {
   try {
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    // const { excludeConditions, isAuthenticated } = await getAuthSession();
 
-    if (!isAuthenticated) {
-      return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
-    }
+    // if (!isAuthenticated) {
+    //   return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
+    // }
 
     const body = await request.json();
     const { user, room, type, groupId } = body;
 
     const uId = user?.id || user?.userId;
     const rId = room?.id;
-
-    // if (!user?.id || !room?.id) {
-    //   return NextResponse.json({ error: "Missing required data" }, { status: 400 });
-    // }
 
     if (isNaN(uId) || isNaN(rId)) {
       console.log("❌ Invalid ID detected:", { uId, rId });
@@ -30,13 +27,14 @@ export async function POST(request: NextRequest) {
     }
 
     const lifestyleArray = user.lifestyle || [];
+    // const facultyConfig = user.faculty_department || [];
 
     // --- เริ่มกระบวนการจองภายใน Transaction ---
     const result = await prisma.$transaction(async (tx) => {
       // 1. ล็อกแถวข้อมูลห้องทันที (คนอื่นที่อ่านห้องเดียวกันด้วย FOR UPDATE จะต้องรอ)
       // วิธีนี้จะทำให้คนอื่นที่พยายามเข้าถึงห้องเดียวกันต้อง "รอ" จนกว่าคนแรกจะจบ Transaction
       const rooms: any[] = await tx.$queryRaw`
-        SELECT id, status, capacity, currentOccupancy, parentId 
+        SELECT id, status, capacity, currentOccupancy, parentId, facultyConfig
         FROM Room 
         WHERE id = ${Number(room.id)} 
         FOR UPDATE
@@ -48,7 +46,7 @@ export async function POST(request: NextRequest) {
 
       // 2. ตรวจสอบเงื่อนไขการจองแบบเหมา (CHARTER)
       if (type === BookingType.CHARTER) {
-        if (targetRoom.currentOccupancy > 0 || targetRoom.status !== RoomStatus.AVAILABLE) {
+        if (targetRoom.currentOccupancy > 0 && targetRoom.status !== RoomStatus.AVAILABLE) {
           throw new Error("ห้องนี้ไม่สามารถจองแบบเหมาได้ เนื่องจากมีผู้เข้าพักแล้วหรือถูกจองไปบางส่วนแล้ว");
         }
       }
@@ -85,33 +83,37 @@ export async function POST(request: NextRequest) {
         newStatus = RoomStatus.AVAILABLE;
       }
 
-      // 4. อัปเดตข้อมูลห้องที่ผู้ใช้เลือก
-      // const updatedRoom = await tx.room.update({
-      //   // await tx.room.update({
-      //   where: {
-      //     id: targetRoom.id,
-      //     // ด่านป้องกันสุดท้าย: ถ้าตอนที่กำลังจะเขียน ข้อมูลเปลี่ยนไปแล้ว ให้ Update ล้มเหลว
-      //     status: targetRoom.status,
-      //     currentOccupancy: targetRoom.currentOccupancy
-      //   },
-      //   data: {
-      //     currentOccupancy: newOcc,
-      //     status: newStatus,
-      //     // คนแรกที่จองห้องนี้จะเป็นคนกำหนด Lifestyle กลางของห้อง
-      //     ...(targetRoom.currentOccupancy === 0 && { lifestyleConfig: lifestyleArray })
-      //   },
-      // }).catch(() => {
-      //   // ถ้าจับ Error ตรงนี้ได้ แสดงว่ามีคนจองตัดหน้าไปเสี้ยววินาที
-      //   throw new Error("ขออภัย ห้องพักถูกจองไปแล้วโดยผู้ใช้อื่น กรุณาลองใหม่อีกครั้ง");
-      // });
+      // ดึงคณะเดิมออกมา ถ้าไม่มีให้เป็น Array ว่าง
+      const existingFaculties = Array.isArray(targetRoom.facultyConfig)
+        ? targetRoom.facultyConfig
+        : [];
 
-      // 2. อัปเดตข้อมูล (ไม่ต้องใส่เงื่อนไข status ใน where แล้ว เพราะเราล็อกแถวไว้แล้ว)
-      await tx.room.update({
-        where: { id: targetRoom.id },
+      // เพิ่มคณะใหม่ของ User คนนี้เข้าไป (กรองค่าว่างออกเพื่อความปลอดภัย)
+      const updatedFaculties = user.faculty_department
+        ? [...existingFaculties, user.faculty_department]
+        : existingFaculties;
+
+      // 4. อัปเดตข้อมูลห้องที่ผู้ใช้เลือก
+      const updatedRoom = await tx.room.update({
+        where: {
+          id: targetRoom.id,
+          // ด่านป้องกันสุดท้าย: ถ้าตอนที่กำลังจะเขียน ข้อมูลเปลี่ยนไปแล้ว ให้ Update ล้มเหลว
+          status: targetRoom.status,
+          currentOccupancy: targetRoom.currentOccupancy
+        },
         data: {
           currentOccupancy: newOcc,
           status: newStatus,
+          facultyConfig: updatedFaculties,
+          // คนแรกที่จองห้องนี้จะเป็นคนกำหนด Lifestyle กลางของห้อง
+          ...(targetRoom.currentOccupancy === 0 && {
+            lifestyleConfig: lifestyleArray,
+            lifestyleNote: user.lifestyleNote,
+          })
         },
+      }).catch(() => {
+        // ถ้าจับ Error ตรงนี้ได้ แสดงว่ามีคนจองตัดหน้าไปเสี้ยววินาที
+        throw new Error("ขออภัย ห้องพักถูกจองไปแล้วโดยผู้ใช้อื่น กรุณาลองใหม่อีกครั้ง");
       });
 
       // 5. --- LOGIC พิเศษสำหรับ ZONE B (Suite Hierarchy) ---
@@ -181,7 +183,7 @@ export async function POST(request: NextRequest) {
       //   status: newBooking.booking_logs[0]?.status || BookingStatus.PENDING
       // };
 
-      const depositAmount = room.price || 5000;
+      // const depositAmount = room.price || 5000;
 
       const newBooking = await tx.booking.create({
         data: {
@@ -189,6 +191,7 @@ export async function POST(request: NextRequest) {
           roomId: targetRoom.id,
           type: type as BookingType,
           groupId: groupId || null,
+          status: BookingStatus.PENDING,
           booking_logs: {
             create: {
               status: BookingStatus.PENDING,
@@ -197,17 +200,17 @@ export async function POST(request: NextRequest) {
           },
 
           // เพิ่มการสร้าง Payment ตรงนี้เลย
-          payments: {
-            create: {
-              amount: depositAmount,
-              currency: "THB",
-              status: PaymentStatus.PENDING,
-              method: "PROMPTPAY",
-              // ในขั้นตอนนี้เรายังไม่มี external_id จาก Gateway 
-              // เพราะเรายังไม่ได้ยิงไปหา Omise/ธนาคาร 
-              // เราจะสร้างไว้รอ แล้วค่อยไปอัปเดต qr_payload ที่หน้า /payment
-            },
-          },
+          // payments: {
+          //   create: {
+          //     amount: depositAmount,
+          //     currency: "THB",
+          //     status: PaymentStatus.PENDING,
+          //     method: "PROMPTPAY",
+          //     // ในขั้นตอนนี้เรายังไม่มี external_id จาก Gateway 
+          //     // เพราะเรายังไม่ได้ยิงไปหา Omise/ธนาคาร 
+          //     // เราจะสร้างไว้รอ แล้วค่อยไปอัปเดต qr_payload ที่หน้า /payment
+          //   },
+          // },
         },
 
         include: {
@@ -215,10 +218,10 @@ export async function POST(request: NextRequest) {
             orderBy: { createdAt: 'desc' },
             take: 1
           },
-          payments: {
-            orderBy: { createdAt: 'desc' },
-            take: 1
-          }
+          // payments: {
+          //   orderBy: { createdAt: 'desc' },
+          //   take: 1
+          // }
         }
       });
 
@@ -246,6 +249,7 @@ export async function POST(request: NextRequest) {
         email: user.email,
         faculty_department: user.faculty_department,
         lifestyle: lifestyleArray,
+        lifestyleNote: user.lifestyleNote,
       }
     }).catch(err => console.error("User Update Warning:", err.message));
 

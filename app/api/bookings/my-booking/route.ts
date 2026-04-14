@@ -1,12 +1,14 @@
-// /app/api/bookings/my-booking/route.ts
+// app/api/bookings/my-booking/route.ts
+
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { BookingStatus } from "@/types/booking";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { BookingStatus } from "@/utils/types";
+import { getAuthSession } from "@/services/identify";
 
 export async function GET() {
+// export const getMyBooking = async () => { 
   try {
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
@@ -96,6 +98,7 @@ export async function GET() {
 
     // 3. Flatten ข้อมูล (เหมือนเดิมแต่โครงสร้างสะอาดขึ้น)
     return NextResponse.json({
+    // return ({
       id: booking.id,
       status: booking.booking_logs[0]?.status || BookingStatus.PENDING,
       type: booking.type,

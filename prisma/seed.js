@@ -3,6 +3,8 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
+import { FACULTY_LIST } from '@/utils/constants';
+
 async function main() {
   const hashedPassword = await bcrypt.hash('password123', 10);
 
@@ -65,6 +67,21 @@ async function main() {
     // สุ่มคนในห้อง ตั้งแต่ 0 จนถึงจำนวน Capacity ของห้องนั้นๆ
     return Math.floor(Math.random() * (capacity + 1));
   };
+
+  const generateFacultyConfig = (occupancy) => {
+    if (occupancy <= 0) return [];
+    const selectedFaculties = [];
+    for (let i = 0; i < occupancy; i++) {
+      const randomFaculty = FACULTIES_LIST[Math.floor(Math.random() * FACULTIES_LIST.length)];
+      selectedFaculties.push(randomFaculty);
+    }
+    return selectedFaculties; // เก็บเป็น Array ใน Json
+  };
+
+  // const getRandomNote = () => {
+  //   const notes = ["ชอบเงียบๆ ครับ", "นอนดึกอ่านหนังสือ", "เล่นเกมบ้างบางคืน", "ตื่นเช้าไปเรียน", ""];
+  //   return notes[Math.floor(Math.random() * notes.length)];
+  // };
 
   const campus = await prisma.campus.upsert({
     where: { name: 'rangsit' },
@@ -2252,6 +2269,9 @@ async function main() {
             status: occA >= 2 ? RoomStatus.FULL : RoomStatus.AVAILABLE,
             currentOccupancy: occA,
             lifestyleConfig: occA > 0 ? generateRandomLifestyle() : [],
+
+            // lifestyleNote: occA > 0 ? getRandomNote() : null,
+            facultyConfig: generateFacultyConfig(occA),
           },
           {
             roomId: `${roomItem.roomId}B`,
@@ -2263,6 +2283,9 @@ async function main() {
             status: occB >= 2 ? RoomStatus.FULL : RoomStatus.AVAILABLE,
             currentOccupancy: occB,
             lifestyleConfig: occB > 0 ? generateRandomLifestyle() : [],
+            
+            // lifestyleNote: occB > 0 ? getRandomNote() : null,
+            facultyConfig: generateFacultyConfig(occB),
           }
         ];
       }
@@ -2292,6 +2315,9 @@ async function main() {
           posY: roomItem.posY || 0,
           currentOccupancy: occupancy,
           lifestyleConfig: (occupancy > 0 && !isCommon) ? generateRandomLifestyle() : [],
+
+          // lifestyleNote: (occupancy > 0 && !isCommon) ? "General suite info" : null,
+          facultyConfig: (occupancy > 0 && !isCommon) ? generateFacultyConfig(occupancy) : [],
 
           // ใส่ SubRooms ที่เตรียมไว้
           ...(suiteSubRooms.length > 0 && {

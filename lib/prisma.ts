@@ -1,39 +1,33 @@
 // lib/prisma.ts
-// import { PrismaClient } from "@prisma/client";
-
-// const globalForPrisma = global as unknown as { prisma: PrismaClient };
-
-// export const prisma =
-//   globalForPrisma.prisma ||
-//   new PrismaClient({
-//     // ⚡ ปิด log ในสถานะปกติ หรือใช้ env switch
-//     log: process.env.NODE_ENV === "development" ? ["error", "warn"] : [], 
-//   });
-
-// if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
-
 import { PrismaClient } from '@prisma/client'
-const prisma = new PrismaClient({
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL || "mysql://dummy:dummy@localhost:3306/dummy"
-    }
-  }
-})
+
+// 1. สร้างฟังก์ชันสำหรับสร้าง Client
+const prismaClientSingleton = () => {
+  return new PrismaClient({
+    // ใส่ log เพื่อดู SQL ที่เกิดขึ้นจริง (ช่วยตอน Debug ได้มาก)
+    // log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+    log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
+  })
+}
+
+// 2. ประกาศ Type ให้ global object รู้จัก prisma
+declare const globalThis: {
+  prismaGlobal: ReturnType<typeof prismaClientSingleton>;
+} & typeof global;
+
+// 3. เลือกใช้ instance เดิมถ้ามีอยู่แล้ว หรือสร้างใหม่
+const prisma = globalThis.prismaGlobal ?? prismaClientSingleton()
+
 export { prisma }
 
-// // lib/prisma.ts
-// import { PrismaClient } from '@prisma/client'
+// 4. ในช่วง Dev ให้เก็บ instance ไว้ใน global เพื่อไม่ให้สร้างใหม่ตอน Fast Refresh
+if (process.env.NODE_ENV !== 'production') globalThis.prismaGlobal = prisma
 
-// const prismaClientSingleton = () => {
-//   return new PrismaClient()
-// }
-
-// declare global {
-//   var prisma: undefined | ReturnType<typeof prismaClientSingleton>
-// }
-
-// // เปลี่ยนตรงนี้เป็น export const prisma
-// export const prisma = globalThis.prisma ?? prismaClientSingleton()
-
-// if (process.env.NODE_ENV !== 'production') globalThis.prisma = prisma
+/// const prisma = new PrismaClient({
+//   datasources: {
+//     db: {
+//       url: process.env.DATABASE_URL || "mysql://dummy:dummy@localhost:3306/dummy"
+//     }
+//   }
+// })
+// export { prisma }

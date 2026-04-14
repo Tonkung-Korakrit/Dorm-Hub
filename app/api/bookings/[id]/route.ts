@@ -1,11 +1,9 @@
+// api/bookings/[id]/route.ts
+
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-import { BookingStatus } from "@/types/booking";
-import { authOptions } from "@/lib/auth";
-import { getServerSession } from "next-auth";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { BookingStatus } from "@/utils/types";
+import { getAuthSession } from "@/services/identify";
 
 export async function GET(
   req: Request,
@@ -13,7 +11,7 @@ export async function GET(
 ) {
   try {
     // 1. ตรวจสอบสิทธิ์ (Security First!)
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });

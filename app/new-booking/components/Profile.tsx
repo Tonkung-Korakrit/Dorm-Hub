@@ -2,26 +2,34 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { BookingStatus } from "@/utils/types";
+
+// context
+import { useBooking } from "@/app/contexts/BookingContext";
+
+// hook
+import { useScrollTop } from "@/hooks/useScrollTop";
+
+// components
+import Container from "@/components/Container";
+
+import toast from "react-hot-toast";
+
+// icons
 import { HiCamera, HiIdentification } from "react-icons/hi";
 import { MdClose, MdInfoOutline } from "react-icons/md";
-import toast from "react-hot-toast"; // แนะนำให้ใช้ toast ที่คุณมี
-import { useBooking } from "@/app/contexts/BookingContext";
-import { BookingStatus } from "@/types/booking";
 
 export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
-  const { formResident, setFormResident, isEditMode, setIsEditMode, currentBooking, setCurrentBooking } = useBooking();
+  const { isEditMode, currentBooking } = useBooking();
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [idCardImage, setIdCardImage] = useState<string | null>(null);
 
-  // เพิ่ม State เก็บชื่อไฟล์เพื่อให้ UI อัปเดตทันที
   const [idFileName, setIdFileName] = useState<string>("");
 
   const faceInputRef = useRef<HTMLInputElement>(null);
   const idInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
+  useScrollTop();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'face' | 'id') => {
     const file = e.target.files?.[0];
@@ -64,20 +72,22 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     }
   };
 
+  const handleNextStep = () => {
+    setStep(3)
+  }
+
+  const handleBackStep = () => {
+    setStep(1)
+  }
+
   return (
-    <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
-      {currentBooking?.status === BookingStatus.REJECTED && (
-        <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl">
-          <p className="text-amber-800 font-bold text-sm flex items-center gap-2 uppercase">
-            <MdInfoOutline size={18} /> Staff Feedback:
-          </p>
-          <p className="text-amber-900 text-sm mt-1">"{currentBooking.remark}"</p>
-        </div>
-      )}
-
-      <h2 className="text-[24px] font-semibold text-gray-700">Student Profile /</h2>
-      <h2 className="text-[24px] font-semibold text-gray-700 mb-4">รูปหน้าตรง และบัตรประชาชนนักศึกษา</h2>
-
+    <Container
+      title="Student Profile / รูปหน้าตรง และบัตรประชาชนนักศึกษา"
+      rejected={currentBooking?.status === BookingStatus.REJECTED}
+      handleNextStep={handleNextStep}
+      handleBackStep={handleBackStep}
+      isEditMode={isEditMode}
+    >
       <div className="space-y-10">
         {/* --- ส่วนอัปโหลดรูปหน้าตรง --- */}
         <div>
@@ -130,19 +140,6 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
           />
 
           <div className="flex flex-col gap-3">
-            {/* <div className="flex items-center">
-              <button 
-                type="button"
-                onClick={() => idInputRef.current?.click()}
-                className="bg-[#4CAF50] text-white px-6 py-2 rounded-l-xl font-bold hover:bg-[#3d8b40] transition-colors whitespace-nowrap"
-              >
-                Choose File
-              </button>
-              <div className="bg-gray-100 flex-grow py-2 px-4 rounded-r-xl text-gray-500 text-sm truncate border-y border-r border-gray-200 min-h-[40px] flex items-center">
-                {idFileName || "ยังไม่ได้เลือกไฟล์..."}
-              </div>
-            </div> */}
-
             <div
               onClick={() => !idCardImage && idInputRef.current?.click()}
               className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${idCardImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
@@ -168,27 +165,6 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
           </div>
         </div>
       </div>
-
-      <div className="flex gap-2 mt-12">
-        <button
-          onClick={() => setStep(1)}
-          className="flex-1 bg-[#7D856C] text-white py-3 rounded-2xl font-bold hover:bg-black transition-all"
-        >
-          Back
-        </button>
-        <button
-          onClick={() => {
-            // if (!faceImage || !idCardImage) {
-            //   toast.error("กรุณาอัปโหลดรูปให้ครบทั้ง 2 รายการ", { id: 'upload-error' });
-            //   return;
-            // }
-            setStep(3);
-          }}
-          className="flex-1 bg-[#006633] text-white py-3 rounded-2xl font-bold shadow-lg shadow-green-100 hover:bg-black transition-all"
-        >
-          Next
-        </button>
-      </div>
-    </div>
+    </Container >
   );
 }

@@ -1,9 +1,10 @@
 // api/bookings/submit-payment
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { sendPaymentVerifyingEmail } from "@/lib/mail";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/types/booking";
+import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@/utils/types";
+import { getAuthSession } from "@/services/identify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,7 +14,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Booking ID is required" }, { status: 400 });
     }
 
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
@@ -74,6 +75,7 @@ export async function POST(request: NextRequest) {
       const updatedBooking = await tx.booking.update({
         where: { id: Number(bookingId) },
         data: {
+          status: BookingStatus.VERIFYING,
           booking_logs: {
             create: {
               status: BookingStatus.VERIFYING,
@@ -92,10 +94,10 @@ export async function POST(request: NextRequest) {
       });
 
       // อัปเดตตาราง Payment ให้สอดคล้องกัน
-      await tx.payment.updateMany({
-        where: { bookingId: Number(bookingId), status: PaymentStatus.PENDING },
-        data: { status: PaymentStatus.SUCCESS } // หรือตามสถานะใน Enum ของคุณ
-      });
+      // await tx.payment.updateMany({
+      //   where: { bookingId: Number(bookingId), status: PaymentStatus.PENDING },
+      //   data: { status: PaymentStatus.SUCCESS } // หรือตามสถานะใน Enum ของคุณ
+      // });
 
       // --- 1.2 อัปเดตสถานะห้องปัจจุบัน (ห้องลูก หรือ ห้องเดี่ยว) ---
       await tx.room.update({

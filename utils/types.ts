@@ -1,0 +1,204 @@
+// types/booking.ts
+import { RoomStatus, BookingType, BookingStatus, Role, GenderType, File_info, AddressType, RoomType, CitizenType, PaymentStatus } from "@prisma/client";
+
+export interface Resident {
+  id: number;
+  citizenType: string;
+  citizenNumber: string;
+  studentId: string;
+  gender: GenderType;
+  titleName: string;
+  name?: string;
+  name_en: string;
+  name_th: string;
+  email: string;
+  mobilePhone?: string;
+  birthDate?: Date | string;
+  isScholarshipStudent?: boolean;
+  isDisabled?: boolean;
+  faculty_department?: string;
+  // department?: string;
+  lifestyle?: string[] | any;
+  lifestyleNote?: string;
+  isEnabled?: boolean;
+  // image?: string;
+  // tu_status?: string;
+
+  address?: Address[];
+  guardians?: Guardian[];
+  profileImage?: File_info[];
+  vehicleInfo?: Vehicle | null;
+  role: Role;
+}
+
+export interface Guardian {
+  id: number;
+  name: string;
+  relation: string;
+  phone: string;
+}
+
+export interface Vehicle {
+  id: number;
+  userId: number;
+  licensePlate: string;
+  province: string;
+  ownerName: string;
+  fileImages: string;
+  // createdAt: Date;
+  // updatedAt: Date;
+}
+
+export interface Address {
+  id: number;
+  type: AddressType;
+  addressDetail: string;
+  subDistrict: string;
+  district: string;
+  province: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface Campus {
+  id: number;
+  name: string;
+  dorm?: Dorm[];
+}
+
+export interface Dorm {
+  id: number;
+  name: string;
+  genderType: GenderType;
+  mapUrl: string;
+  maxCols: number;
+  maxRows: number;
+  campus: Campus;
+  // floors: number[]
+  rooms?: Room[];
+}
+
+export interface Room {
+  id: number;
+  campus: string;
+  dorm: Dorm;
+  roomId: string;
+  floor: number;
+  status: RoomStatus;
+  isLocked: boolean;
+  roomType: RoomType;
+  price: number;
+  capacity: number;
+  currentOccupancy: number;
+  lifestyleConfig: any; // Prisma เก็บเป็น Json
+  lifestyleNote?: String;
+  facultyConfig?: any;
+
+  isSuite: boolean;
+  parentId?: number | null;     // ID ของห้องใหญ่ (กรณีที่เป็นห้องย่อย A หรือ B)
+  parent?: Room | null;         // ข้อมูลห้องใหญ่
+  subRooms?: Room[];
+
+  posX: number;
+  posY: number;
+  booking: Booking[];
+
+  // bookingId?: number; // สำหรับเก็บ ID การจองเมื่อมีการจองสำเร็จ
+}
+
+export interface OwnerInfo {
+  studentId?: string;
+  name?: string;
+  dorm?: string;
+  roomId?: string;
+  // roomNumber: string;
+}
+
+export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType, CitizenType, PaymentStatus };
+
+export interface Booking {
+  success: boolean;
+  message: string;
+
+  id?: number;
+  status?: BookingStatus;
+  type?: BookingType;
+  createdAt?: Date;
+  remark?: string;
+
+  // expiresAt?: Date | null;
+  // verifiedBy?: number | null;
+  // verifier?: Admin | null;
+
+  // vehicle?: Vehicle;
+  cus_users?: Resident;
+  room?: Room;
+  payments?: Payment;
+}
+
+export interface Payment {
+  id?: number;
+  amount?: number;
+}
+
+export interface MyBookingResponse {
+  success: boolean;
+  message: string;
+  id?: number; // หรือ string ตาม schema
+  status?: BookingStatus;
+  type?: string;
+  createdAt?: Date;
+  remark?: string | null;
+  room?: {
+    roomId: string;
+    floor: number;
+    dorm: string;
+    campus: string;
+    roomType: string;
+    lifestyleNote: string;
+    facultyConfig: any;
+  };
+  cus_users?: {
+    userId: number;
+    studentId: string;
+    name_th: string;
+    name_en: string;
+    email: string;
+    mobilePhone: string;
+    gender: string;
+    isScholarshipStudent: boolean;
+    isDisabled: boolean;
+    faculty_department: string;
+    lifestyle: any; // หรือใส่ type ของ lifestyle ถ้ามี
+    lifestyleNote: string;
+  };
+  booking?: null; // สำหรับกรณีไม่พบข้อมูล
+}
+
+export interface MailBookingData {
+  id: number;
+  type: string;
+  cus_users: {
+    name_th: string;
+    email: string;
+  };
+  room: {
+    roomId: string;
+    floor: number;
+    roomType: string;
+    dorm: {
+      name: string;
+      campus: {
+        name: string;
+      };
+    };
+  };
+}
+
+export interface Staff {
+  id: number;
+  name: string | null;
+  email: string;
+  employeeId: string | null;
+  role: Role;
+}

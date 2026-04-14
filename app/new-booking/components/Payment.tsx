@@ -1,30 +1,40 @@
+// app/new-booking/components/PaymentPage.tsx
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useBooking } from "@/app/contexts/BookingContext";
-import { MdCheckCircle, MdTimer, MdQrCodeScanner, MdEmail, MdErrorOutline, MdCloudUpload, MdClose } from "react-icons/md";
-import { RiLineFill } from "react-icons/ri";
-import { LoadingOverlay } from "@/app/loading/components/LoadingOverlay";
-import { customFetch } from "@/lib/custom-api";
+import { customFetch } from "@/utils/custom-api";
+
+// hooks
+import { useScrollTop } from "@/hooks/useScrollTop";
+
+// components
+import Container from "@/components/Container";
+import PaymentInstructions from "@/app/payment/components/PaymentInstructions";
+import PaymentAllocation from "@/app/payment/components/PaymentAllocation";
+import PrintButton from "../../payment/success/components/PrintButton";
+import HomeButton from "../../../components/HomeButton";
+import { LoadingOverlay } from "@/components/Loading/LoadingOverlay";
+
+// icons
+import { MdCheckCircle, MdTimer, MdQrCodeScanner, MdEmail, MdErrorOutline, MdCloudUpload, MdClose, MdInfo, MdError } from "react-icons/md";
+import { RiHomeSmileFill, RiLineFill } from "react-icons/ri";
+import { LuAlarmClock } from "react-icons/lu";
+
 
 export function PaymentPage() {
-  const { formResident, formRoom, currentBooking } = useBooking();
+  const { formRoom, currentBooking } = useBooking();
   const [timeLeft, setTimeLeft] = useState(600); // 10 นาที
   const [isVerifying, setIsVerifying] = useState(false);
   const [isExpired, setIsExpired] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  // const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   // const expiryTimestamp = new Date(currentBooking.expiresAt).getTime();
 
-  useEffect(() => {
-    // เลื่อนหน้าไปด้านบนสุด เมื่อคอมโพเนนต์ mount
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, []);
-
-  // console.log("currentBooking: ", currentBooking)
+  useScrollTop();
 
   const handleAutoCancel = useCallback(async () => {
     if (!currentBooking.id || isVerifying || isExpired) return;
@@ -62,42 +72,6 @@ export function PaymentPage() {
     return () => clearInterval(timer);
   }, [timeLeft, isVerifying, isExpired, handleAutoCancel]);
 
-  // useEffect(() => {
-  //   if (isVerifying || isExpired) return;
-
-  //   const updateTimer = () => {
-  //     const now = new Date().getTime();
-  //     const distance = expiryTimestamp - now;
-  //     const secondsRemaining = Math.max(0, Math.floor(distance / 1000));
-
-  //     setTimeLeft(secondsRemaining);
-
-  //     if (secondsRemaining <= 0) {
-  //       handleAutoCancel(); // ฟังก์ชันยกเลิกจองอัตโนมัติ
-  //       return false; // สั่งให้หยุด Interval
-  //     }
-  //     return true;
-  //   };
-
-  //   // รันครั้งแรกทันทีที่โหลดหน้า
-  //   updateTimer();
-
-  //   // ตั้ง Interval
-  //   const timer = setInterval(() => {
-  //     const isActive = updateTimer();
-  //     if (!isActive) clearInterval(timer);
-  //   }, 1000);
-
-  //   // ดักจับเวลาผู้ใช้กลับมาที่แท็บ (Refresh เวลาให้ตรงเป๊ะ)
-  //   const handleFocus = () => updateTimer();
-  //   window.addEventListener('focus', handleFocus);
-
-  //   return () => {
-  //     clearInterval(timer);
-  //     window.removeEventListener('focus', handleFocus);
-  //   };
-  // }, [expiryTimestamp, isVerifying, isExpired]);
-
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -120,37 +94,10 @@ export function PaymentPage() {
   };
 
   useEffect(() => {
-    // Cleanup function
     return () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
     };
   }, [previewUrl]);
-
-  // const handleUploadPayment = async () => {
-  //   if (!selectedFile) return alert("กรุณาแนบรูปภาพสลิปการโอนเงินครับ");
-
-  //   setIsUploading(true);
-  //   const bId = currentBooking.id;
-
-  //   try {
-  //     // ในชีวิตจริง คุณต้องใช้ FormData เพื่อส่งไฟล์
-  //     const formData = new FormData();
-  //     formData.append("bookingId", bId.toString());
-  //     formData.append("paymentProof", selectedFile);
-
-  //     const res = await fetch("/api/bookings/upload-proof", {
-  //       method: "POST",
-  //       body: formData, // ส่งเป็น FormData
-  //     });
-
-  //     if (res.ok) setIsVerifying(true);
-  //   } catch (err) {
-  //     console.error(err);
-  //     alert("เกิดข้อผิดพลาดในการอัปโหลด");
-  //   } finally {
-  //     setIsUploading(false);
-  //   }
-  // };
 
   // 2. จำลองการจ่ายเงินสำเร็จ
   const handlePaymentSuccess = async () => {
@@ -171,6 +118,7 @@ export function PaymentPage() {
       });
 
       if (res.ok) setIsVerifying(true);
+
     } catch (err) {
       console.error(err);
     } finally {
@@ -178,18 +126,23 @@ export function PaymentPage() {
     }
   };
 
+  // console.log("currentBooking in payment: ",currentBooking)
+
   if (isExpired) {
     return (
-      <div className="max-w-3xl mx-auto bg-white p-8 rounded-2xl shadow-md border border-gray-200">
-        <MdErrorOutline className="text-red-500 text-8xl mx-auto mb-6" />
-        <h1 className="text-[24px] font-black text-gray-800 mb-2">หมดเวลาชำระเงิน</h1>
-        <p className="text-gray-500 mb-8">ขออภัย รายการจองของคุณถูกยกเลิกอัตโนมัติเนื่องจากเกินเวลาที่กำหนด (10 นาที)</p>
-        <button
-          onClick={() => window.location.href = "/new-booking"}
-          className="w-full py-4 bg-red-500 text-white rounded-2xl font-bold hover:bg-red-600 transition-all shadow-lg shadow-red-100"
-        >
-          กลับไปเลือกห้องใหม่
-        </button>
+      <div className="max-w-md mx-auto my-20 p-8 bg-white rounded-[2.5rem] shadow-xl border border-red-50 text-center">
+        <div className="flex justify-center mb-6">
+          <div className="bg-red-50 p-6 rounded-full relative">
+            <MdError className="text-red-500" size={64} />
+            <div className="absolute inset-0 rounded-full border-4 border-red-200 animate-ping opacity-20"></div>
+          </div>
+        </div>
+
+        <h1 className="text-2xl font-black text-gray-800 mb-2">Payment Timeout</h1>
+        <p className="text-sm text-gray-500 mb-4 px-4 leading-relaxed">
+          ขออภัย! คุณชำระเงินไม่ทันภายในเวลาที่กำหนด หากยังต้องการจองห้องนี้ กรุณาเริ่มขั้นตอนใหม่
+        </p>
+        <HomeButton isSuccess={false} />
       </div>
     );
   }
@@ -234,39 +187,126 @@ export function PaymentPage() {
   // --- View: เมื่อส่งสลิปสำเร็จ (รอตรวจสอบ) ---
   if (isVerifying) {
     return (
-      <div className="max-w-3xl mx-auto bg-white p-12 rounded-[3rem] shadow-2xl border border-gray-100 text-center">
-        <MdCheckCircle className="text-[#126A31] text-8xl mx-auto mb-6 animate-bounce" />
-        <h1 className="text-2xl font-black text-gray-800 mb-2">The evidence has been received / ได้รับหลักฐานเรียบร้อย!</h1>
-        <p className="text-gray-500">Our staff is currently reviewing your balance and other information. You will be notified of the result via email within 24 hours.</p>
-        <p className="text-gray-400 mb-8">เจ้าหน้าที่กำลังตรวจสอบยอดเงิน และข้อมูลอื่นๆ ของคุณ ระบบจะแจ้งผลทางอีเมลภายใน 24 ชม</p>
-
-        <div className="bg-emerald-50 p-6 rounded-3xl border border-emerald-100 mb-8 text-left">
-          <p className="text-sm text-emerald-800 font-bold mb-2">Inspection data - ข้อมูลการตรวจสอบ:</p>
-          <ul className="text-sm text-emerald-700 space-y-1">
-            <li>• สถานะ: <span className="font-bold">VERIFYING - เจ้าหน้าที่กำลังตรวจสอบ</span></li>
-            <li>• อีเมลแจ้งเตือน: {formResident.email}</li>
-          </ul>
+      <Container title="">
+        {/* ส่วนหัว: มินิมอลสุดๆ */}
+        <div className="flex flex-col items-center my-4">
+          <div className="relative">
+            <div className="absolute inset-0 bg-green-100 rounded-full blur-xl opacity-50 scale-150"></div>
+            <MdCheckCircle className="relative text-[#126A31] text-7xl animate-bounce" />
+          </div>
+          <h2 className="mt-4 text-xl font-black text-gray-800">Booking Confirmed!</h2>
+          <p className="text-gray-400 text-sm">เราได้รับยอดชำระเงินของคุณเรียบร้อยแล้ว</p>
         </div>
 
-        <button onClick={() => window.location.href = "/"} className="w-full py-4 bg-gray-900 text-white rounded-2xl font-bold">
-          กลับหน้าหลัก
-        </button>
-      </div>
+        {/* บัตรรายละเอียด: สไตล์ใบเสร็จมินิมอล */}
+        <div className="bg-white rounded-[2.5rem] border border-gray-200 shadow-xl shadow-green-900/5 overflow-hidden mb-6">
+
+          {/* ส่วนบน: รหัสการจอง */}
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-green-50">
+            <div>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Booking ID</p>
+              <p className="text-lg font-black text-gray-800">#TU-B-{currentBooking.id.toString().padStart(5, '0')}</p>
+            </div>
+            <div className="bg-green-500/10 text-green-600 px-4 py-1.5 rounded-full text-xs font-black">
+              Success
+            </div>
+          </div>
+
+          {/* ส่วนกลาง: รายละเอียดห้อง (ใช้ Grid แบบคลีน) */}
+          <div className="px-8 py-4 space-y-6">
+
+            {/* รายละเอียดราคาที่โดดเด่นแต่เรียบง่าย */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Amount Paid</span>
+              <div className="text-right">
+                <span className="text-2xl font-black text-[#126A31]">฿{currentBooking.payments.amount.toLocaleString()}</span>
+              </div>
+              <span className="text-xs font-bold text-gray-300">THB</span>
+            </div>
+
+            <div className="h-px bg-dashed border-t border-dashed border-gray-200"></div>
+
+            {/* ข้อมูลที่พัก */}
+            <div className="grid grid-cols-1 gap-6">
+              {/* Dormitory & Room Section */}
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-slate-50 rounded-xl text-slate-400 flex-shrink-0">
+                  <RiHomeSmileFill size={22} />
+                </div>
+                <div className="flex-1 min-w-0"> {/* เพิ่ม flex-1 และ min-w-0 เพื่อให้ตัดคำได้ */}
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dormitory & Room</p>
+                  <p className="text-sm font-bold text-gray-700 truncate" title={`${currentBooking.room.campus} — ${currentBooking.room.roomId}`}>
+                    Campus: {currentBooking.room.campus}
+                    <br />
+                    Room: {currentBooking.room.roomId}
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-medium truncate">
+                    Floor {currentBooking.room.floor} • {currentBooking.room.roomType}
+                  </p>
+                </div>
+              </div>
+
+              {/* Contact Section */}
+              <div className="flex items-start gap-4">
+                <div className="p-2 bg-slate-50 rounded-xl text-slate-400 flex-shrink-0">
+                  <MdEmail size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact</p>
+                  <div className="mt-0.5 space-y-0.5">
+                    <p className="text-[12px] font-bold text-gray-700 truncate" title={currentBooking.cus_users?.email}>
+                      <span className="text-gray-400 font-medium mr-1">Email:</span>
+                      {currentBooking.cus_users?.email}
+                    </p>
+                    <p className="text-[12px] font-bold text-gray-700 truncate">
+                      <span className="text-gray-400 font-medium mr-1">Phone:</span>
+                      {currentBooking.cus_users?.mobilePhone}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* ส่วนล่าง: สถานะการตรวจสอบ */}
+          <div className="p-4 bg-blue-50 flex items-center justify-center gap-2 border-t border-blue-200">
+            <MdInfo className="text-blue-500" size={18} />
+            <span className="text-[11px] font-bold text-blue-600 uppercase tracking-tight">Status: Verifying - เจ้าหน้าที่กำลังตรวจสอบ</span>
+          </div>
+        </div>
+
+        {/* กล่องคำเตือนสีส้ม (ทำให้จางลง) */}
+        <div className="px-4 mb-8">
+          <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50 text-center">
+            <p className="text-[12px] text-amber-700 leading-relaxed font-medium">
+              ระบบจะส่งผลการอนุมัติให้คุณทางอีเมลภายใน <span className="font-bold underline">24-48 ชั่วโมง</span>
+            </p>
+          </div>
+        </div>
+
+        {/* ปุ่ม Action */}
+        <div className="flex flex-col md:flex-row gap-4 px-2">
+          <PrintButton />
+          <HomeButton isSuccess={true} />
+        </div>
+      </Container>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto bg-white p-8 rounded-[2.5rem] shadow-xl border border-gray-100">
-      <div className="text-left mb-8">
-        <h1 className="text-[24px] font-bold text-gray-700 mb-4 leading-tight">Pay a deposit / ชำระเงินค่ามัดจำ</h1>
-        <p className="text-gray-400 text-sm">Please make the payment and upload the receipt to confirm your room reservation - กรุณาชำระเงิน และอัปโหลดสลิปเพื่อยืนยันสิทธิ์การจองห้องพัก</p>
+    <Container
+      title="Pay a deposit / ชำระเงินค่ามัดจำ"
+    >
+      <div className={`flex items-center justify-center gap-2 p-4 rounded-2xl font-bold my-4 ${timeLeft < 60 ? 'bg-red-50 text-red-500 animate-pulse' : 'bg-orange-50 text-orange-500'
+        }`}>
+        <LuAlarmClock className="text-lg text-green-700" />
+        {timeLeft > 0
+          ? `กรุณาชำระเงินภายใน ${formatTime(timeLeft)} นาที`
+          : 'หมดเวลาชำระเงิน'}
       </div>
 
-      {/* Timer Bar */}
-      <div className={`flex items-center justify-center gap-3 p-4 rounded-2xl mb-8 ${timeLeft < 60 ? "bg-red-50 text-red-600 animate-pulse" : "bg-orange-50 text-orange-600"}`}>
-        <MdTimer size={24} />
-        <span className="text-2xl font-mono font-black">{formatTime(timeLeft)}</span>
-      </div>
+      <PaymentInstructions />
+      <PaymentAllocation />
 
       <div className="bg-gray-50 p-8 rounded-[2rem] flex flex-col items-center border-2 border-dashed border-gray-200">
         <div className="bg-white p-4 rounded-2xl shadow-md mb-6">
@@ -282,18 +322,13 @@ export function PaymentPage() {
         </div>
       </div>
 
-      <div className="mt-8 space-y-4">
-        <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-2xl text-[12px] text-blue-700">
-          <span className="font-bold">💡 วิธีการ:</span>
-          <p>เปิดแอปธนาคารของคุณ สแกน QR Code ด้านบนเพื่อชำระเงิน ระบบจะตรวจสอบยอดเงินอัตโนมัติภายใน 1-2 นาที</p>
-        </div>
-
+      <div className="mt-4 space-y-4">
         {/* Upload Section: Minimalist Design */}
         <div className="space-y-6">
           <div
             onClick={() => !selectedFile && fileInputRef.current?.click()} // ถ้ามีรูปแล้ว ไม่ต้องกดซ้ำ
             className={`group relative overflow-hidden border-2 border-dashed rounded-3xl transition-all
-    ${selectedFile ? 'border-[#126A31] bg-white' : 'border-gray-200 hover:border-[#126A31] hover:bg-green-50 cursor-pointer p-8 flex flex-col items-center'}`}
+          ${selectedFile ? 'border-[#126A31] bg-white' : 'border-gray-200 hover:border-[#126A31] hover:bg-green-50 cursor-pointer p-8 flex flex-col items-center'}`}
           >
             <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
 
@@ -340,7 +375,13 @@ export function PaymentPage() {
           จำลองการจ่ายเงิน และอัปโหลดสลีปโอนเงินสำเร็จ (Simulate Success)
           {isLoading && <LoadingOverlay message="Saving booking information...." />}
         </button>
+
+        <div className="w-full p-4 bg-amber-50/50 rounded-2xl border border-amber-100/50">
+          <p className="text-center text-amber-700 text-[11px] leading-relaxed font-medium">
+            <span className="font-bold">⚠️ สำคัญ:</span> ระบบล็อกห้องไว้ให้แล้ว แต่ถ้าคุณไม่ชำระเงินให้สำเร็จภายในเวลาที่กำหนด ระบบก็จะยกเลิกการจองของคุณโดยอัตโนมัติ
+          </p>
+        </div>
       </div>
-    </div >
+    </Container>
   );
 }

@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import jwt from 'jsonwebtoken';
 import { prisma } from "@/lib/prisma";
 import axios from "axios";
-import { Role } from "@/types/booking";
+import { Role } from "@/utils/types";
 
 export async function POST(req) {
   try {

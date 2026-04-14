@@ -1,4 +1,5 @@
 // api/webhook/omise
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 import { BookingStatus, BookingType, PaymentStatus, RoomStatus } from "@prisma/client";
@@ -17,7 +18,7 @@ export async function POST(req: NextRequest) {
 
     // 2. เริ่ม Transaction เพื่อความปลอดภัยระดับสูงสุด
     const result = await prisma.$transaction(async (tx) => {
-      
+      // console.log("1.🔍 Finding Payment for ID:", event.data.id);
       // ค้นหา Payment จาก external_id (chargeId)
       const payment = await tx.payment.findUnique({
         where: { external_id: chargeId },
@@ -37,6 +38,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (!payment) throw new Error("Payment record not found");
+      // console.log("2");
 
       // ป้องกันการรันซ้ำ (Idempotency Check)
       // ถ้าสถานะเป็น SUCCESS หรือ VERIFYING อยู่แล้ว ให้หยุดทำงานทันที
@@ -44,6 +46,8 @@ export async function POST(req: NextRequest) {
       if (payment.status === PaymentStatus.SUCCESS || currentStatus === BookingStatus.VERIFYING) {
         return { alreadyProcessed: true };
       }
+
+      // console.log("3");
 
       const { booking } = payment;
       const { room, type } = booking;
@@ -71,6 +75,8 @@ export async function POST(req: NextRequest) {
         data: { status: PaymentStatus.SUCCESS, paidAt: new Date() }
       });
 
+      // console.log("4: ", booking);
+
       // ข. บันทึก Log การจอง
       await tx.booking_log.create({
         data: {
@@ -79,6 +85,17 @@ export async function POST(req: NextRequest) {
           paymentProof: `Omise_Charge_${chargeId}`
         }
       });
+
+      // console.log("5: ", booking);
+
+      await tx.booking.update({
+        where: { id: booking.id },
+        data: {
+          status: BookingStatus.VERIFYING,
+        }
+      })
+
+      // console.log("6: ", booking);
 
       // ค. อัปเดตสถานะห้องพัก (ลูก/เดี่ยว)
       await tx.room.update({
@@ -121,10 +138,10 @@ export async function POST(req: NextRequest) {
     // 6. ส่งอีเมลยืนยัน (ทำนอก Transaction)
     if (result && !result.alreadyProcessed) {
       try {
-        let coResidentNote = result.ownerName 
-          ? `ท่านเข้าพักในฐานะผู้พักร่วมกับคุณ ${result.ownerName}` 
+        let coResidentNote = result.ownerName
+          ? `ท่านเข้าพักในฐานะผู้พักร่วมกับคุณ ${result.ownerName}`
           : "";
-        
+
         await sendPaymentVerifyingEmail(result.bookingData, coResidentNote);
       } catch (emailError) {
         console.error("📧 Webhook Email Error:", emailError);

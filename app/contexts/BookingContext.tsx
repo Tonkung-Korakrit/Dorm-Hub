@@ -2,8 +2,9 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-// import { useRouter } from "next/navigation";
-import { Room, Resident, Booking, BookingType, RoomStatus, Role, BookingStatus, RoomType, GenderType, OwnerInfo, Vehicle, Staff } from "@/types/booking";
+import { Room, Resident, Booking, BookingType, RoomStatus, 
+  Role, BookingStatus, RoomType, GenderType, OwnerInfo, Vehicle, 
+  Staff, CitizenType } from "@/utils/types";
 
 // กำหนด Interface สำหรับข้อมูลใน Context (จะแชร์อะไรบ้าง)
 interface BookingContextType {
@@ -31,13 +32,9 @@ interface BookingContextType {
   setMessage: React.Dispatch<React.SetStateAction<string>>;
 }
 
-// สร้าง Context พร้อมกำหนดค่าเริ่มต้นเป็น undefined
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: ReactNode }) => {
-  // console.log("Context Provider is Rendering!");
-  // const router = useRouter();
-
   const [isEditMode, setIsEditMode] = useState(false);
   // const [editState, setEditState] = useState<{
   //   section: 'resident' | 'room' | 'lifestyle' | null;
@@ -46,7 +43,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
 
   const [formResident, setFormResident] = useState<Resident>({
     id: 0,
-    citizenType: "CITIZEN_ID",
+    citizenType: CitizenType.CITIZEN_ID,
     citizenNumber: "",
     studentId: "",
     gender: GenderType.OTHER,
@@ -60,9 +57,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     isScholarshipStudent: false,
     isDisabled: false,
     faculty_department: "",
-    // department: "",
-    // image: "",
-    // tu_status: "",
     lifestyle: [],
     isEnabled: true,
 
@@ -76,7 +70,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [formRoom, setFormRoom] = useState<Room>({
     id: 0,
     campus: "",
-    // zone: "",
     roomId: "",
     floor: 0,
     status: RoomStatus.AVAILABLE, // "AVAILABLE"
@@ -91,6 +84,9 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     posX: 1,
     posY: 1,
     lifestyleConfig: [],
+    // lifestyleNote: "",
+    // facultyConfig: [],
+
     booking: [],
 
     dorm: {
@@ -111,14 +107,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
 
   const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null)
 
-  // const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>({
-  // studentId: "",
-  // name: "",
-  // zoneName: "",
-  // roomNumber: "",
-  // roomId: "",
-  // });
-
   const [vehicle, setVehicle] = useState<Vehicle>({
     id: 0,
     userId: 0,
@@ -126,17 +114,16 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     province: "",
     ownerName: "",
     fileImages: "",
-    // createdAt: "",
-    // updatedAt: "",
   })
 
   const [currentBooking, setCurrentBooking] = useState<Booking>({
+    success: false,
+    message: "",
+
     id: 0,
     status: BookingStatus.PENDING,
     type: BookingType.NOT_CHARTER,
     createdAt: new Date(),
-    // userId: 0,
-    // roomId: 0,
     cus_users: formResident,
     room: formRoom,
   });
@@ -151,44 +138,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
 
   const [message, setMessage] = useState<string>("");
 
-  // const handleBook = async () => {
-  //   console.log("Booking room:", formRoom);
-
-  //   const confirmBooking = confirm(`ยืนยันที่จะจองห้อง ${formRoom.roomId} หรือไม่?`);
-  //   if (!confirmBooking) return;
-
-  //   try {
-  //     const bookingData = {
-  //       user: formResident,
-  //       // campus: formRoom.zone?.dorm.name,
-  //       campus: formRoom.campus,
-  //       // zone: formRoom.zone?.name,
-  //       zone: formRoom.zone,
-  //       room: formRoom,
-  //       type: currentBooking?.type || BookingType.NOT_CHARTER,
-  //       status: BookingStatus.PENDING,
-  //       createdAt: new Date().toISOString(),
-  //     };
-
-  //     const res = await fetch("../api/bookings", {
-  //       method: "POST",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify(bookingData),
-  //     });
-
-  //     const result = await res.json();
-  //     if (res.ok) {
-  //       setMessage("✅ จองสำเร็จ!");
-  //       setTimeout(() => router.push("/my-booking"), 1000);
-  //     } else {
-  //       setMessage("❌ เกิดข้อผิดพลาด: " + (result.error || "Unknown error"));
-  //     }
-  //   } catch (err) {
-  //     console.error(err);
-  //     setMessage("❌ เกิดข้อผิดพลาดในการจอง");
-  //   }
-  // };
-
   return (
     <BookingContext.Provider
       value={{
@@ -199,8 +148,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         vehicle, setVehicle,
         staff, setStaff,
         isEditMode, setIsEditMode,
-        // bookingType, setBookingType,
-        // handleBook,
         message, setMessage
       }}
     >

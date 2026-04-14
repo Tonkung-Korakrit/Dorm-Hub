@@ -77,6 +77,7 @@ model Cus_users {
   // department String?
   // tu_status  String?
   lifestyle     Json? // เก็บเป็น JSON string เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]'
+  lifestyleNote String?
   isEnabled     Boolean @default(true) // สถานะการใช้งาน (เผื่อลาออก หรือระงับสิทธิ์ชั่วคราว)
 
   address       Address[]
@@ -246,7 +247,9 @@ model Room {
   price            Float      @default(0.0)
   capacity         Int        @default(2)
   currentOccupancy Int        @default(0)
-  lifestyleConfig  Json? // คนแรกที่จองจะมา Set ค่าที่นี่ไว้ เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]' เพื่อให้คนที่จองต่อไปต้องมี Lifestyle ที่เข้ากัน 
+  lifestyleConfig  Json? // คนแรกที่จองจะมา Set ค่าที่นี่ไว้ เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]' เพื่อให้คนที่จองต่อไปต้องมี Lifestyle ที่เข้ากัน
+  lifestyleNote    String?
+  facultyConfig    Json?
   
   // --- เพื่อรองรับ Zone B ---
   isSuite          Boolean      @default(false) // ระบุว่าเป็นห้องใหญ่ หรือไม่
@@ -288,7 +291,7 @@ model Booking {
   cus_users      Cus_users          @relation(fields: [userId], references: [id])
   roomId    Int
   room      Room          @relation(fields: [roomId], references: [id])
-  // status    BookingStatus @default(PENDING)
+  status    BookingStatus @default(PENDING)
   type      BookingType   @default(NOT_CHARTER)
   groupId   String? // รหัสกลุ่ม (กรณีจองเหมาห้อง)
 
@@ -322,7 +325,8 @@ enum BookingStatus {
   CANCELLED // ยกเลิก
   EXPIRED // หมดเวลา (ถ้าไม่ชำระเงินภายใน 10 นาที)
   VERIFYING // ชำระเงินเรียบร้อย และรอการตรวจสอบการชำระเงิน
-  REJECTED // การชำระเงินถูกปฏิเสธ
+  REJECTED // การชำระเงินถูกปฏิเสธ หรือเจ้าหน้าที่ปฏิเสธ
+  PENDING_CORRECTION // กำลังรอการแก้ไข
 }
 
 enum BookingType {

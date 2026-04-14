@@ -25,6 +25,10 @@ export async function middleware(request: NextRequest) {
   let isAdminAuthenticated = false;
   let isUserAuthenticated = !!nextAuthSession;
 
+  if (request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/login', request.url))
+  }
+
   // แยกส่วนการไขกุญแจตามประเภทบัตรที่ถือมา
   try {
     // 1. ถ้ามีบัตร Admin ให้ใช้กุญแจ Admin ไขเท่านั้น

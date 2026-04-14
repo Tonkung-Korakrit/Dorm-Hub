@@ -1,18 +1,16 @@
+// api/bookings/update-rejected
+
 import { prisma } from "@/lib/prisma";
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { jwtVerify } from "jose";
-import { BookingStatus } from "@/types/booking";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
+import { BookingStatus } from "@/utils/types";
 import { sendResubmissionReceivedEmail } from "@/lib/mail";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getAuthSession } from "@/services/identify";
 
 export async function PUT(request: Request) {
   try {
     let userId: number | null = null;
 
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     if (!isAuthenticated) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
@@ -35,9 +33,12 @@ export async function PUT(request: Request) {
 
       if (!existing) throw new Error("ไม่พบรายการจอง หรือคุณไม่มีสิทธิ์เข้าถึง");
 
+      // console.log("user: ", user);
+      // console.log("existing: ", existing);
+
       // 3. อัปเดตเฉพาะฟิลด์ที่อนุญาต (Explicit Update)
       await tx.cus_users.update({
-        where: { id: userId },
+        where: { id: user.id },
         data: {
           citizenType: user.citizenType,
           citizenNumber: user.citizenNumber,
@@ -76,6 +77,7 @@ export async function PUT(request: Request) {
         data: {
           bookingId: Number(bookingId),
           status: BookingStatus.VERIFYING, // "VERIFYING"
+          createdAt: new Date()
           // หมายเหตุ: ตรงนี้ไม่ต้องใส่ verifiedBy เพราะยังไม่มี admin มาตรวจ
         }
       });
@@ -83,12 +85,13 @@ export async function PUT(request: Request) {
       const updatedBooking = await tx.booking.update({
         where: { id: Number(bookingId) },
         data: {
-          booking_logs: {
-            create: {
-              status: BookingStatus.VERIFYING,
-              createdAt: new Date()
-            }
-          }
+          status: BookingStatus.VERIFYING,
+          // booking_logs: {
+          //   create: {
+          //     status: BookingStatus.VERIFYING,
+          //     createdAt: new Date()
+          //   }
+          // },
         },
         include: {
           cus_users: { select: { name_th: true, email: true } },

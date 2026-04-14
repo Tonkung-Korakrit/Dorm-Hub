@@ -1,6 +1,8 @@
+// api/bookings/check-owner/route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { BookingStatus, BookingType } from "@/types/booking";
+import { BookingStatus, BookingType } from "@/utils/types";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);

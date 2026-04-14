@@ -1,89 +1,127 @@
+// payment/components/PaymentStatusChecker
 'use client';
-import { useCallback, useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { BookingStatus } from "@/types/booking";
 
-// เพิ่ม Prop initialSeconds เพื่อรับเวลาที่เหลือจริงจาก Server
-export default function PaymentStatusChecker({
-  bookingId,
-  initialSeconds
-}: {
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { BookingStatus } from "@/utils/types";
+
+// icons
+import { LuAlarmClock } from "react-icons/lu";
+
+interface PaymentStatusCheckerProps {
   bookingId: number,
   initialSeconds: number
-}) {
+}
+
+export default function PaymentStatusChecker({ bookingId, initialSeconds }: PaymentStatusCheckerProps) {
   const router = useRouter();
   const [timeLeft, setTimeLeft] = useState(initialSeconds);
   const [isProcessing, setIsProcessing] = useState(false);
 
-  // 1. ฟังก์ชันเช็คสถานะ (แยกออกมาให้เรียกซ้ำได้)
+  const processingRef = useRef(false);
+
+  const stopEverything = useCallback(() => {
+    setIsProcessing(true);
+    processingRef.current = true;
+  }, []);
+
+  // 1. ฟังก์ชันเช็คสถานะ
   const checkStatus = useCallback(async () => {
-    if (isProcessing) return false;
+    // if (isProcessing) return false;
+    if (processingRef.current) return true;
     try {
       const res = await fetch(`/api/bookings/${bookingId}/status`);
       if (!res.ok) return false;
       const data = await res.json();
 
       if (data.bookingStatus === BookingStatus.VERIFYING) {
-        setIsProcessing(true);
-        router.push(`/new-booking/success?id=${bookingId}`);
+        // setIsProcessing(true);
+        stopEverything();
+        router.replace(`/payment/success?id=${bookingId}`);
         return true;
       }
       if (data.bookingStatus === BookingStatus.EXPIRED) {
-        setIsProcessing(true);
-        router.push(`/new-booking/fail?id=${bookingId}`);
+        // setIsProcessing(true);
+        stopEverything();
+        router.replace(`/payment/fail?id=${bookingId}`);
         return true;
       }
       return false;
     } catch (err) {
       return false;
     }
-  }, [bookingId, isProcessing, router]);
+  }, [bookingId, router, stopEverything]);
 
-  // 2. ฟังก์ชันจัดการเมื่อเวลาหมด (Double Check ก่อน Cancel)
+  // 2. ฟังก์ชันจัดการเมื่อเวลาหมด
   const handleExpire = useCallback(async () => {
-    if (isProcessing) return;
+    // if (isProcessing) return;
+    if (processingRef.current) return;
+    
+    stopEverything();
 
-    // 🚀 เช็คสถานะ "นาทีสุดท้าย" เผื่อ Webhook เพิ่งทำงานเสร็จ
-    const isPaid = await checkStatus();
-    if (isPaid) return;
+    // เช็คสถานะ "นาทีสุดท้าย" เผื่อ Webhook เพิ่งทำงานเสร็จ
+    // const isPaid = await checkStatus();
+    // if (isPaid) return;
 
-    setIsProcessing(true);
+    // setIsProcessing(true);
     try {
       await fetch("/api/bookings/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, isExpired: true })
       });
-      router.push(`/new-booking/fail?reason=timeout&id=${bookingId}`);
+      router.replace(`/new-booking/fail?reason=timeout&id=${bookingId}`);
     } catch (err) {
-      router.push(`/new-booking/fail?reason=timeout&id=${bookingId}`);
+      router.replace(`/new-booking/fail?reason=timeout&id=${bookingId}`);
     }
-  }, [bookingId, checkStatus, isProcessing, router]);
+  }, [bookingId, router, stopEverything]);
 
-  // 3. Timer Effect (ลดเวลาอย่างเดียว ไม่ต้องรีเซ็ต Polling)
   useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev <= 1) {
-          clearInterval(timer);
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []); // รันครั้งเดียวเมื่อ Mount
+    const endTime = Date.now() + initialSeconds * 1000;
 
-  // 4. Watcher สำหรับเวลาหมด
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const diff = Math.max(0, Math.floor((endTime - now) / 1000));
+      setTimeLeft(diff);
+
+      if (diff <= 0) clearInterval(timer);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  // Watcher สำหรับเวลาหมด
   useEffect(() => {
     if (timeLeft === 0) handleExpire();
   }, [timeLeft, handleExpire]);
 
-  // 5. Polling Effect (แยกอิสระ รันทุก 4 วินาที)
+  // Polling Effect (แยกอิสระ รันทุก 5 วินาที)
+  // useEffect(() => {
+  //   const poll = setInterval(checkStatus, 5000);
+  //   return () => clearInterval(poll);
+  // }, [checkStatus]);
+
+  // Polling Effect (ปลอดภัยกว่า setInterval)
   useEffect(() => {
-    const poll = setInterval(checkStatus, 4000);
-    return () => clearInterval(poll);
-  }, [checkStatus]);
+    let timerId: NodeJS.Timeout;
+
+    const poll = async () => {
+      // ถ้ากำลังเปลี่ยนหน้า หรือสำเร็จไปแล้ว ไม่ต้องยิง
+      if (isProcessing) return;
+
+      await checkStatus();
+
+      // หลังจากเช็คเสร็จ (ไม่ว่าจะ OK หรือ Error) 
+      // ค่อยตั้งเวลาอีก 5 วินาทีเพื่อยิงรอบถัดไป
+      timerId = setTimeout(poll, 5000);
+    };
+
+    poll(); // เริ่มยิงครั้งแรก
+
+    return () => {
+      if (timerId) clearTimeout(timerId);
+    };
+  }, [checkStatus, isProcessing]);
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -92,10 +130,10 @@ export default function PaymentStatusChecker({
   };
 
   return (
-    <div className="mt-4 p-4">
+    <div className="mt-2 p-4">
       <div className={`font-bold text-sm mb-2 flex items-center justify-center gap-2 ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-orange-500'
         }`}>
-        <span className="text-lg">⏱️</span>
+        <LuAlarmClock className="text-lg text-green-700"/>
         {timeLeft > 0
           ? `กรุณาชำระเงินภายใน ${formatTime(timeLeft)} นาที`
           : 'หมดเวลาชำระเงิน'}

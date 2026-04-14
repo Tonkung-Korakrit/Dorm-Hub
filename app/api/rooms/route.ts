@@ -1,4 +1,5 @@
-// /api/rooms/route.ts
+// api/rooms/route.ts
+
 import { prisma } from "@/lib/prisma";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
         dorm: {
           include: { campus: true }
         },
-        subRooms: true
+        subRooms: true,
       },
       orderBy: { roomId: 'asc' }
     });

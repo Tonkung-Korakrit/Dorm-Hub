@@ -1,14 +1,24 @@
+// payment/components/CountdownTimer.tsx
 'use client';
+
 import { useState, useEffect } from 'react';
 
 export default function CountdownTimer({ initialSeconds }: { initialSeconds: number }) {
-  const [seconds, setSeconds] = useState(initialSeconds);
+  const [timeLeft, setTimeLeft] = useState(initialSeconds);
 
   useEffect(() => {
-    if (seconds <= 0) return;
-    const timer = setInterval(() => setSeconds(prev => prev - 1), 1000);
+    const endTime = Date.now() + initialSeconds * 1000;
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const diff = Math.max(0, Math.floor((endTime - now) / 1000));
+      setTimeLeft(diff);
+
+      if (diff <= 0) clearInterval(timer);
+    }, 1000);
+
     return () => clearInterval(timer);
-  }, [seconds]);
+  }, []);
 
   const formatTime = (s: number) => {
     const mins = Math.floor(s / 60);
@@ -16,9 +26,19 @@ export default function CountdownTimer({ initialSeconds }: { initialSeconds: num
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const isExpired = timeLeft <= 0;
+
   return (
-    <div className={`font-bold ${seconds < 60 ? 'text-red-500 animate-pulse' : 'text-orange-600'}`}>
-      {seconds > 0 ? `QR จะหมดอายุใน ${formatTime(seconds)} นาที` : 'QR หมดอายุแล้ว'}
+    <div className={`font-bold transition-colors ${timeLeft < 60 ? 'text-red-500 animate-pulse' : 'text-orange-600'}`}>
+      {isExpired ? (
+        'QR หมดอายุแล้ว'
+      ) : (
+        <div className='flex justify-center'>
+          <span className="mr-1">QR จะหมดอายุใน</span>
+          <span className="font-mono text-lg">{formatTime(timeLeft)}</span>
+          <span className="ml-1">นาที</span>
+        </div>
+      )}
     </div>
   );
 }

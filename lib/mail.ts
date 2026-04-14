@@ -2,8 +2,8 @@
 // import nodemailer from 'nodemailer';
 import dns from 'dns';
 import * as Brevo from '@getbrevo/brevo';
-import { Booking, BookingStatus, MailBookingData } from "@/types/booking";
-import { DORM_LABELS } from './constants';
+import { Booking, BookingStatus, MailBookingData } from "@/utils/types";
+import { DORM_LABELS } from '../utils/constants';
 
 // บังคับให้ใช้ IPv4 ก่อน เพื่อป้องกันปัญหา Network Timeout บน Railways
 dns.setDefaultResultOrder('ipv4first');
@@ -34,13 +34,23 @@ export const sendStatusEmail = async (
   const targetEmail = cleanEmail(booking.cus_users.email);
   const isConfirmed = status === BookingStatus.COMPLETED;
   const isRejected = status === BookingStatus.REJECTED;
+  const isResubmitting = status === BookingStatus.PENDING_CORRECTION;
   // const transporter = getTransporter();
-  if (!isConfirmed && !isRejected) return;
+  if (!isConfirmed && !isRejected && !isResubmitting) return;
 
   const sendSmtpEmail = new Brevo.SendSmtpEmail();
-  sendSmtpEmail.subject = isConfirmed
-    ? `[CONFIRMED] ยืนยันสิทธิ์การเข้าพักหอพักเรียบร้อยแล้ว - ห้อง ${booking.room.roomId}`
-    : `[REJECTED] แจ้งแก้ไขหลักฐานการชำระเงิน - เลขที่การจอง #${booking.id}`;
+  // sendSmtpEmail.subject = isConfirmed
+  //   ? `[CONFIRMED] ยืนยันสิทธิ์การเข้าพักหอพักเรียบร้อยแล้ว - ห้อง ${booking.room.roomId}`
+  //   : `[REJECTED] แจ้งแก้ไขหลักฐานการชำระเงิน - เลขที่การจอง #${booking.id}`;
+  let subject = "";
+  if (isConfirmed) {
+    subject = `[CONFIRMED] ยืนยันสิทธิ์การเข้าพักเรียบร้อยแล้ว - ห้อง ${booking.room.roomId}`;
+  } else if (isResubmitting) {
+    subject = `[ACTION REQUIRED] แจ้งแก้ไขข้อมูลการจองเพื่อให้สิทธิ์สมบูรณ์ - เลขที่ #${booking.id}`;
+  } else {
+    subject = `[REJECTED] ผลการพิจารณาการจองหอพักไม่ผ่านการอนุมัติ - เลขที่ #${booking.id}`;
+  }
+  sendSmtpEmail.subject = subject;
 
   sendSmtpEmail.sender = { "name": senderName, "email": senderEmail };
   sendSmtpEmail.to = [{ "email": targetEmail, "name": booking.cus_users.name_th }];
@@ -118,39 +128,80 @@ export const sendStatusEmail = async (
         </div>
       </div>
 
-      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
         <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
-        <p style="margin: 0;">© 2026 ${senderName}</p>
+        <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
       </div>
     </div>`;
 
   const htmlRejected = `
-    <div style="font-family: 'Sarabun', -apple-system, sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #fee2e2; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+    <div style="font-family: 'Sarabun', sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #fee2e2; padding: 0; border-radius: 12px; overflow: hidden;">
       <div style="background-color: #dc2626; padding: 30px 20px; text-align: center;">
         <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งผลการตรวจสอบข้อมูลการจอง</h2>
-        <p style="color: #fee2e2; margin-top: 8px; font-size: 14px;">รายการจอง #${booking.id} ต้องได้รับการแก้ไข</p>
+        <p style="color: #fee2e2; margin-top: 8px; font-size: 14px;">รายการจอง #${booking.id} ไม่ผ่านการอนุมัติ</p>
       </div>
 
       <div style="padding: 40px 30px;">
         <p style="font-size: 16px; margin-bottom: 20px;">เรียน คุณ <b>${booking.cus_users.name_th}</b>,</p>
         <p style="line-height: 1.7; color: #4b5563; margin-bottom: 25px;">
-          จากการตรวจสอบ **ข้อมูลหรือหลักฐานการจอง** ของท่านโดยเจ้าหน้าที่ พบจุดที่ต้องดำเนินการแก้ไข 
-          ทำให้ไม่สามารถยืนยันการจองได้ในขณะนี้
+          ขออภัยในความไม่สะดวก เจ้าหน้าที่ได้ตรวจสอบข้อมูลการจองของท่านแล้ว <b>ไม่สามารถอนุมัติสิทธิ์การเข้าพักได้</b> 
+          เนื่องจากสาเหตุดังต่อไปนี้:
         </p>
         
         <div style="background-color: #fef2f2; border: 1px solid #fee2e2; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
-          <h3 style="font-size: 13px; color: #991b1b; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">❌ สิ่งที่ต้องแก้ไข / เหตุผล:</h3>
-          <div style="font-size: 15px; color: #b91c1c; margin: 0; line-height: 1.6; background: #ffffff; padding: 15px; border-radius: 6px; border-left: 4px solid #dc2626;">
-            ${remark || 'ข้อมูลไม่ถูกต้องครบถ้วน กรุณาตรวจสอบอีกครั้งในระบบ'}
+          <h3 style="font-size: 13px; color: #991b1b; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold;">🚫 สาเหตุการปฏิเสธ:</h3>
+          <div style="font-size: 15px; color: #b91c1c; background: #ffffff; padding: 15px; border-radius: 6px; border-left: 4px solid #dc2626;">
+            ${remark || 'ข้อมูลไม่เป็นไปตามเงื่อนไขที่มหาวิทยาลัยกำหนด'}
+          </div>
+        </div>
+
+        <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
+          <h4 style="font-size: 15px; color: #1f2937; margin: 0 0 10px 0;">หากมีข้อสงสัย<br />ท่านสามารถสอบถามเพิ่มเติมผ่านทาง:</h4>
+          <ul style="font-size: 14px; color: #64748b; padding-left: 20px; line-height: 1.8;">
+            <li>เบอร์โทรศัพท์: <a href="tel:020262345" style="color: #006432; text-decoration: none; font-weight: 600;">02-026-2345</a></li>
+            <li>Line@: <a href="https://line.me/ti/p/@baantuofficial" style="color: #006432; text-decoration: none; font-weight: 600;">@baantuofficial</a></li> 
+            <li>Email: <a href="mailto:marketing@psm.tu.ac.th" style="color: #006432; text-decoration: none; font-weight: 600;">marketing@psm.tu.ac.th</a></li>
+            <li>Facebook Page: <a href="https://www.facebook.com/psm.tu?locale=th_TH" target="_blank" style="color: #006432; text-decoration: none; font-weight: 600;">baantuofficial</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+        <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
+        <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
+      </div>
+    </div>`;
+
+  const htmlPendingCorrection = `
+    <div style="font-family: 'Sarabun', sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #fed7aa; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+      <div style="background-color: #f97316; padding: 30px 20px; text-align: center;">
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งแก้ไขข้อมูลการจอง</h2>
+        <p style="color: #ffedd5; margin-top: 8px; font-size: 14px;">รายการจอง #${booking.id} รอการแก้ไขจากท่าน</p>
+      </div>
+
+      <div style="padding: 40px 30px;">
+        <p style="font-size: 16px; margin-bottom: 20px;">เรียน คุณ <b>${booking.cus_users.name_th}</b>,</p>
+        <p style="line-height: 1.7; color: #4b5563; margin-bottom: 25px;">
+          เจ้าหน้าที่ได้ตรวจสอบข้อมูลของท่านแล้ว **พบจุดที่ต้องแก้ไขเพิ่มเติม** กรุณาดำเนินการแก้ไขเพื่อให้การจองสมบูรณ์:
+        </p>
+        
+        <div style="background-color: #fffaf5; border: 1px solid #fed7aa; padding: 25px; border-radius: 8px; margin-bottom: 30px;">
+          <h3 style="font-size: 13px; color: #9a3412; margin: 0 0 10px 0; text-transform: uppercase; font-weight: bold; letter-spacing: 0.5px;">⚠️ รายละเอียดที่ต้องแก้ไข:</h3>
+          <div style="font-size: 15px; color: #7c2d12; margin: 0; line-height: 1.6; background: #ffffff; padding: 15px; border-radius: 6px; border-left: 4px solid #f97316;">
+            ${remark || 'กรุณาตรวจสอบรายละเอียดการแก้ไขในระบบ'}
           </div>
         </div>
 
         <div style="text-align: center; margin-bottom: 30px;">
-          <a href="${baseUrl}/my-booking" style="background-color: #dc2626; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block; box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.2);">กดเพื่อเข้าแก้ไขข้อมูลทันที</a>
+          <a href="${baseUrl}/my-booking" style="background-color: #f97316; color: #ffffff; padding: 12px 28px; text-decoration: none; border-radius: 8px; font-weight: 600; display: inline-block;">เข้าสู่ระบบเพื่อแก้ไขข้อมูล</a>
         </div>
 
         <p style="font-size: 14px; color: #64748b; margin-bottom: 25px;">
           กรุณาดำเนินการแก้ไขข้อมูลให้ถูกต้องภายในระยะเวลา 3 วัน เพื่อรักษาเสถียรภาพสิทธิ์ในการจองห้องพักของท่าน
+        </p>
+
+        <p style="font-size: 13px; color: #64748b; background: #f8fafc; padding: 15px; border-radius: 6px;">
+          <b>หมายเหตุ:</b> หลังจากท่านแก้ไข และส่งข้อมูลอีกครั้ง เจ้าหน้าที่จะรีบดำเนินการตรวจสอบให้เร็วที่สุดครับ
         </p>
 
         <div style="padding-top: 20px; border-top: 1px solid #f1f5f9;">
@@ -164,12 +215,20 @@ export const sendStatusEmail = async (
         </div>
       </div>
 
-      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+        <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
         <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
       </div>
     </div>`;
 
-  sendSmtpEmail.htmlContent = isConfirmed ? htmlConfirmed : htmlRejected;
+  // sendSmtpEmail.htmlContent = isConfirmed ? htmlConfirmed : htmlRejected;
+  if (isConfirmed) {
+    sendSmtpEmail.htmlContent = htmlConfirmed;
+  } else if (isResubmitting) {
+    sendSmtpEmail.htmlContent = htmlPendingCorrection; // ตัวใหม่ที่เราจะสร้าง
+  } else {
+    sendSmtpEmail.htmlContent = htmlRejected;
+  }
 
   console.log(`[GmailService] กำลังส่งเมลแจ้งผลไปที่: ${targetEmail}`);
 
@@ -246,7 +305,7 @@ export const sendPaymentVerifyingEmail = async (
         <p style="line-height: 1.7; color: #4b5563; margin-bottom: 30px;">
           หอพักมหาวิทยาลัยได้รับหลักฐานการชำระเงินค่ามัดจำสำหรับการจองหอพักของท่านเรียบร้อยแล้ว 
           ขณะนี้ข้อมูลดังกล่าวอยู่ใน <b>ขั้นตอนการตรวจสอบความถูกต้อง</b> 
-          โดยเจ้าหน้าที่${senderName} โปรดรอการดำเนินการภายใน 1-2 วันทำการ
+          โดยเจ้าหน้าที่${senderName} โปรดรอการดำเนินการภายใน 7 วันทำการ
         </p>
         
         <div style="${cardStyle}">
@@ -290,9 +349,9 @@ export const sendPaymentVerifyingEmail = async (
         </div>
       </div>
 
-      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
         <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
-        <p style="margin: 0;">© 2026 ${senderName}</p>
+        <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
       </div>
     </div>`;
 
@@ -323,7 +382,7 @@ export const sendResubmissionReceivedEmail = async (
   const sendSmtpEmail = new Brevo.SendSmtpEmail();
 
   // ปรับ Subject ให้ชัดเจนว่าเป็นการรับข้อมูลที่ "แก้ไขแล้ว"
-  sendSmtpEmail.subject = `[RE-VERIFYING] แจ้งยืนยันการรับข้อมูลที่แก้ไขแล้ว - ห้อง ${booking.room.roomId}`;
+  sendSmtpEmail.subject = `[RE-SUBMITTED] ระบบได้รับข้อมูลที่แก้ไขแล้ว - ห้อง ${booking.room.roomId}`;
   sendSmtpEmail.sender = { "name": senderName, "email": senderEmail };
   sendSmtpEmail.to = [{ "email": targetEmail, "name": booking.cus_users.name_th }];
 
@@ -332,7 +391,7 @@ export const sendResubmissionReceivedEmail = async (
   const htmlResubmission = `
     <div style="font-family: 'Sarabun', -apple-system, sans-serif; color: #1f2937; max-width: 600px; margin: auto; border: 1px solid #e5e7eb; padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
       <div style="background-color: #F59E0B; padding: 30px 20px; text-align: center;">
-        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">แจ้งยืนยันการรับข้อมูลที่แก้ไขแล้ว</h2>
+        <h2 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 600;">ระบบได้รับข้อมูลที่แก้ไขแล้ว</h2>
         <p style="color: #fef3c7; margin-top: 8px; font-size: 14px;">${senderName}</p>
       </div>
 
@@ -341,7 +400,7 @@ export const sendResubmissionReceivedEmail = async (
         <p style="line-height: 1.7; color: #4b5563; margin-bottom: 30px;">
           ระบบได้รับข้อมูลที่ท่านดำเนินการ <b>แก้ไข และส่งเข้ามาใหม่ (Resubmitted)</b> เรียบร้อยแล้ว 
           ขณะนี้ข้อมูลดังกล่าวถูกส่งกลับเข้าสู่ระบบเพื่อให้เจ้าหน้าที่ตรวจสอบความถูกต้องอีกครั้ง 
-          โปรดรอการดำเนินการภายใน 1-2 วันทำการ
+          โปรดรอการดำเนินการภายใน 7 วันทำการ
         </p>
         
         <div style="${cardStyle}">
@@ -382,9 +441,9 @@ export const sendResubmissionReceivedEmail = async (
         </div>
       </div>
 
-      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 12px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
+      <div style="background-color: #f8fafc; padding: 25px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px solid #f1f5f9;">
         <p style="margin: 0 0 5px 0;">อีเมลฉบับนี้ส่งโดยระบบอัตโนมัติ กรุณาอย่าตอบกลับอีเมลนี้</p>
-        <p style="margin: 0;">© 2026 ${senderName}</p>
+        <p style="margin: 0;">© ${new Date().getFullYear()} ${senderName} | หอพักมหาวิทยาลัยธรรมศาสตร์</p>
       </div>
     </div>`;
 

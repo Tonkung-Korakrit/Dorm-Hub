@@ -4,7 +4,7 @@ on:
   push:
     # branches: [ "main" ] # รันเมื่อมีการ push ขึ้น branch main เท่านั้น
     branches:
-    - "main"
+    # - "main"
     # - "dev_ton"
 
 jobs:

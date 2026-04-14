@@ -1,6 +1,7 @@
 // api/validate-user
-import { getCurrentUser } from "@/lib/auth-utils";
+
 import { prisma } from "@/lib/prisma";
+import { getAuthSession } from "@/services/identify";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -39,7 +40,7 @@ export async function GET(request: Request) {
     // if (email) excludeConditions.push({ email: email });
     // if (studentId) excludeConditions.push({ studentId: studentId });
 
-    const { excludeConditions, isAuthenticated } = await getCurrentUser();
+    const { excludeConditions, isAuthenticated } = await getAuthSession();
 
     // ใช้ findFirst แทน findUnique เพื่อให้ใช้คำสั่ง NOT ได้
     const user = await prisma.cus_users.findFirst({
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
-      isExist: !!user, // ถ้าเจอ user จะคืนค่า true
+      isDuplicate: !!user, // ถ้าเจอ user จะคืนค่า true
       message: user ? `พบ ${type} นี้มีซ้ำในระบบแล้ว` : `${type} สามารถใช้ได้`,
     });
 

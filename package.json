@@ -25,7 +25,7 @@
     "jsonwebtoken": "^9.0.2",
     "next": "^15.5.9",
     "next-auth": "^4.24.11",
-    "nodemailer": "^6.10.1",
+    "nodemailer": "^7.0.13",
     "omise": "^1.1.0",
     "react": "^19.2.3",
     "react-cookie": "^8.0.1",
