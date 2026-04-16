@@ -36,3 +36,11 @@
   background-color: #ef4444 !important; /* สีเดียวกับ ring-red-500 ของคุณ */
   border-radius: 8px !important;
 }
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 10px;
+}

@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 
 const prisma = new PrismaClient();
 
-import { FACULTY_LIST } from '@/utils/constants';
+import { FACULTY_LIST } from '../utils/constants';
 
 async function main() {
   const hashedPassword = await bcrypt.hash('password123', 10);
@@ -72,7 +72,7 @@ async function main() {
     if (occupancy <= 0) return [];
     const selectedFaculties = [];
     for (let i = 0; i < occupancy; i++) {
-      const randomFaculty = FACULTIES_LIST[Math.floor(Math.random() * FACULTIES_LIST.length)];
+      const randomFaculty = FACULTY_LIST[Math.floor(Math.random() * FACULTY_LIST.length)];
       selectedFaculties.push(randomFaculty);
     }
     return selectedFaculties; // เก็บเป็น Array ใน Json

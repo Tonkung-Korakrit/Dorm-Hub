@@ -1,13 +1,27 @@
 // components/ui/LoadingOverlay.tsx
-import React from 'react';
+"user client"
+import React, { useEffect } from "react";
 
 interface LoadingOverlayProps {
   message?: string;
 }
 
-export const LoadingOverlay = ({ message = "กำลังประมวลผล..." }: LoadingOverlayProps) => {
+export const LoadingOverlay = ({
+  message = "กำลังประมวลผล...",
+}: LoadingOverlayProps) => {
+  useEffect(() => {
+    // เก็บค่าเดิมไว้ก่อน
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = "hidden";
+
+    // คืนค่าเดิมเมื่อ Loading หายไป (Cleanup)
+    return () => {
+      document.body.style.overflow = originalStyle;
+    };
+  }, []);
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] w-screen h-[100dvh] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
       <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-[280px] w-full">
         {/* Spinner วงกลมหมุน */}
         <div className="relative w-12 h-12">

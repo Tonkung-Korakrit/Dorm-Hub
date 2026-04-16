@@ -23,7 +23,7 @@ const Verify = ({ name, validateMessage }: VerifyProps) => {
       case "name_th":
         return <p className="text-red-500 text-xs mb-2 animate-pulse">* กรุณากรอกทั้งชื่อ และนามสกุลภาษาไทย (และเว้นวรรคให้ถูกต้อง)</p>
       case "name_en":
-        return <p className="text-red-500 text-xs mb-2 animate-pulse">* กรุณากรอกทั้งชื่อ และนามสกุลภาษาอังกฤษ (และเว้นวรรคให้ถูกต้อง)</p>
+        return <p className="text-red-500 text-xs mb-2 animate-pulse">* Please enter both First name and Surname (English)</p>
       case "birthDate":
         return <p className="text-red-500 text-xs my-2 animate-pulse">* กรุณาเลือกวันเกิดให้ถูกต้อง (ผู้เข้าพักต้องมีอายุ 18 ปีขึ้นไป)</p>
       case "mobilePhone":

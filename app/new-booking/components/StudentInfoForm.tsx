@@ -28,8 +28,8 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
   const { formResident, setFormResident, isEditMode, currentBooking } = useBooking();
 
   const {
-    errors, setErrors, errorValidate, handleChange, isLocked, handleFieldBlur
-  } = useStudentForm();
+    errors, setErrors, errorValidate, isLocked, 
+    handleChange,  handleFieldBlur } = useStudentForm();
 
   useScrollTop();
 
@@ -47,8 +47,9 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
     }
   }, [currentBooking, setFormResident]);
 
-  const handleNextStep = () => {
+  const handleNextStep = (e?: React.MouseEvent) => {
     // รายการฟีลด์ที่ต้องตรวจสอบก่อนอนุญาตให้ไปขั้นตอนถัดไป
+    e?.preventDefault();
     const requiredFields = [
       "citizenType", "citizenNumber", "studentId", "gender", "faculty_department",
       "titleName", "name_th", "name_en", "email", "birthDate", "mobilePhone",
@@ -100,9 +101,9 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
       });
       return;
     }
-
+   
     if (formResident.name_th && !formResident.name_th.trim().includes(' ')) {
-      toast.error('กรุณากรอกทั้งชื่อ และนามสกุลภาษาไทย (เว้นวรรคระหว่างชื่อ และนามสกุล)', {
+      toast.error('กรุณากรอกทั้งชื่อ และนามสกุลภาษาไทย 1 (เว้นวรรคระหว่างชื่อ และนามสกุล)', {
         id: 'name-th-error'
       });
       return;
@@ -223,7 +224,7 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
           onBlur={(e) => handleFieldBlur("studentId", e.target.value)}
           onInput={(e) => { e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '') }}
           validateMessage={errorValidate.studentId}
-          disabled={!formResident.studentId}
+          // disabled={!formResident.studentId}
           required={true}
           suppressHydrationWarning
         />
@@ -351,7 +352,7 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
             value = value.replace(/\s\s+/g, ' ');
             e.currentTarget.value = value;
           }}
-          disabled={!formResident.name_th}
+          // disabled={!formResident.name_th}
           minLength={2}
           maxLength={100}
           required={true}
@@ -392,7 +393,7 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
 
             e.currentTarget.value = capitalizedWords.join(' ');
           }}
-          disabled={!formResident.name_en}
+          // disabled={!formResident.name_en}
           minLength={2}
           maxLength={100}
           required={true}
@@ -455,7 +456,7 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
           onBlur={(e) => handleFieldBlur("email", e.target.value)}
           onInput={(e) => e.currentTarget.value = e.currentTarget.value.replace(/[^a-zA-Z0-9._%+-@]/g, '').toLowerCase()}
           validateMessage={errorValidate.email}
-          disabled={!formResident.email}
+          disabled={!!formResident.email}
           minLength={2}
           maxLength={50}
           required={true}
@@ -471,6 +472,7 @@ export const StudentInfoForm = ({ setStep }: StudentInfoFormProps) => {
       <FacultyCombobox
         value={formResident.faculty_department || ""}
         onChange={(val) => setFormResident(prev => ({ ...prev, faculty_department: val }))}
+        onBlur={() => handleFieldBlur("faculty_department", formResident.faculty_department)}
         error={errors.includes("faculty_department")}
       />
     </Container>

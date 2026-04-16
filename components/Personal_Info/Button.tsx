@@ -13,6 +13,7 @@ interface ButtonProps {
 const Button = (props: ButtonProps) => {
   const { href, handleNextStep, handleBackStep, handleNextSummary, isEditMode } = props;
   // const { currentBooking, ownerInfo } = useBooking();
+  // console.log("Check prop handleNextStep in Button components:", handleNextStep);
   return (
     <div className={`flex justify-start w-[1/2] gap-2 mt-6 font-bold ${isEditMode ? "text-[16px]" : "text-[16px]"}`}>
       {href ? (

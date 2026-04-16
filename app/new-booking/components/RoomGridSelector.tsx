@@ -48,15 +48,15 @@ export const RoomGridSelector = ({ setStep }: RoomGridSelectorProps) => {
     return () => media.removeEventListener('change', listener);
   }, []);
 
-  useEffect(() => {
-    const handleGlobalScroll = () => {
-      if (confirmRoom) setConfirmRoom(null);
-    };
+  // useEffect(() => {
+  //   const handleGlobalScroll = () => {
+  //     if (confirmRoom) setConfirmRoom(null);
+  //   };
 
-    // ใช้ true เพื่อดักจับ Event ทุกระดับ (Capture Phase)
-    window.addEventListener("scroll", handleGlobalScroll, true);
-    return () => window.removeEventListener("scroll", handleGlobalScroll, true);
-  }, [confirmRoom]);
+  //   // ใช้ true เพื่อดักจับ Event ทุกระดับ (Capture Phase)
+  //   window.addEventListener("scroll", handleGlobalScroll, true);
+  //   return () => window.removeEventListener("scroll", handleGlobalScroll, true);
+  // }, [confirmRoom]);
 
   const handleBackStep = () => {
     setStep(5)

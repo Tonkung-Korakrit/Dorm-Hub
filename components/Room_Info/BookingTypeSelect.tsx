@@ -48,7 +48,7 @@ const BookingTypeSelect = (props: BookingTypeSelectProps) => {
           href="https://psm.tu.ac.th/our-services/dormitory/"
           target="_blank"
           rel="noopener noreferrer"
-          className="px-2 py-2 text-white text-[16px] font-medium bg-red-500 rounded-lg shadow-md hover:bg-red-600 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
+          className="px-2 py-2 text-black text-[16px] font-medium bg-[#C6E686] rounded-lg shadow-md hover:bg-opacity-80 hover:shadow-lg transition-all duration-300 transform hover:-translate-y-1"
         >
           Dormitory details / รายละเอียดหอพัก
         </a>

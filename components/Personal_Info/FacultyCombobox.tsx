@@ -15,10 +15,11 @@ interface FacultyComboboxProps {
   value: string;
   onChange: (value: string) => void;
   // list: Faculty[];
+  onBlur?: () => void;
   error?: boolean;
 }
 
-const FacultyCombobox = ({ value, onChange, error }: FacultyComboboxProps) => {
+const FacultyCombobox = ({ value, onChange, onBlur, error }: FacultyComboboxProps) => {
   const [query, setQuery] = useState('');
   const [mounted, setMounted] = useState(false);
 
@@ -46,6 +47,7 @@ const FacultyCombobox = ({ value, onChange, error }: FacultyComboboxProps) => {
               className="w-full border-none py-2.5 pl-4 pr-10 text-sm leading-5 text-gray-900 focus:ring-0 outline-none"
               displayValue={(val: string) => val}
               onChange={(e) => setQuery(e.target.value)}
+              onBlur={onBlur}
               placeholder="พิมพ์เพื่อค้นหาคณะ..."
             />
             <Combobox.Button className="absolute inset-y-0 right-0 flex items-center pr-2">
