@@ -30,7 +30,7 @@ const DormComponent = (props: DormComponentProps) => {
           {/* Container ของรูปภาพ */}
           <div className="relative aspect-[16/10] overflow-hidden rounded-[10px] shadow-inner">
             <Image
-              src={images[dorm.name[0]] || "/images/zones/default.png"}
+              src={images[dorm.name[0]] || "/images/zones/Default.png"}
               alt={`${dorm.name || "Dorm ..."}`}
               // width={50}
               // height={50}

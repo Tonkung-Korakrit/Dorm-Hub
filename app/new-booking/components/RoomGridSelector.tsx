@@ -34,6 +34,10 @@ export const RoomGridSelector = ({ setStep }: RoomGridSelectorProps) => {
     calculateMatch, getMatchStatusLabel, handleSelectRoom, canUserBookRoom, handleRoomClick
   } = useRooms(setStep);
 
+  // console.log("confirmRoom in roomGirdSelector: ", confirmRoom);
+  // console.log("planImage in roomGirdSelector: ", planImage);
+  // console.log("roomsByFloor in roomGirdSelector: ", roomsByFloor);
+
   useScrollTop();
 
   useEffect(() => {

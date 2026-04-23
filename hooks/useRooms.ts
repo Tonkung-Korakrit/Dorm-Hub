@@ -1,14 +1,21 @@
 // hooks/useRooms.ts
-"use client"
+"use client";
 
-import React, { Dispatch, SetStateAction, useState } from 'react'
-import { BookingType, Room, RoomStatus } from '@/utils/types';
-import { useBooking } from '@/app/contexts/BookingContext';
-import useSWR from 'swr';
-import { customFetch } from '@/utils/custom-api';
+import React, { Dispatch, SetStateAction, useState } from "react";
+import { BookingType, Room, RoomStatus } from "@/utils/types";
+import { useBooking } from "@/app/contexts/BookingContext";
+import useSWR from "swr";
+import { customFetch } from "@/utils/custom-api";
 
 const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
-  const { formResident, setFormResident, formRoom, setFormRoom, currentBooking, setCurrentBooking } = useBooking();
+  const {
+    formResident,
+    setFormResident,
+    formRoom,
+    setFormRoom,
+    currentBooking,
+    setCurrentBooking,
+  } = useBooking();
 
   const [confirmRoom, setConfirmRoom] = useState<Room | null>(null);
   const [selectedFloor, setSelectedFloor] = useState<string>("2");
@@ -18,10 +25,15 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   const currentOcc = confirmRoom?.currentOccupancy || 0;
 
   // 1. ถ้าเลือกเหมา: ต้องไม่มีคนอยู่ (Occ = 0) และสถานะต้องไม่ใช่ FULL หรือ PENDING จากคนอื่น
-  const isCharterBroken = isCharterSelected && (currentOcc > 0 || confirmRoom?.status !== RoomStatus.AVAILABLE);
+  const isCharterBroken =
+    isCharterSelected &&
+    (currentOcc > 0 || confirmRoom?.status !== RoomStatus.AVAILABLE);
 
   // 2. ถ้าเลือกจองปกติ: ต้องไม่เกินความจุ และสถานะต้องไม่เป็น FULL
-  const isRoomFull = !isCharterSelected && (currentOcc >= (confirmRoom?.capacity || 0) || confirmRoom?.status === RoomStatus.FULL);
+  const isRoomFull =
+    !isCharterSelected &&
+    (currentOcc >= (confirmRoom?.capacity || 0) ||
+      confirmRoom?.status === RoomStatus.FULL);
   const cannotBook = isCharterBroken || isRoomFull;
 
   const dormName = formRoom?.dorm?.name;
@@ -47,7 +59,12 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   // ฟังก์ชันคำนวณ % การ Match
   const calculateMatch = (roomConfig: any) => {
     // 1. เช็คว่ามีข้อมูลทั้งฝั่งห้อง และฝั่งนักศึกษาหรือไม่
-    if (!roomConfig || !Array.isArray(roomConfig) || !formResident.lifestyle || formResident.lifestyle.length === 0) {
+    if (
+      !roomConfig ||
+      !Array.isArray(roomConfig) ||
+      !formResident.lifestyle ||
+      formResident.lifestyle.length === 0
+    ) {
       return 0;
     }
 
@@ -56,7 +73,7 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
       const userTags = formResident.lifestyle;
 
       // 3. คำนวณหาจุดที่ตรงกัน (Intersection)
-      const matches = roomTags.filter(tag => userTags.includes(tag));
+      const matches = roomTags.filter((tag) => userTags.includes(tag));
 
       // 4. คำนวณเป็น % (เทียบกับจำนวนไลฟ์สไตล์ที่ User เลือก)
       // return Math.round((matches.length / userTags.length) * 100);
@@ -116,7 +133,7 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   //       totalScore += weight;
   //     } else {
   //       // --- แก้ปัญหาเรื่อง LGBTQ_FRIENDLY / SMOKE_FREE ---
-  //       // ถ้าห้องมี แต่ User "ไม่เลือก" (ไม่ว่าจะลืมหรือจงใจ) 
+  //       // ถ้าห้องมี แต่ User "ไม่เลือก" (ไม่ว่าจะลืมหรือจงใจ)
   //       // เราจะหักคะแนนส่วนนี้ออกเพื่อสะท้อนความไม่แน่นอน
   //       if (tag === 'LGBTQ_FRIENDLY' || tag === 'SMOKE_FREE') {
   //         totalScore -= (weight * 0.5); // หักลบ 50% ของน้ำหนัก
@@ -137,9 +154,15 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   };
 
   // ดึงข้อมูลห้องพักแบบ Real-time (ตรวจสอบชื่อ API ให้ตรงกับที่คุณสร้างไว้)
-  const { data: rooms, mutate, isLoading } = useSWR<Room[]>(
-    formRoom.dorm ? `/api/rooms?campus=${formRoom.campus}&dorm=${formRoom.dorm.name}` : null, // &floor=${selectedFloor}
-    (url) => customFetch(url).then(res => res.json()),
+  const {
+    data: rooms,
+    mutate,
+    isLoading,
+  } = useSWR<Room[]>(
+    formRoom.dorm
+      ? `/api/rooms?campus=${formRoom.campus}&dorm=${formRoom.dorm.name}`
+      : null, // &floor=${selectedFloor}
+    (url) => customFetch(url).then((res) => res.json()),
     {
       refreshInterval: 5000, // อัพเดตข้อมูลทุก 5 วินาที
       dedupingInterval: 2000, // ถ้ากดซ้ำๆ ภายใน 2 วิ ไม่ต้องยิงใหม่
@@ -147,36 +170,41 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
 
       // revalidateOnFocus: false,  // (เพิ่มเติม) ปิดการโหลดใหม่เมื่อสลับหน้าจอกลับมา
       // revalidateOnReconnect: false,
-    }
+    },
   );
 
   // จัดกลุ่มห้องพักตามชั้น (ใช้ Optional Chaining เพื่อความปลอดภัย)
-  const roomsByFloor = (Array.isArray(rooms) ? rooms : []).reduce((acc: Record<string, Room[]>, room) => {
-    if (room.parentId) return acc;
+  const roomsByFloor = (Array.isArray(rooms) ? rooms : []).reduce(
+    (acc: Record<string, Room[]>, room) => {
+      if (room.parentId) return acc;
 
-    const floorStr = String(room.floor);
-    if (!acc[floorStr]) acc[floorStr] = [];
-    acc[floorStr].push(room);
-    return acc;
-  }, {});
+      const floorStr = String(room.floor);
+      if (!acc[floorStr]) acc[floorStr] = [];
+      acc[floorStr].push(room);
+      return acc;
+    },
+    {},
+  );
 
   // 3. เมื่อเลือกห้องพักใน Modal
   const handleSelectRoom = () => {
     if (confirmRoom) {
       setFormRoom((prev: any) => ({
         ...prev,
-        roomId: confirmRoom.roomId,
-        price: confirmRoom.price,
-        floor: confirmRoom.floor,
+        roomId: confirmRoom.roomId || "",
+        price: confirmRoom.price || 0,
+        floor: confirmRoom.floor || 1,
         id: confirmRoom.id,
         // เก็บก้อนข้อมูล zone และ dorm ลงไปใน Context เพื่อใช้ในหน้า Summary
         dorm: {
           ...prev.dorm,
-          name: confirmRoom.dorm,
+          name: confirmRoom.dorm || "Default.png",
         },
-        lifestyleConfig: confirmRoom.lifestyleConfig,
-        lifestyleNote: confirmRoom.lifestyleNote,
-        facultyConfig: confirmRoom.facultyConfig,
+        // กันเหนียวด้วยการใส่ [] เผื่อค่าที่มาจาก DB เป็น null
+        lifestyleConfig: confirmRoom.lifestyleConfig || [],
+        lifestyleNote: confirmRoom.lifestyleNote || "",
+        facultyConfig:
+          confirmRoom.facultyConfig?.map((f: any) => f.name || f) || [],
         roomType: confirmRoom.roomType,
       }));
       setConfirmRoom(null);
@@ -193,79 +221,95 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
       if (isCharterSelected) {
         // โหมดเหมา: ยอมให้กดห้องแม่ได้ ถ้า "มีอย่างน้อย 1 ห้องย่อยที่ไม่มีคนอยู่เลย"
         // เพราะผู้ใช้อาจจะอยากเข้าไปเหมาห้อง A ที่ว่าง แม้ห้อง B จะมีคนอยู่แล้วก็ตาม
-        return room.subRooms.some(sub => sub.currentOccupancy === 0 && sub.status === RoomStatus.AVAILABLE);
+        return room.subRooms.some(
+          (sub) =>
+            sub.currentOccupancy === 0 && sub.status === RoomStatus.AVAILABLE,
+        );
       } else {
         // โหมดปกติ: ขอแค่มีลูกอย่างน้อย 1 ห้องที่ยังไม่เต็ม (เช่น 1/2 ก็ยังจองได้)
-        return room.subRooms.some(sub => sub.currentOccupancy < sub.capacity && sub.status !== RoomStatus.FULL);
+        return room.subRooms.some(
+          (sub) =>
+            sub.currentOccupancy < sub.capacity &&
+            sub.status !== RoomStatus.FULL,
+        );
       }
     }
 
     // --- กรณีห้องปกติ หรือ ห้องย่อย (A/B) ที่อยู่ใน Modal ---
     if (isCharterSelected) {
       // ต้องว่างเปล่า 100% ถึงจะเหมาได้
-      return room.currentOccupancy === 0 && room.status === RoomStatus.AVAILABLE;
+      return (
+        room.currentOccupancy === 0 && room.status === RoomStatus.AVAILABLE
+      );
     } else {
       // จองปกติ แค่ไม่เต็มก็พอ
-      return room.currentOccupancy < room.capacity && room.status !== RoomStatus.FULL;
+      return (
+        room.currentOccupancy < room.capacity && room.status !== RoomStatus.FULL
+      );
     }
   };
 
-  const handleRoomClick = (e: React.MouseEvent<HTMLButtonElement>, room: Room) => {
+  const handleRoomClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    room: Room,
+  ) => {
     if (room.status === RoomStatus.COMMON) return;
-
-    // const canBook = canUserBookRoom(room);
-    // if (!canBook) return; // ถ้าจองไม่ได้ (แดง) ก็ไม่ต้องให้คลิกเปิด Modal หรือ Popup
 
     if (confirmRoom?.id === room.id) {
       setConfirmRoom(null);
       return;
     }
 
-    // 2. กรณีห้องชุด (Suite): เปิด Modal กลางจอ แทน Popup ปกติ
     if (room.isSuite) {
-      setSelectedSuite(room); // เก็บข้อมูล Suite ไว้เปิด Modal
-      setConfirmRoom(null);   // เคลียร์การเลือกห้องปกติ (ถ้ามี)
-      return; // จบการทำงาน ไม่ต้องคำนวณตำแหน่ง Popup
+      setSelectedSuite(room);
+      setConfirmRoom(null);
+      return;
     }
 
     const rect = e.currentTarget.getBoundingClientRect();
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
+    const roomCenterY = rect.top + rect.height / 2;
 
-    // 1. ปรับความกว้างตามหน้าจอจริง (Mobile Safe)
     const isMobile = windowWidth < 768;
-    const popupWidth = isMobile ? Math.min(windowWidth - 40, 280) : 320;
-    const screenPadding = 20;
+    const popupWidth = isMobile ? windowWidth * 0.92 : 450;
+    const screenPadding = 16;
 
-    // 2. เช็คพื้นที่แนวตั้ง (Flip อัตโนมัติถ้าพื้นที่ข้างล่างไม่พอ)
-    const spaceBelow = windowHeight - rect.bottom;
-    const isTop = spaceBelow < 300; // ถ้าเหลือน้อยกว่า 300px ให้เด้งขึ้นบน
+    // ปรับใหม่: ถ้าห้องอยู่ต่ำกว่า 50% ของความสูงจอ ให้ดีดขึ้นบนทันที (isTopRow = true)
+    // วิธีนี้จะทำให้มีพื้นที่เหลือด้านบนเยอะกว่าตอนดีดลงล่างครับ
+    const isTop = rect.bottom > windowHeight * 0.5;
+
+    // ลดโอกาสเกิด isCenter ให้เหลือน้อยที่สุด (เอาไว้ใช้เฉพาะตอนจอเล็กมากๆ เท่านั้น)
+    const shouldForceCenter = isMobile && windowHeight < 600;
 
     let leftPos = rect.left + rect.width / 2;
-
-    // 3. ป้องกันหลุดขอบซ้าย-ขวาแบบ Dynamic
-    const minLeft = popupWidth / 2 + screenPadding;
-    const maxLeft = windowWidth - (popupWidth / 2 + screenPadding);
-
-    if (leftPos < minLeft) leftPos = minLeft;
-    if (leftPos > maxLeft) leftPos = maxLeft;
+    const halfWidth = popupWidth / 2;
+    const safeLeft = Math.min(
+      Math.max(leftPos, halfWidth + screenPadding),
+      windowWidth - halfWidth - screenPadding,
+    );
 
     setPopupPos({
-      top: isTop ? rect.top : rect.bottom,
-      left: leftPos,
+      top: isTop ? rect.top : rect.bottom, // ปักหมุดที่ขอบบนหรือล่างของปุ่ม
+      left: safeLeft,
       isTopRow: isTop,
-      arrowOffset: (rect.left + rect.width / 2) - leftPos,
-      actualWidth: popupWidth, // ส่งค่า width ไปใช้ใน CSS ด้วย
-      isCenter: false,
+      arrowOffset: leftPos - safeLeft,
+      actualWidth: popupWidth,
+      isCenter: shouldForceCenter,
     });
 
     setConfirmRoom(room);
   };
 
-  const getRoomColor = (room: Room, canBook: boolean, isCharterSelected: boolean) => {
+  const getRoomColor = (
+    room: Room,
+    canBook: boolean,
+    isCharterSelected: boolean,
+  ) => {
     // 1. พื้นที่ส่วนกลาง หรือ ห้องซ่อมบำรุง (สถานะคงที่)
     if (room.status === RoomStatus.COMMON) return "bg-[#D9D9D9] cursor-default";
-    if (room.status === RoomStatus.MAINTENANCE) return "bg-[#D9D9D9] cursor-not-allowed";
+    if (room.status === RoomStatus.MAINTENANCE)
+      return "bg-[#D9D9D9] cursor-not-allowed";
 
     // 2. ใช้ผลลัพธ์จาก canUserBookRoom เป็นตัวตัดสินหลัก
     // ถ้า canBook เป็น false (ไม่ว่าจะห้องเดี่ยวเต็ม หรือ ห้อง Suite ไม่มีห้องย่อยว่างให้เหมา)
@@ -296,15 +340,37 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
 
     // 4. สถานะปกติที่จองได้ (สีเขียว)
     return "bg-[#126A31] hover:scale-110 hover:shadow-lg";
-  }
+  };
 
   return {
-    confirmRoom, setConfirmRoom, selectedFloor, setSelectedFloor,
-    checkIsMobile, setCheckIsMobile, isCharterSelected, currentOcc, isCharterBroken,
-    isRoomFull, cannotBook, planImage, selectedSuite, setSelectedSuite, getRoomColor,
-    matchScore, setMatchScore, popupPos, setPopupPos, rooms, isLoading, roomsByFloor,
-    calculateMatch, getMatchStatusLabel, handleSelectRoom, canUserBookRoom, handleRoomClick,
-  }
-}
+    confirmRoom,
+    setConfirmRoom,
+    selectedFloor,
+    setSelectedFloor,
+    checkIsMobile,
+    setCheckIsMobile,
+    isCharterSelected,
+    currentOcc,
+    isCharterBroken,
+    isRoomFull,
+    cannotBook,
+    planImage,
+    selectedSuite,
+    setSelectedSuite,
+    getRoomColor,
+    matchScore,
+    setMatchScore,
+    popupPos,
+    setPopupPos,
+    rooms,
+    isLoading,
+    roomsByFloor,
+    calculateMatch,
+    getMatchStatusLabel,
+    handleSelectRoom,
+    canUserBookRoom,
+    handleRoomClick,
+  };
+};
 
-export default useRooms
+export default useRooms;

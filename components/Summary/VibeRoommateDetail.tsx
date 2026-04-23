@@ -86,7 +86,7 @@ const VibeRoommateDetail = () => {
                   key={index}
                   className="group flex items-center gap-2 bg-white text-slate-700 text-[11px] font-bold px-3 py-1.5 rounded-lg border border-slate-200 transition-colors hover:bg-white hover:border-blue-300"
                 >
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 group-hover:scale-125 transition-transform" />
+                  <div className="w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-400 group-hover:scale-125 transition-transform" />
                   {faculty}
                 </div>
               ))

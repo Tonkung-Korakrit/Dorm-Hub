@@ -65,41 +65,60 @@ const DetailPopup = (props: DetailPopupProps) => {
     };
   }, [confirmRoom]);
 
+  const [availableHeight, setAvailableHeight] = React.useState("70dvh");
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !popupPos.isCenter && confirmRoom) {
+      const screenH = window.innerHeight;
+      const padding = 24; // ระยะเผื่อขอบจอ
+
+      // ถ้าเด้งขึ้น: พื้นที่คือจากขอบบนถึงจุดที่คลิก | ถ้าเด้งลง: พื้นที่คือจากจุดที่คลิกถึงขอบล่าง
+      const space = popupPos.isTopRow
+        ? popupPos.top - padding
+        : screenH - popupPos.top - padding;
+
+      setAvailableHeight(`${Math.max(space, 250)}px`); // อย่างน้อยต้องสูง 250px
+    }
+  }, [popupPos, confirmRoom]);
+
   // console.log("confirmRoom.facultyConfig: ", confirmRoom?.facultyConfig);
 
   return (
     <Portal>
+      {/* 1. Background Overlay */}
       <div
         className="fixed inset-0 z-[9998] bg-black/20 backdrop-blur-[1px] animate-in fade-in duration-200"
         onClick={() => setConfirmRoom(null)}
       />
 
+      {/* 2. กล่องนอก (หมุดปักตำแหน่ง) */}
       <div
-        className={`fixed z-[9999] pointer-events-none transition-all duration-200 ease-out
-            ${popupPos.isCenter ? "" : popupPos.isTopRow ? "-translate-y-full" : ""}`} // ถ้าเป็น Center ไม่ต้องเลื่อนหลบแถวบน
+        className="fixed z-[9999] pointer-events-none transition-all duration-200 ease-out"
         style={{
-          top: popupPos.isCenter ? "50%" : popupPos.top, // ถ้า Center ให้เอาไว้ที่ 50% ของจอ
-          left: popupPos.isCenter ? "50%" : popupPos.left, // ถ้า Center ให้เอาไว้ที่ 50% ของจอ
+          top: popupPos.isCenter ? "50%" : popupPos.top,
+          left: popupPos.isCenter ? "50%" : popupPos.left, // ใช้ค่าที่คำนวณมาจาก Parent ได้เลย
         }}
       >
-        {/* Popup Content */}
-        {/* <div
-          className={`relative pointer-events-auto bg-white text-black p-4 rounded-xl shadow-xl border border-gray-100 animate-in zoom-in-95 duration-200
-            ${popupPos.isCenter ? "-translate-x-1/2 -translate-y-1/2" : "-translate-x-1/2"} 
-            w-[92vw]           
-            md:w-[450px]       
-            max-h-[60dvh]      
-            overflow-y-auto custom-scrollbar
-        `} // มือถือ: กว้าง 92% ของจอ, คอม: กว้างคงที่ 450px, สูงไม่เกิน 60% ของหน้าจอ */}
+        {/* 3. กล่องใน (ตัว Popup จริง) - ใช้ flex-col เพื่อแยกส่วน Body กับ Footer */}
         <div
           className={`relative pointer-events-auto bg-white text-black rounded-xl shadow-xl border border-gray-100 animate-in zoom-in-95 duration-200 flex flex-col
-            ${popupPos.isCenter ? "-translate-x-1/2 -translate-y-1/2" : "-translate-x-1/2"} 
-            ${!popupPos.isCenter && (popupPos.isTopRow ? "mb-4" : "mt-4")}
-            w-[92vw] md:w-[450px]
-          `}
+          ${
+            popupPos.isCenter
+              ? "-translate-x-1/2 -translate-y-1/2"
+              : `-translate-x-1/2 ${popupPos.isTopRow ? "-translate-y-full mb-4" : "mt-4"}`
+          }
+          w-[92vw] md:w-[450px] 
+          max-w-[calc(100vw-32px)]
+          
+        `} // 70% ของจอ max-h-[70dvh] 
+          style={{
+            // ใช้ความสูงที่เราคำนวณมา เพื่อไม่ให้ปุ่มจมขอบจอ
+            maxHeight: popupPos.isCenter ? "75dvh" : availableHeight,
+          }}
         >
-          {/* ส่วนเนื้อหาที่ Scroll ได้ */}
-          <div className="p-4 max-h-[60dvh] overflow-y-auto custom-scrollbar rounded-xl">
+          {/* --- ส่วนที่ 1: เนื้อหาที่ Scroll ได้ (Body) --- */}
+          {/* <div className="p-4 max-h-[60dvh] overflow-y-auto custom-scrollbar rounded-xl"> */}
+          <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
             {/* รายละเอียดห้อง (Grid 2 คอลัมน์) */}
             <div className="grid grid-cols-2 gap-y-2 text-[12px] md:text-[14px]">
               <p>
@@ -247,30 +266,11 @@ const DetailPopup = (props: DetailPopupProps) => {
               </div>
             )}
 
-            {/* นี่คือโน้ตไลฟ์สไตล์เพิ่มเติมของห้องนี้ */}
-            {/* {confirmRoom.lifestyleNote && (
-              <div className="mt-4 relative group">
-                <div className="absolute -left-1 top-0 bottom-0 w-1 bg-amber-300 rounded-full" />
-
-                <div className="bg-amber-50/50 p-3 pl-4 rounded-r-xl border border-amber-100 border-l-0 shadow-sm transition-all group-hover:bg-amber-50">
-                  <div className="flex items-center gap-1.5 mb-1.5">
-                    <MdChatBubbleOutline className="text-amber-500" size={14} />
-                    <span className="text-[10px] font-black text-amber-700/60 uppercase tracking-widest">
-                      Roommate's Note / บันทึกเพิ่มเติม
-                    </span>
-                  </div>
-
-                  <p className="text-[13px] text-amber-900/80 italic leading-relaxed font-medium">
-                    "{confirmRoom.lifestyleNote}"
-                  </p>
-                </div>
-              </div>
-            )} */}
-
-            <div className="flex flex-col items-center w-full mt-4 gap-2">
-              {/* Warning กรณี Match น้อยกว่า 50% */}
+            {/* Warning กรณี Match น้อยกว่า 50% */}
+            <div className="mt-4 space-y-2">
+              {/* <div className="flex flex-col items-center w-full mt-4 gap-2"> */}
               {confirmRoom.currentOccupancy > 0 &&
-                matchScore < 50 &&
+                calculateMatch(confirmRoom.lifestyleConfig) < 50 &&
                 !isRoomFull &&
                 !isCharterBroken && (
                   <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
@@ -303,54 +303,42 @@ const DetailPopup = (props: DetailPopupProps) => {
                   booked.
                 </p>
               )}
-
-              {!cannotBook ? (
-                <button
-                  onClick={handleSelectRoom}
-                  className="w-[200px] text-[14px] items-center mt-2 py-2 bg-[#006432] text-white rounded-full font-semibold shadow-lg hover:bg-[#004d26] active:scale-95 transition-all"
-                >
-                  Confirm / จองห้องนี้
-                </button>
-              ) : (
-                <button
-                  disabled
-                  className="w-[300px] text-[14px] p-2 bg-gray-300 text-gray-500 rounded-3xl font-semibold cursor-not-allowed"
-                >
-                  {isCharterBroken
-                    ? "จองแบบเหมาไม่ได้ / Unable to reserve"
-                    : "ห้องพักเต็มแล้ว / Room is full."}
-                </button>
-              )}
             </div>
           </div>
-          {/* หางลูกศร - อยู่นอกส่วน Scroll แต่อยู่ในกล่องนอกสุด */}
+
+          {/* --- ส่วนที่ 2: ส่วนล่าง (Footer) - ไม่เลื่อนตามเนื้อหา --- */}
+          <div className="py-2 border-t border-gray-100 bg-gray-50/50 rounded-b-xl flex justify-center">
+            {!cannotBook ? (
+              <button
+                onClick={handleSelectRoom}
+                className="w-[200px] text-[14px] items-center mt-2 py-2 bg-[#006432] text-white rounded-full font-semibold shadow-lg hover:bg-[#004d26] active:scale-95 transition-all"
+              >
+                Confirm / จองห้องนี้
+              </button>
+            ) : (
+              <button
+                disabled
+                className="w-full max-w-[300px] text-[14px] p-2 bg-gray-300 text-gray-500 rounded-3xl font-semibold cursor-not-allowed"
+              >
+                {isCharterBroken
+                  ? "จองแบบเหมาไม่ได้ / Unable to reserve"
+                  : "ห้องพักเต็มแล้ว / Room is full."}
+              </button>
+            )}
+          </div>
+
+          {/* 4. หางลูกศร (อยู่นอกกล่อง Popup แต่อยู่ในกล่องปักตำแหน่ง) */}
           {!popupPos.isCenter && (
             <div
               className={`absolute left-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent pointer-events-none
-                ${
-                  popupPos.isTopRow
-                    ? "top-[calc(100%-1px)] border-t-[10px] border-t-white"
-                    : "bottom-[calc(100%-1px)] border-b-[10px] border-b-white"
-                }
-              `}
+              ${popupPos.isTopRow ? "top-[calc(100%-1px)] border-t-[10px] border-t-white" : "bottom-[calc(100%-1px)] border-b-[10px] border-b-white"}
+            `}
               style={{
-                // ใช้ arrowOffset เพื่อให้ลูกศรชี้ไปที่ "ห้อง" ตลอดเวลา แม้กล่องจะขยับหลบขอบจอ
                 transform: `translateX(calc(-50% + ${popupPos.arrowOffset}px))`,
-                filter: "drop-shadow(0 -1px 1px rgba(0,0,0,0.05))" // ใส่เงาจางๆ ให้ลูกศร
+                filter: "drop-shadow(0 -1px 1px rgba(0,0,0,0.05))",
               }}
             />
           )}
-          
-          {/* {!popupPos.isCenter && (
-            <div
-              className={`absolute left-1/2 w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent
-              ${popupPos.isTopRow ? "top-full border-t-[10px] border-t-white" : "bottom-full border-b-[10px] border-b-white"}`}
-              style={{
-                transform: `translateX(calc(-50% + ${popupPos.arrowOffset}px))`,
-                [popupPos.isTopRow ? "marginTop" : "marginBottom"]: "-1px",
-              }}
-            />
-          )} */}
         </div>
       </div>
     </Portal>
