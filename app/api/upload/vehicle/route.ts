@@ -1,7 +1,7 @@
 // api/upload/vehicle/route.ts
 import { NextRequest, NextResponse } from "next/server";
 // import { writeFile, mkdir } from "fs/promises";
-// import path from "path";
+import path from "path";
 // import fs from "fs";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
@@ -31,11 +31,11 @@ export async function POST(req: NextRequest) {
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const year = String(now.getFullYear());
 
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "vehicles", year, month, day);
+    // const uploadDir = path.join(process.cwd(), "public", "uploads", "vehicles", year, month, day);
 
-    if (!fs.existsSync(uploadDir)) {
-      await mkdir(uploadDir, { recursive: true });
-    }
+    // if (!fs.existsSync(uploadDir)) {
+    //   await mkdir(uploadDir, { recursive: true });
+    // }
 
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1E9)}`;
     const extension = path.extname(file.name);
