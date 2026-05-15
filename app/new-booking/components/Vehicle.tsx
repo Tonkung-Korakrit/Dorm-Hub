@@ -2,7 +2,7 @@
 "use client";
 
 import { Fragment, useEffect, useState, useRef } from "react";
-import { Combobox, Transition } from '@headlessui/react';
+import { Combobox, Transition } from "@headlessui/react";
 import { BookingStatus } from "@/utils/types";
 
 // context
@@ -18,47 +18,91 @@ import { useScrollTop } from "@/hooks/useScrollTop";
 import { MdSwapVert, MdCheck, MdClose, MdCloudUpload } from "react-icons/md";
 
 export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
-  const { vehicle, setVehicle, currentBooking, isEditMode, setIsEditMode } = useBooking();
+  const {
+    formResident,
+    setFormResident,
+    // vehicle,
+    // setVehicle,
+    currentBooking,
+    setCurrentBooking,
+    isEditMode,
+    setIsEditMode,
+  } = useBooking();
   // const [mounted, setMounted] = useState(false);
   const editId = new URLSearchParams(window.location.search).get("edit");
 
-  const [provinceQuery, setProvinceQuery] = useState('');
+  const [provinceQuery, setProvinceQuery] = useState("");
   const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredProvinces = provinceQuery === ''
-    ? PROVINCE_LIST
-    : PROVINCE_LIST.filter((p) =>
-      p.name_th.includes(provinceQuery) ||
-      p.name_en.toLowerCase().includes(provinceQuery.toLowerCase())
-    );
+  const filteredProvinces =
+    provinceQuery === ""
+      ? PROVINCE_LIST
+      : PROVINCE_LIST.filter(
+          (p) =>
+            p.name_th.includes(provinceQuery) ||
+            p.name_en.toLowerCase().includes(provinceQuery.toLowerCase()),
+        );
 
   useScrollTop();
 
   useEffect(() => {
-    if (currentBooking?.status === BookingStatus.REJECTED && currentBooking.cus_users.vehicleInfo) {
-      setVehicle(currentBooking.cus_users.vehicleInfo);
+    if (
+      currentBooking?.status === BookingStatus.PENDING_CORRECTION &&
+      currentBooking?.cus_users?.vehicleInfo && !isEditMode
+    ) {
+      // setFormResident(currentBooking.cus_users.vehicleInfo);
+      setFormResident((prev) => ({
+        ...prev,
+        vehicleInfo: currentBooking.cus_users.vehicleInfo // ยัดข้อมูลรถเก่าลงไปเลย
+      }));
+
       // ถ้ามี URL รูปเดิมจาก DB ก็เอามาใส่ Preview
-      if (currentBooking.cus_users.vehicleInfo.fileImages) {
-        setPreviewImage(currentBooking.cus_users.vehicleInfo.fileImages);
+      if (currentBooking?.cus_users?.vehicleInfo?.path) {
+        setPreviewImage(currentBooking.cus_users.vehicleInfo.path);
       }
     }
-  }, [currentBooking, setVehicle]);
+  }, [currentBooking, setFormResident, isEditMode]);
 
-  // ฟังก์ชันจัดการการเปลี่ยนทะเบียนรถ
-  // const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-  //   setVehicle(prev => ({ ...prev, licensePlate: e.target.value.replace(/\s/g, '') }));
-  // };
+  useEffect(() => {
+    let objectUrl: string | null = null;
+
+    if (formResident?.vehicleInfo?.registrationFile instanceof File) {
+      // ถ้ามีไฟล์ที่เพิ่งเลือก (เป็นก้อน File) ให้สร้าง URL ชั่วคราว
+      objectUrl = URL.createObjectURL(formResident?.vehicleInfo?.registrationFile);
+      setPreviewImage(objectUrl);
+    } else if (formResident?.vehicleInfo?.path) {
+      // ถ้าไม่มีไฟล์ใหม่ แต่มี URL รูปเดิมจากฐานข้อมูล
+      setPreviewImage(formResident?.vehicleInfo?.path);
+    } else {
+      // ถ้าไม่มีทั้งคู่
+      setPreviewImage(null);
+    }
+
+    // Cleanup function: สำคัญมาก เพื่อป้องกัน Memory Leak
+    return () => {
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [formResident?.vehicleInfo?.registrationFile, formResident?.vehicleInfo?.path]);
 
   const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // ลบช่องว่าง และอนุญาตเฉพาะ ก-ฮ, สระ, A-Z, 0-9
-    const cleanValue = e.target.value.replace(/[^ก-๙a-zA-Z0-9]/g, '');
+    const cleanValue = e.target.value.replace(/[^ก-๙a-zA-Z0-9]/g, "");
 
-    setVehicle(prev => ({
+    // setVehicle((prev) => ({
+    //   ...prev,
+    //   licensePlate: cleanValue,
+    // }));
+    setFormResident((prev) => ({
       ...prev,
-      licensePlate: cleanValue
+      vehicleInfo: {
+        ...(prev.vehicleInfo || {}), // ดึงข้อมูลรถเดิมมาใส่ก่อน (กัน null)
+        licensePlate: cleanValue,    // อัปเดตฟิลด์ที่ต้องการ
+      },
     }));
   };
 
@@ -66,9 +110,16 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const imageUrl = URL.createObjectURL(file);
-      setPreviewImage(imageUrl);
-      // setVehicle(prev => ({ ...prev, registrationFile: file })); // ถ้าต้องการเก็บ File Object ลง Context
+      // เซตไฟล์ลง Context อย่างเดียว เดี๋ยว useEffect ข้างบนจะสร้าง Preview ให้เอง
+      // setVehicle((prev) => ({ ...prev, registrationFile: file }));
+        setFormResident((prev) => ({
+        ...prev,
+        vehicleInfo: {
+          ...(prev.vehicleInfo || {}),
+          registrationFile: file,
+          path: undefined,
+        },
+      }));
     }
   };
 
@@ -89,18 +140,22 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   };
 
   const handleBackStep = () => {
-    setStep(2)
-  }
+    setStep(2);
+  };
+
+  console.log("formResident in vehicle: ", formResident);
+  // console.log("vehicle in vehicle: ", vehicle);
 
   return (
     <Container
-      title="Student Profile / รูปหน้าตรง และบัตรประชาชนนักศึกษา"
-      rejected={currentBooking?.status === BookingStatus.REJECTED}
+      title="Vehicle / ยานพาหนะ"
+      pending_correction={
+        currentBooking?.status === BookingStatus.PENDING_CORRECTION
+      }
       handleNextStep={handleNextStep}
       handleBackStep={handleBackStep}
       isEditMode={isEditMode}
     >
-
       {/* คำเตือนสีแดง */}
       <div className="text-center text-red-500 text-[14px] font-bold space-y-1 mb-10 italic">
         <p>เฉพาะรถของนักศึกษาหรือผู้ปกครอง</p>
@@ -114,10 +169,13 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
           <label className="block text-[16px] font-bold text-gray-700 mb-2">
             License Plate ID / ทะเบียนรถยนต์
           </label>
-          <p className="text-[14px] text-gray-400 mb-3 uppercase tracking-tighter">ระบุหมวดอักษร และเลขทะเบียนโดยไม่ต้องเว้นวรรค หรือมีเครื่องหมายขีด เช่น 1กภ2345</p>
+          <p className="text-[14px] text-gray-400 mb-3 uppercase tracking-tighter">
+            ระบุหมวดอักษร และเลขทะเบียนโดยไม่ต้องเว้นวรรค หรือมีเครื่องหมายขีด
+            เช่น 1กภ2345
+          </p>
           <input
             type="text"
-            value={vehicle?.licensePlate || ""}
+            value={formResident.vehicleInfo?.licensePlate || ""}
             onChange={handlePlateChange}
             // onBlur={(e) => {
             //   const value = e.target.value;
@@ -137,7 +195,34 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
             placeholder="เช่น 1กภ2345"
             className="w-full border-b-2 border-gray-200 py-2.5 focus:border-[#006432] outline-none transition-all font-bold text-lg placeholder:text-gray-300 placeholder:font-normal"
           />
-          <p className="text-[10px] text-gray-400 font-medium">ระบุหมวดอักษรและเลขทะเบียนโดยไม่ต้องเว้นวรรค</p>
+          <p className="text-[10px] text-gray-400 font-medium">
+            ระบุหมวดอักษรและเลขทะเบียนโดยไม่ต้องเว้นวรรค
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-[16px] font-bold text-gray-700 mb-2">
+            Vehicle Owner Name / ชื่อ-นามสกุลเจ้าของรถ
+          </label>
+          <input
+            type="text"
+            value={formResident.vehicleInfo?.ownerName || ""}
+            onChange={(e) =>
+              // setVehicle((prev) => ({ ...prev, ownerName: e.target.value }))
+              setFormResident((prev) => ({
+                ...prev,
+                vehicleInfo: {
+                  ...(prev.vehicleInfo || {}),
+                  ownerName: e.target.value,
+                }
+              }))
+            }
+            placeholder="name-last name / ชื่อ-นามสกุล"
+            className="w-full border-b-2 border-gray-200 py-2.5 focus:border-[#006432] outline-none transition-all font-bold text-lg placeholder:text-gray-300 placeholder:font-normal"
+          />
+          <p className="text-[10px] text-gray-400 font-medium">
+            ระบุชื่อ-นามสกุลของผู้ครอบครองรถตามเล่มทะเบียน
+          </p>
         </div>
 
         {/* อัปโหลดรายการจดทะเบียน */}
@@ -151,22 +236,59 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
             className="hidden"
             accept="image/*"
             onChange={handleFileChange}
+            onError={() => {
+              // ถ้ารูปโหลดไม่ขึ้น (ติด 404) ให้เคลียร์ preview ทิ้งซะ
+              setPreviewImage(null);
+              setFormResident((prev) => ({
+                ...prev,
+                vehicleInfo: {
+                  ...(prev.vehicleInfo || {}),
+                  path: undefined,
+                }
+              }));
+            }}
           />
 
           <div
             onClick={() => !previewImage && fileInputRef.current?.click()}
-            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${previewImage ? "border-transparent" :
-              errors.includes('registrationImage') ? "border-red-500 bg-red-50" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-              }`}
+            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${
+              previewImage
+                ? "border-transparent"
+                : errors.includes("registrationImage")
+                  ? "border-red-500 bg-red-50"
+                  : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
+            }`}
           >
             {previewImage ? (
               <>
-                <img src={previewImage} alt="Registration Preview" className="w-full h-full object-cover" />
+                <img
+                  src={previewImage}
+                  alt="Registration Preview"
+                  className="w-full h-full object-cover"
+                />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     setPreviewImage(null);
-                    setVehicle(prev => ({ ...prev, registrationFileUrl: "" }));
+                    // setVehicle((prev) => ({
+                    //   ...prev,
+                    //   registrationFile: null, //undefined
+                    //   path: null, //undefined
+                    //   fileImages: "",
+                    // }));
+                    setFormResident((prev) => ({
+                      ...prev,
+                      vehicleInfo: {
+                        ...(prev.vehicleInfo || {}),
+                        registrationFile: undefined, 
+                        path: undefined, 
+                      },
+                    }));
+
+                    // ล้างค่า input file เพื่อให้ผู้ใช้สามารถคลิกเลือก "ไฟล์เดิม" ซ้ำได้
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
                   }}
                   className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors"
                 >
@@ -175,8 +297,15 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
               </>
             ) : (
               <div className="text-center">
-                <MdCloudUpload size={48} className={`mx-auto mb-2 ${errors.includes('registrationImage') ? 'text-red-300' : 'text-gray-300'}`} />
-                <p className={`${errors.includes('registrationImage') ? 'text-red-500' : 'text-gray-400'} text-sm font-bold`}>คลิกเพื่ออัปโหลดรูปรายการจดทะเบียน</p>
+                <MdCloudUpload
+                  size={48}
+                  className={`mx-auto mb-2 ${errors.includes("registrationImage") ? "text-red-300" : "text-gray-300"}`}
+                />
+                <p
+                  className={`${errors.includes("registrationImage") ? "text-red-500" : "text-gray-400"} text-sm font-bold`}
+                >
+                  คลิกเพื่ออัปโหลดรูปรายการจดทะเบียน
+                </p>
               </div>
             )}
           </div>
@@ -188,69 +317,90 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
             License Plate Province / จังหวัดที่จดทะเบียนรถ
           </label>
 
-          <span className="text-[12px] text-red-500">*สามารถพิมพ์เพื่อค้นหาได้ ไม่ต้องเลื่อนหาเองให้ปวดตา</span>
+          <span className="text-[12px] text-red-500">
+            *สามารถพิมพ์เพื่อค้นหาได้ ไม่ต้องเลื่อนหาเองให้ปวดตา
+          </span>
 
           {/* {mounted ? ( */}
-            <Combobox
-              value={vehicle?.province || ""}
-              onChange={(val) => setVehicle(prev => ({ ...prev, province: val }))}
-            >
-              <div className="relative mt-1">
-                <div className="relative w-full cursor-default overflow-hidden rounded-lg border border-gray-300 bg-[#006633] text-white focus-within:ring-2 focus-within:ring-green-400 transition-all">
-                  <Combobox.Input
-                    id="province-combobox-input"
-                    className="w-full border-none py-2.5 pl-4 pr-10 text-sm leading-5 text-white bg-transparent focus:ring-0 outline-none placeholder:text-white/60"
-                    displayValue={(val: string) => val}
-                    onChange={(event) => setProvinceQuery(event.target.value)}
-                    placeholder="พิมพ์ชื่อจังหวัด (ไทย/Eng)..."
-                    autoComplete="off"
-                  />
-                  <Combobox.Button id="province-combobox-button" className="absolute inset-y-0 right-0 flex items-center pr-2 text-white/80">
-                    <MdSwapVert size={20} />
-                  </Combobox.Button>
-                </div>
-
-                <Transition
-                  as={Fragment}
-                  leave="transition ease-in duration-100"
-                  leaveFrom="opacity-100"
-                  leaveTo="opacity-0"
-                  afterLeave={() => setProvinceQuery('')}
+          <Combobox
+            value={formResident?.vehicleInfo?.province || ""}
+            onChange={(val) =>
+              // setVehicle((prev) => ({ ...prev, province: val }))
+              setFormResident((prev) => ({
+                ...prev,
+                province: val,
+              }))
+            }
+          >
+            <div className="relative mt-1">
+              <div className="relative w-full cursor-default overflow-hidden rounded-lg border border-gray-300 bg-[#006633] text-white focus-within:ring-2 focus-within:ring-green-400 transition-all">
+                <Combobox.Input
+                  id="province-combobox-input"
+                  className="w-full border-none py-2.5 pl-4 pr-10 text-sm leading-5 text-white bg-transparent focus:ring-0 outline-none placeholder:text-white/60"
+                  displayValue={(val: string) => val}
+                  onChange={(event) => setProvinceQuery(event.target.value)}
+                  placeholder="พิมพ์ชื่อจังหวัด (ไทย/Eng)..."
+                  autoComplete="off"
+                />
+                <Combobox.Button
+                  id="province-combobox-button"
+                  className="absolute inset-y-0 right-0 flex items-center pr-2 text-white/80"
                 >
-                  <Combobox.Options className="custom-scrollbar absolute mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm z-50">
-                    {filteredProvinces.length === 0 && provinceQuery !== '' ? (
-                      <div className="relative cursor-default select-none py-2 px-4 text-gray-500 italic">
-                        ไม่พบข้อมูล "{provinceQuery}"
-                      </div>
-                    ) : (
-                      filteredProvinces.map((p) => (
-                        <Combobox.Option
-                          key={p.id}
-                          className={({ active }) =>
-                            `relative cursor-default select-none py-2.5 pl-10 pr-4 transition-colors ${active ? 'bg-[#006633] text-white' : 'text-gray-900'
-                            }`
-                          }
-                          value={p.name_th}
-                        >
-                          {({ selected, active }) => (
-                            <>
-                              <span className={`block truncate ${selected ? 'font-bold' : 'font-normal'}`}>
-                                {p.name_th} <span className={`text-[10px] ml-1 ${active ? 'text-white/70' : 'text-gray-400'}`}>({p.name_en})</span>
-                              </span>
-                              {selected && (
-                                <span className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? 'text-white' : 'text-[#006633]'}`}>
-                                  <MdCheck size={18} />
-                                </span>
-                              )}
-                            </>
-                          )}
-                        </Combobox.Option>
-                      ))
-                    )}
-                  </Combobox.Options>
-                </Transition>
+                  <MdSwapVert size={20} />
+                </Combobox.Button>
               </div>
-            </Combobox>
+
+              <Transition
+                as={Fragment}
+                leave="transition ease-in duration-100"
+                leaveFrom="opacity-100"
+                leaveTo="opacity-0"
+                afterLeave={() => setProvinceQuery("")}
+              >
+                <Combobox.Options className="custom-scrollbar absolute mt-1 max-h-60 w-full overflow-auto rounded-xl bg-white py-1 text-base shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none sm:text-sm z-50">
+                  {filteredProvinces.length === 0 && provinceQuery !== "" ? (
+                    <div className="relative cursor-default select-none py-2 px-4 text-gray-500 italic">
+                      ไม่พบข้อมูล "{provinceQuery}"
+                    </div>
+                  ) : (
+                    filteredProvinces.map((p) => (
+                      <Combobox.Option
+                        key={p.id}
+                        className={({ active }) =>
+                          `relative cursor-default select-none py-2.5 pl-10 pr-4 transition-colors ${
+                            active ? "bg-[#006633] text-white" : "text-gray-900"
+                          }`
+                        }
+                        value={p.name_th}
+                      >
+                        {({ selected, active }) => (
+                          <>
+                            <span
+                              className={`block truncate ${selected ? "font-bold" : "font-normal"}`}
+                            >
+                              {p.name_th}{" "}
+                              <span
+                                className={`text-[10px] ml-1 ${active ? "text-white/70" : "text-gray-400"}`}
+                              >
+                                ({p.name_en})
+                              </span>
+                            </span>
+                            {selected && (
+                              <span
+                                className={`absolute inset-y-0 left-0 flex items-center pl-3 ${active ? "text-white" : "text-[#006633]"}`}
+                              >
+                                <MdCheck size={18} />
+                              </span>
+                            )}
+                          </>
+                        )}
+                      </Combobox.Option>
+                    ))
+                  )}
+                </Combobox.Options>
+              </Transition>
+            </div>
+          </Combobox>
         </div>
       </div>
     </Container>
@@ -334,5 +484,5 @@ const PROVINCE_LIST = [
   { id: "74", name_th: "ปัตตานี", name_en: "Pattani" },
   { id: "75", name_th: "ยะลา", name_en: "Yala" },
   { id: "76", name_th: "นราธิวาส", name_en: "Narathiwat" },
-  { id: "77", name_th: "บึงกาฬ", name_en: "Bueng Kan" }
+  { id: "77", name_th: "บึงกาฬ", name_en: "Bueng Kan" },
 ];

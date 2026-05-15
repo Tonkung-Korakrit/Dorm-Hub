@@ -1,6 +1,7 @@
 // app/api/bookings/my-booking/route.ts
 
 import { prisma } from "@/lib/prisma";
+import { PROFILE_IMAGE_TYPES } from "@/lib/profile-images";
 import { NextResponse } from "next/server";
 import { BookingStatus } from "@/utils/types";
 import { getAuthSession } from "@/services/identify";
@@ -57,6 +58,11 @@ export async function GET() {
           },
           take: 1
         },
+        checkins: {
+          select: {
+            type: true,
+          },
+        },
         room: {
           select: {
             roomId: true,
@@ -84,6 +90,19 @@ export async function GET() {
             isDisabled: true,
             faculty_department: true,
             lifestyle: true,
+            address: true,
+            profileImage: {
+              where: {
+                type: {
+                  in: PROFILE_IMAGE_TYPES,
+                },
+              },
+            },
+            vehicleInfo: {
+              include: {
+                file_info: true
+              }
+            },
           }
         },
       },
@@ -94,13 +113,59 @@ export async function GET() {
       // }
     });
 
-    if (!booking) return NextResponse.json({ booking: null });
+    const userTMP = await prisma.cus_users.findFirst({
+      where: {
+        OR: excludeConditions
+      },
+      select: {
+        id: true,
+        studentId: true,
+        name_en: true
+      }
+    });
+
+    if (!booking) {
+      const lineLoginsCount = userTMP
+        ? await prisma.line_login.count({ where: { userId: userTMP.id } })
+        : 0;
+
+      return NextResponse.json({
+        cus_users: userTMP
+          ? {
+              id: userTMP.id,
+              name_en: userTMP.name_en,
+              hasLineLogin: lineLoginsCount > 0,
+            }
+          : null,
+      });
+    }
+
+    const lineLoginsCount = await prisma.line_login.count({
+      where: {
+        userId: booking.cus_users.id,
+      }
+    });
+
+    const hasCheckin = booking.checkins.some((record) => record.type === "CHECKIN");
+    const hasCheckout = booking.checkins.some((record) => record.type === "CHECKOUT");
+    const currentStatus = booking.booking_logs[0]?.status || BookingStatus.PENDING;
+    const rebookableStatuses: BookingStatus[] = [
+      BookingStatus.CANCELLED,
+      BookingStatus.EXPIRED,
+      BookingStatus.REJECTED,
+    ];
+    const canBookAgain =
+      rebookableStatuses.includes(currentStatus) ||
+      (currentStatus === BookingStatus.COMPLETED && hasCheckout);
 
     // 3. Flatten ข้อมูล (เหมือนเดิมแต่โครงสร้างสะอาดขึ้น)
     return NextResponse.json({
     // return ({
       id: booking.id,
-      status: booking.booking_logs[0]?.status || BookingStatus.PENDING,
+      status: currentStatus,
+      hasCheckin,
+      hasCheckout,
+      canBookAgain,
       type: booking.type,
       createdAt: booking.booking_logs[0]?.createdAt,
       remark: booking.booking_logs[0]?.verifier?.staff_action_log?.[0]?.remark || null,      // expiresAt: booking.expiresAt,
@@ -123,7 +188,14 @@ export async function GET() {
         isScholarshipStudent: booking.cus_users.isScholarshipStudent,
         isDisabled: booking.cus_users.isDisabled,
         faculty_department: booking.cus_users.faculty_department,
+        hasLineLogin: lineLoginsCount > 0,
         lifestyle: booking.cus_users.lifestyle,
+        address: booking.cus_users.address,
+        profileImage: booking.cus_users.profileImage,
+        vehicleInfo: booking.cus_users.vehicleInfo ? {
+          ...booking.cus_users.vehicleInfo,
+          fileImages: booking.cus_users.vehicleInfo.file_info?.path || ""
+        } : null
       }
     });
 

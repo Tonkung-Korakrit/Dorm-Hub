@@ -3,8 +3,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-// icons
 import { 
   MdLockOutline, MdOutlineEmail, MdError, 
   MdVisibility, MdVisibilityOff, MdSecurity 

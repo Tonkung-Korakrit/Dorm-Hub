@@ -14,7 +14,7 @@ import { LoadingOverlay } from "@/components/Loading/LoadingOverlay";
 import ConfirmModal from "@/components/Loading/ConfirmModal";
 
 // icons
-import { MdCheck } from "react-icons/md";
+import { LuFolderSearch } from "react-icons/lu";
 
 // hooks
 import { useScrollTop } from "@/hooks/useScrollTop";
@@ -22,7 +22,6 @@ import useSummary from "@/hooks/useSummary";
 
 interface SummaryBookingProps {
   setStep: (step: number) => void;
-  isSubmitting: boolean;
 }
 
 export const SummaryBooking = ({ setStep }: SummaryBookingProps) => {
@@ -30,9 +29,11 @@ export const SummaryBooking = ({ setStep }: SummaryBookingProps) => {
   const { isSubmitting, isResubmitting, isAcceptAgreement, bookingError, setBookingError,
     handleEdit, handleCheckbox, handleFinalConfirm, handleBackStep } = useSummary(setStep)
 
+  console.log("formResident in Summary:", formResident);  
   console.log("formRoom in Summary:", formRoom);
-  console.log("formResident in Summary:", formResident);
   console.log("currentBooking in Summary:", currentBooking);
+  // console.log("vehicle in vehicle: ", vehicle);
+  // console.log("Address in Summary:", formResident.address[0]);
 
   useScrollTop();
 
@@ -63,11 +64,11 @@ export const SummaryBooking = ({ setStep }: SummaryBookingProps) => {
       {isResubmitting && (
         <div className="my-2 p-4 bg-amber-50 border border-amber-200 rounded-[2rem] flex gap-4 items-center">
           <div className="bg-amber-500 text-white p-2 rounded-full shadow-md">
-            <MdCheck size={24} />
+            <LuFolderSearch size={24} />
           </div>
           <div>
             <p className="text-amber-800 font-bold text-sm">Review your corrections</p>
-            <p className="text-amber-700 text-xs italic">กรุณาตรวจสอบข้อมูลที่ท่านแก้ไขตามคำแนะนำ: "{currentBooking.remark}"</p>
+            <p className="text-amber-700 text-xs italic">กรุณาตรวจสอบข้อมูลที่ท่านแก้ไขตามคำแนะนำ: "{currentBooking?.remark}"</p>
           </div>
         </div>
       )}

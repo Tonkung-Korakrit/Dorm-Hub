@@ -12,7 +12,7 @@ import { Room } from "@/utils/types";
 import { DORM_LABELS } from "@/utils/constants";
 
 // icons
-import { MdChatBubbleOutline, MdWarningAmber } from "react-icons/md";
+import { MdChatBubbleOutline, MdClose, MdWarningAmber } from "react-icons/md";
 
 function Portal({ children }: { children: React.ReactNode }) {
   if (typeof window === "undefined") return null;
@@ -44,7 +44,7 @@ const DetailPopup = (props: DetailPopupProps) => {
     confirmRoom,
     setConfirmRoom,
     popupPos,
-    matchScore,
+    // matchScore,
     isRoomFull,
     isCharterBroken,
     cannotBook,
@@ -52,6 +52,7 @@ const DetailPopup = (props: DetailPopupProps) => {
     calculateMatch,
   } = props;
   const { formRoom } = useBooking();
+  const isMatchTooLow = calculateMatch(confirmRoom.lifestyleConfig) < 50;
 
   useEffect(() => {
     if (confirmRoom) {
@@ -81,8 +82,9 @@ const DetailPopup = (props: DetailPopupProps) => {
     }
   }, [popupPos, confirmRoom]);
 
+  // console.log("confirmRoom: ", confirmRoom);
   // console.log("confirmRoom.facultyConfig: ", confirmRoom?.facultyConfig);
-
+  
   return (
     <Portal>
       {/* 1. Background Overlay */}
@@ -110,12 +112,20 @@ const DetailPopup = (props: DetailPopupProps) => {
           w-[92vw] md:w-[450px] 
           max-w-[calc(100vw-32px)]
           
-        `} // 70% ของจอ max-h-[70dvh] 
+        `} // 70% ของจอ max-h-[70dvh]
           style={{
             // ใช้ความสูงที่เราคำนวณมา เพื่อไม่ให้ปุ่มจมขอบจอ
             maxHeight: popupPos.isCenter ? "75dvh" : availableHeight,
           }}
         >
+          <button
+            onClick={() => setConfirmRoom(null)}
+            className="absolute top-2 right-2 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors z-[1010]"
+            aria-label="Close details"
+          >
+            <MdClose size={20} />
+          </button>
+
           {/* --- ส่วนที่ 1: เนื้อหาที่ Scroll ได้ (Body) --- */}
           {/* <div className="p-4 max-h-[60dvh] overflow-y-auto custom-scrollbar rounded-xl"> */}
           <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
@@ -169,18 +179,19 @@ const DetailPopup = (props: DetailPopupProps) => {
               <div className="flex flex-wrap gap-1">
                 {Array.isArray(confirmRoom.facultyConfig) &&
                 confirmRoom.facultyConfig.length > 0 ? (
-                  confirmRoom.facultyConfig.map(
-                    (item: { id: string; name: string }) => (
+                  confirmRoom.facultyConfig?.map((item, index) => (
                       <span
-                        key={item.id}
+                        key={`${index}`}
                         className="bg-green-50 text-[#126A31] px-2 py-0.5 rounded-md border border-green-100"
                       >
-                        {item.name}
+                        {typeof item === 'object' ? item.name : item}
                       </span>
                     ),
                   )
                 ) : (
-                  <span className="text-gray-400">N/A</span>
+                  <span className="text-gray-400">
+                    There are no residents yet
+                  </span>
                 )}
               </div>
             </div>
@@ -270,7 +281,7 @@ const DetailPopup = (props: DetailPopupProps) => {
             <div className="mt-4 space-y-2">
               {/* <div className="flex flex-col items-center w-full mt-4 gap-2"> */}
               {confirmRoom.currentOccupancy > 0 &&
-                calculateMatch(confirmRoom.lifestyleConfig) < 50 &&
+                isMatchTooLow &&
                 !isRoomFull &&
                 !isCharterBroken && (
                   <div className="w-full p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-2 animate-in fade-in slide-in-from-top-2">
@@ -284,7 +295,7 @@ const DetailPopup = (props: DetailPopupProps) => {
                       </p>
                       <p className="text-[10px] text-amber-700 leading-tight">
                         ไลฟ์สไตล์ของคุณอาจไม่ค่อยตรงกับรูมเมทคนปัจจุบัน
-                        แต่คุณยังสามารถจองได้เพื่อปรับตัวเข้าหากันครับ
+                        {/* แต่คุณยังสามารถจองได้เพื่อปรับตัวเข้าหากันครับ */}
                       </p>
                     </div>
                   </div>
@@ -308,7 +319,8 @@ const DetailPopup = (props: DetailPopupProps) => {
 
           {/* --- ส่วนที่ 2: ส่วนล่าง (Footer) - ไม่เลื่อนตามเนื้อหา --- */}
           <div className="py-2 border-t border-gray-100 bg-gray-50/50 rounded-b-xl flex justify-center">
-            {!cannotBook ? (
+            {!cannotBook &&
+            (!isMatchTooLow || confirmRoom.currentOccupancy === 0) ? (
               <button
                 onClick={handleSelectRoom}
                 className="w-[200px] text-[14px] items-center mt-2 py-2 bg-[#006432] text-white rounded-full font-semibold shadow-lg hover:bg-[#004d26] active:scale-95 transition-all"
@@ -322,7 +334,9 @@ const DetailPopup = (props: DetailPopupProps) => {
               >
                 {isCharterBroken
                   ? "จองแบบเหมาไม่ได้ / Unable to reserve"
-                  : "ห้องพักเต็มแล้ว / Room is full."}
+                  : (isMatchTooLow && confirmRoom.currentOccupancy > 0 && !isRoomFull)
+                    ? "ความเข้ากันได้ต่ำเกินไป / Compatibility is too low"
+                    : "ห้องพักเต็มแล้ว / Room is full."}
               </button>
             )}
           </div>

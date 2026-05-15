@@ -1,81 +1,85 @@
 // app/login/LoginContent.tsx
-"use client"
+"use client";
 
-import React, { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 
 // loadings
-import toast from 'react-hot-toast'
-import { LoadingOverlay } from '@/components/Loading/LoadingOverlay'
-import { StatusPopup } from '@/components/Loading/StatusPopup'
+import toast from "react-hot-toast";
+import { LoadingOverlay } from "@/components/Loading/LoadingOverlay";
+import { StatusPopup } from "@/components/Loading/StatusPopup";
 
-// icons
+// icon
 import { PiEyesFill } from "react-icons/pi";
 import { RiEyeCloseLine } from "react-icons/ri";
 import { FcGoogle } from "react-icons/fc";
 
-const LoginContent = () => {
+const LoginContent = ({ isSignout }: { isSignout: boolean }) => {
   const router = useRouter();
-  const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [popupStatus, setPopupStatus] = useState<{ type: "success" | "error"; message: string }>(null);
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
+  const [popupStatus, setPopupStatus] = useState<{
+    type: "success" | "error";
+    message: string;
+  }>(null);
+
+  // const [username, setUsername] = useState("");
+  // const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  const searchParams = useSearchParams();
-  const isLogout = searchParams.get("logout");
+  // const searchParams = useSearchParams();
+  // const isLogout = searchParams.get("logout");
 
   useEffect(() => {
-    if (isLogout === "true") {
+    if (isSignout === true) {
       toast.success("คุณออกจากระบบสำเร็จแล้ว", {
-        id: "logout-success",
+        id: "signout-success",
         duration: 3000,
         style: {
-          borderRadius: '10px',
-          background: '#00FF00',
-          color: '#fff',
+          borderRadius: "10px",
+          background: "#C0EDD0",
+          color: "#000",
         },
       });
 
-      window.history.replaceState(null, "", "/login")
+      window.history.replaceState(null, "", "/login");
     }
-  }, [isLogout])
+  }, [isSignout]);
 
-  useEffect(() => {
-    setMounted(true); // จะทำงานเมื่อถึงฝั่ง Client แล้วเท่านั้น
-  }, []);
-
-  // ถ้ายังไม่ Mount (ยังอยู่ที่ Server) ให้คืนค่าว่างหรือ Loader ไปก่อน
-  if (!mounted) return null;
-
-  const handleLoginByTU = async (e: React.FormEvent) => {
+  const handleLoginByTU = async (e: React.FormEvent<HTMLFormElement>) => {
+    // const handleLoginByTU = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // ดึงค่าจาก Form โดยตรง (ไม่ต้องใช้ useState ใน Input)
+    const formData = new FormData(e.currentTarget);
+    const username = formData.get("username") as string;
+    const password = formData.get("password") as string;
+
     if (username.length !== 10) {
-      toast.error('Please enter your 10-digit studentID'), {
-        id: "studentID",
-        duration: 1000,
-        style: {
-          borderRadius: '10px',
-          background: '#990000',
-          color: '#fff',
-        },
-      };
+      (toast.error("Please enter your 10-digit studentID"),
+        {
+          id: "studentID",
+          duration: 1000,
+          style: {
+            borderRadius: "10px",
+            background: "#FFA9A9",
+            color: "#000",
+          },
+        });
       return;
     }
 
     if (password.length == 0) {
-      toast.error('Please enter your password'), {
-        id: "password",
-        duration: 1000,
-        style: {
-          borderRadius: '10px',
-          background: '#990000',
-          color: '#fff',
-        },
-      }
+      (toast.error("Please enter your password"),
+        {
+          id: "password",
+          duration: 1000,
+          style: {
+            borderRadius: "10px",
+            background: "#FFA9A9",
+            color: "#000",
+          },
+        });
       return;
     }
 
@@ -90,13 +94,20 @@ const LoginContent = () => {
 
       const data = await res.json();
 
-      if (res.ok && data.ok) {
-        toast.success('Welcome! Logging in....', {
+      // มาตรฐานคือใช้ signIn("credentials") ของ NextAuth เลย
+      // const res = await signIn("credentials", {
+      //   username,
+      //   password,
+      //   redirect: false, // เพื่อให้เราจัดการ Toast และ Popup เองได้
+      // });
+
+      if (data?.ok) {
+        toast.success("Welcome! Logging in....", {
           duration: 3000,
           style: {
-            borderRadius: '10px',
-            background: '#459A3B',
-            color: '#fff',
+            borderRadius: "10px",
+            background: "#C0EDD0",
+            color: "#000",
           },
         });
 
@@ -110,13 +121,14 @@ const LoginContent = () => {
       } else {
         setPopupStatus({
           type: "error",
-          message: "ชื่อผู้ใช้ หรือรหัสผ่านของท่านไม่ถูกต้อง กรุณาติดต่อ LINE ICT TU Helpdesk https://lin.ee/vBxlVav"
+          message:
+            "ชื่อผู้ใช้ หรือรหัสผ่านของท่านไม่ถูกต้อง กรุณาติดต่อ LINE ICT TU Helpdesk https://lin.ee/vBxlVav",
         });
       }
     } catch (error) {
       setPopupStatus({
         type: "error",
-        message: "ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่"
+        message: "ไม่สามารถเชื่อมต่อกับระบบได้ กรุณาลองใหม่",
       });
     } finally {
       setIsLoading(false);
@@ -145,37 +157,46 @@ const LoginContent = () => {
 
         {/* Student ID Input */}
         <div className="relative">
-          <label className="text-[16px] font-normal text-black ml-2">Student ID</label>
+          <label className="text-[16px] font-normal text-black ml-2">
+            Student ID
+          </label>
           <br />
           <input
+            name="username"
             type="tel"
             inputMode="numeric"
             className="w-[216px] sm:w-[244px] border-b border-black py-0.5 ml-4 text-[16px] focus:outline-none focus:border-[#91b838] transition-colors text-black bg-transparent"
-            value={username}
-            onChange={(e) => setUsername(e.target.value)}
+            // value={username}
+            // onChange={(e) => setUsername(e.target.value)}
             onInput={(e) => {
-              e.currentTarget.value = e.currentTarget.value.replace(/[^0-9]/g, '');
+              e.currentTarget.value = e.currentTarget.value.replace(
+                /[^0-9]/g,
+                "",
+              );
             }}
             minLength={10}
             maxLength={10}
             placeholder="68xxxxxxxx"
             required
-            suppressHydrationWarning={true}
+            // suppressHydrationWarning={true}
           />
         </div>
 
         {/* Password Input */}
         <div className="relative mt-2">
-          <label className="text-[16px] font-normal text-black ml-2">Password</label>
+          <label className="text-[16px] font-normal text-black ml-2">
+            Password
+          </label>
           <div className="relative w-[244px]">
             <input
+              name="password"
               type={showPassword ? "text" : "password"}
               className="w-[216px] sm:w-[244px] ml-4 border-b border-black py-0.5 text-[16px] focus:outline-none focus:border-[#91b838] transition-colors text-black bg-transparent"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder='••••••••••'
+              // value={password}
+              // onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••••"
               required
-              suppressHydrationWarning={true}
+              // suppressHydrationWarning={true}
             />
 
             {/* ปุ่มเปิด-ปิดตา */}
@@ -185,7 +206,11 @@ const LoginContent = () => {
               onClick={() => setShowPassword(!showPassword)}
               tabIndex={-1}
             >
-              {showPassword ? <PiEyesFill size={20} /> : <RiEyeCloseLine size={20} />}
+              {showPassword ? (
+                <PiEyesFill size={20} />
+              ) : (
+                <RiEyeCloseLine size={20} />
+              )}
             </button>
           </div>
           <div className="text-right mr-14">
@@ -218,15 +243,17 @@ const LoginContent = () => {
         </p>
         <button
           type="button"
-          onClick={() => signIn("google", { callbackUrl: "/my-booking", redirect: true })}
+          onClick={() =>
+            signIn("google", { callbackUrl: "/my-booking", redirect: true })
+          }
           className="inline-flex items-center justify-center p-1.5 mr-10 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm bg-white"
-          suppressHydrationWarning={true}
+          // suppressHydrationWarning={true}
         >
           <FcGoogle size={24} />
         </button>
       </div>
     </>
-  )
-}
+  );
+};
 
-export default LoginContent
+export default LoginContent;

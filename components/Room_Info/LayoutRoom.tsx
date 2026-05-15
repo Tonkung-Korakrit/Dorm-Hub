@@ -56,7 +56,7 @@ const LayoutRoom = (props: LayoutRoomProps) => {
             const isSelected = confirmRoom?.id === room.id;
             const canBook = canUserBookRoom(room);
             const matchScore = calculateMatch(room.lifestyleConfig);
-            const isCharterSelected = currentBooking.type === BookingType.CHARTER;
+            const isCharterSelected = currentBooking?.type === BookingType.CHARTER;
             // const isCharterBroken = isCharterSelected && (currentOcc > 0 || confirmRoom?.status !== RoomStatus.AVAILABLE);
 
             const roomConfig = DORM_LABELS.ROOM_TYPES[room.roomType as keyof typeof DORM_LABELS.ROOM_TYPES];

@@ -1,5 +1,4 @@
 // api/validate-user
-
 import { prisma } from "@/lib/prisma";
 import { getAuthSession } from "@/services/identify";
 import { NextResponse } from "next/server";

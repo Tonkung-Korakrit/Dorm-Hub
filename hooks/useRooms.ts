@@ -21,7 +21,7 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   const [selectedFloor, setSelectedFloor] = useState<string>("2");
   const [checkIsMobile, setCheckIsMobile] = useState(false);
 
-  const isCharterSelected = currentBooking.type === BookingType.CHARTER;
+  const isCharterSelected = currentBooking?.type === BookingType.CHARTER;
   const currentOcc = confirmRoom?.currentOccupancy || 0;
 
   // 1. ถ้าเลือกเหมา: ต้องไม่มีคนอยู่ (Occ = 0) และสถานะต้องไม่ใช่ FULL หรือ PENDING จากคนอื่น
@@ -214,7 +214,7 @@ const useRooms = (setStep: Dispatch<SetStateAction<number>>) => {
   };
 
   const canUserBookRoom = (room: Room) => {
-    const isCharterSelected = currentBooking.type === BookingType.CHARTER;
+    const isCharterSelected = currentBooking?.type === BookingType.CHARTER;
 
     // --- กรณีห้องชุด (ห้องแม่บน Grid) ---
     if (room.isSuite && room.subRooms) {

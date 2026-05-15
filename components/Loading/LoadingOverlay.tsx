@@ -1,5 +1,5 @@
 // components/ui/LoadingOverlay.tsx
-"user client"
+"use client";
 import React, { useEffect } from "react";
 
 interface LoadingOverlayProps {
@@ -21,7 +21,8 @@ export const LoadingOverlay = ({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[9999] w-screen h-[100dvh] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    // <div className="fixed inset-0 z-[9999] w-screen h-[100dvh] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed top-0 left-0 right-0 bottom-0 z-[9999] flex items-center justify-center bg-black/40 backdrop-blur-sm">
       <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center max-w-[280px] w-full">
         {/* Spinner วงกลมหมุน */}
         <div className="relative w-12 h-12">

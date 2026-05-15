@@ -22,7 +22,6 @@ export async function POST(req) {
         },
       }
     );
-    console.log("Login response:", tuData.data);
 
     if (tuData.data.status === true) {
       const tuUser = tuData.data;
@@ -75,7 +74,6 @@ export async function POST(req) {
     }
 
   } catch (err) {
-    console.error("TU API error:", err.response?.data || err.message);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

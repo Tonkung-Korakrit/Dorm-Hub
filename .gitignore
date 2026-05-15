@@ -47,7 +47,7 @@ next-env.d.ts
 /mysql_data
 
 public/uploads/*
-
+prisma/migrations/
 # Playwright
 node_modules/
 /test-results/
@@ -58,3 +58,4 @@ node_modules/
 
 tests/e2e/screenshots/
 booking.spec.ts
+/public/uploads/*

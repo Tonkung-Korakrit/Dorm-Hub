@@ -1,10 +1,12 @@
 // api/bookings/update-rejected
 
 import { prisma } from "@/lib/prisma";
+import { syncProfileImages } from "@/lib/profile-images";
 import { NextResponse } from "next/server";
 import { BookingStatus } from "@/utils/types";
 import { sendResubmissionReceivedEmail } from "@/lib/mail";
 import { getAuthSession } from "@/services/identify";
+import { sendBookingStatusFlex } from "@/lib/line";
 
 export async function PUT(request: Request) {
   try {
@@ -16,10 +18,11 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Unauthorized - ไม่ได้รับอนุญาต" }, { status: 401 });
     }
 
-    const { bookingId, user, vehicle } = await request.json();
+    const { bookingId, user, vehicle, address, profileImages } = await request.json();
 
     // 2. ใช้ Transaction เพื่อความปลอดภัย
     const result = await prisma.$transaction(async (tx) => {
+      let fileId: number | undefined = undefined;
 
       // ตรวจสอบก่อนว่า Booking นี้เป็นของ User คนนี้จริง และสถานะคือ REJECTED
       const existing = await tx.booking.findFirst({
@@ -28,17 +31,84 @@ export async function PUT(request: Request) {
           cus_users: {
             OR: excludeConditions // ข้อมูลต้องตรงกับ Email หรือ Student ID ของตัวเอง
           }
-        }
+        },
+        include: {
+          cus_users: {
+            include: {
+              vehicleInfo: {
+                include: {
+                  file_info: true,
+                },
+              },
+            },
+          },
+        },
       });
 
       if (!existing) throw new Error("ไม่พบรายการจอง หรือคุณไม่มีสิทธิ์เข้าถึง");
+
+      const bookingUserId = Number(existing.userId);
+
+      if (vehicle?.filePath) {
+        const currentVehiclePath = existing.cus_users.vehicleInfo?.file_info?.path;
+        if (currentVehiclePath && currentVehiclePath === vehicle.filePath) {
+          fileId = existing.cus_users.vehicleInfo?.fileId || undefined;
+        } else {
+          const newFile = await tx.file_info.create({
+            data: {
+              createdBy: bookingUserId,
+              type: "VEHICLE_CARD",
+              path: vehicle.filePath,
+            },
+          });
+          fileId = newFile.id;
+        }
+      }
+
+      if (address) {
+        const existingAddress = await tx.address.findFirst({
+          where: {
+            userId: bookingUserId,
+            type: address.type,
+          },
+          select: { id: true },
+        });
+
+        if (existingAddress) {
+          await tx.address.update({
+            where: { id: existingAddress.id },
+            data: {
+              type: address.type,
+              addressDetail: address.addressDetail,
+              subDistrict: address.subDistrict,
+              district: address.district,
+              province: address.province,
+              postalCode: address.postalCode,
+              country: address.country || "Thailand",
+            },
+          });
+        } else {
+          await tx.address.create({
+            data: {
+              userId: bookingUserId,
+              type: address.type,
+              addressDetail: address.addressDetail,
+              subDistrict: address.subDistrict,
+              district: address.district,
+              province: address.province,
+              postalCode: address.postalCode,
+              country: address.country || "Thailand",
+            },
+          });
+        }
+      }
 
       // console.log("user: ", user);
       // console.log("existing: ", existing);
 
       // 3. อัปเดตเฉพาะฟิลด์ที่อนุญาต (Explicit Update)
       await tx.cus_users.update({
-        where: { id: user.id },
+        where: { id: bookingUserId },
         data: {
           citizenType: user.citizenType,
           citizenNumber: user.citizenNumber,
@@ -62,16 +132,20 @@ export async function PUT(request: Request) {
                 licensePlate: vehicle.licensePlate,
                 province: vehicle.province,
                 ownerName: vehicle.ownerName || user.name_th, // fallback เป็นชื่อนศ.
+                fileId,
               },
               update: {
                 licensePlate: vehicle.licensePlate,
                 province: vehicle.province,
                 ownerName: vehicle.ownerName || user.name_th,
+                fileId,
               }
             }
           } : undefined
         }
       });
+
+      await syncProfileImages(tx, bookingUserId, profileImages);
 
       const newLog = await tx.booking_log.create({
         data: {
@@ -94,11 +168,24 @@ export async function PUT(request: Request) {
           // },
         },
         include: {
-          cus_users: { select: { name_th: true, email: true } },
+          cus_users: { 
+            select: { 
+              id: true,
+              name_th: true, 
+              email: true 
+            } 
+          },
           room: {
             include: {
-              dorm: { include: { campus: true } }
+              dorm: { 
+                include: { 
+                  campus: true 
+                } 
+              }
             }
+          },
+          booking_logs: {
+            orderBy: { createdAt: "desc" },
           }
         }
       });
@@ -146,6 +233,20 @@ export async function PUT(request: Request) {
     } catch (notifError) {
       // ถ้าส่งเมลพลาด ไม่ต้องระเบิด Error ใส่ User แต่ให้ Log ไว้ตรวจสอบ
       console.error("🔔 Notification Error:", notifError);
+    }
+
+    const bookingStatus = result.bookingData.booking_logs?.[0]?.status || BookingStatus.VERIFYING;
+
+    try {
+      await sendBookingStatusFlex({
+        userId: result.bookingData.cus_users.id,
+        bookingId: result.bookingData.id,
+        status: bookingStatus,
+        dormName: result.bookingData.room.dorm.name,
+        roomCode: result.bookingData.room.roomId,
+      })
+    } catch(err) {
+      console.error(err);
     }
 
     return NextResponse.json({ success: true, booking: result });

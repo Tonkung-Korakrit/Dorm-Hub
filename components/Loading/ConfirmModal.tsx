@@ -1,5 +1,5 @@
 // loading/components/ConfirmModal.tsx
-import { MdWarning, MdLogout } from "react-icons/md";
+import { MdWarning, MdLogout, MdInfoOutline } from "react-icons/md";
 
 interface ConfirmModalProps {
   isOpen: boolean;
@@ -10,7 +10,7 @@ interface ConfirmModalProps {
   title: string;
   message: string;
   confirmText: string;
-  type: "danger" | "warning";
+  type: "danger" | "warning" | "info";
   isLoading: boolean;
   showCancel?: boolean;
 }
@@ -27,9 +27,11 @@ const ConfirmModal = ({
       type={formAction ? "submit" : "button"}
       onClick={!formAction ? onConfirm : undefined}
       disabled={isLoading}
-      className={`w-full py-3 rounded-2xl fint-bold text-[12px] transition-all active:scale-[0.98] ${type === "danger"
+      className={`w-full py-3 rounded-2xl fint-bold text-[14px] transition-all active:scale-[0.98] ${type === "danger"
         ? "bg-red-500 text-white shadow-lg shadow-red-200"
-        : "bg-amber-500 text-white shadow-lg shadow-gray-200"
+        : type === "info"
+          ? "bg-sky-600 text-white shadow-lg shadow-sky-200"
+          : "bg-amber-500 text-white shadow-lg shadow-gray-200"
         } disabled:opacity-50`}
     >
       {isLoading ? "Processing..." : confirmText}
@@ -44,9 +46,16 @@ const ConfirmModal = ({
       {/* Modal Card: มนและเรียบง่าย */}
       <div className="relative bg-white w-full max-w-[340px] rounded-[2.5rem] shadow-sm border border-gray-100/50 animate-in zoom-in-95 duration-300">
         <div className="pt-8 pb-4 px-8 text-center">
-          <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${type === "danger" ? "bg-red-500 text-white" : "bg-amber-500 text-white"
-            }`}>
-            {type === "danger" ? <MdLogout size={32} /> : <MdWarning size={32} />}
+          <div
+            className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 
+              ${type === "danger"
+              ? "bg-red-500 text-white"
+              : type === "info"
+                ? "bg-sky-600 text-white"
+                : "bg-amber-500 text-white"
+              }`}
+          >
+            {type === "danger" ? <MdLogout size={32} /> : type === "info" ? <MdInfoOutline size={32} /> : <MdWarning size={32} />}
           </div>
 
           <div className="space-y-1 mb-2">
@@ -61,24 +70,13 @@ const ConfirmModal = ({
           </div>
 
           <div className="space-y-4">
-            <p className="text-[10px] leading-[1.8] text-gray-500 whitespace-pre-line px-2">
+            <p className="text-[12px] leading-[1.8] text-gray-500 whitespace-pre-line px-2">
               {message}
             </p>
           </div>
         </div>
 
-        <div className="px-8 pb-8 flex flex-col gap-2">
-          {/* <button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className={`w-full py-3 rounded-2xl font-bold text-[12px] transition-all active:scale-[0.98] ${type === "danger"
-              ? "bg-red-500 text-white shadow-lg shadow-red-200"
-              : "bg-amber-500 text-white shadow-lg shadow-gray-200"
-              } disabled:opacity-50`}
-          >
-            {isLoading ? "Processing..." : confirmText}
-          </button> */}
-
+        <div className="px-8 pb-4 flex flex-col gap-2">
           {formAction ? (
             <form action={formAction}>
               {/* ใส่ ID การจองไว้ใน Hidden Input เพื่อส่งไปหลังบ้าน */}
@@ -93,7 +91,7 @@ const ConfirmModal = ({
           {showCancel && (
             <button
               onClick={onClose}
-              className="w-full py-3 rounded-2xl font-bold text-[12px] text-gray-400 hover:text-gray-600 transition-colors active:scale-[0.98]"
+              className="w-full py-4 rounded-2xl font-bold text-[13px] text-gray-400 hover:text-gray-600 transition-colors active:scale-[0.98]"
             >
               Not now / ไว้วันหลัง
             </button>

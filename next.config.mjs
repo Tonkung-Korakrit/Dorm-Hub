@@ -32,7 +32,8 @@ const nextConfig = {
     // buildActivity: false, 
   },
   allowedDevOrigins: [
-    'final.my-ppp.net'
+    'final.my-ppp.net',
+    "marvelously-patchable-monty.ngrok-free.dev",
   ]
 };
 

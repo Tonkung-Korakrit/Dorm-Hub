@@ -108,16 +108,10 @@ const useStudentForm = () => {
         if (!errors.includes(fieldName)) {
           setErrors((prev) => [...prev, fieldName]);
         }
-        setErrorValidate((prev) => ({
-          ...prev,
-          [fieldName]: { message: data.message, isDuplicate: data.isDuplicate },
-        }));
+        setErrorValidate(prev => ({ ...prev, [fieldName]: { message: data.message, isDuplicate: data.isDuplicate } }));
       } else {
-        setErrors((prev) => prev.filter((item) => item !== fieldName));
-        setErrorValidate((prev) => ({
-          ...prev,
-          [fieldName]: { message: data.message, isDuplicate: data.isDuplicate },
-        }));
+        setErrors(prev => prev.filter(item => item !== fieldName));
+        setErrorValidate(prev => ({ ...prev, [fieldName]: { message: data.message, isDuplicate: data.isDuplicate } }));
       }
     } catch (err) {
       console.error("Check unique error", err);

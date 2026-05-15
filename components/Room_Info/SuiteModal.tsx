@@ -1,4 +1,7 @@
-import React from 'react'
+// components/Room_Info/SuiteModal.tsx
+"use client"
+
+import React, { useEffect } from 'react'
 import { MdClose, MdInfo, MdLock } from 'react-icons/md';
 import { Room, RoomStatus, BookingType } from "@/utils/types";
 import { useBooking } from '@/app/contexts/BookingContext';
@@ -24,6 +27,16 @@ const SuiteModal = (props: SuiteModalProps) => {
   const { selectedSuite, setSelectedSuite, canUserBookRoom,
     calculateMatch, setConfirmRoom, checkIsMobile, setPopupPos } = props;
   const { formRoom, currentBooking } = useBooking();
+
+  useEffect(() => {
+    // ปิดการเลื่อนของ body เมื่อ Modal ถูกโหลด
+    document.body.style.overflow = 'hidden';
+
+    // เมื่อ Modal ถูกทำลาย (Unmount) ให้คืนค่าการเลื่อนปกติ
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
@@ -106,7 +119,7 @@ const SuiteModal = (props: SuiteModalProps) => {
                     const label = subRoom.roomId.slice(-1); // "A" หรือ "B"\
 
                     const matchScore = calculateMatch(subRoom.lifestyleConfig);
-                    const isCharterSelected = currentBooking.type === BookingType.CHARTER;
+                    const isCharterSelected = currentBooking?.type === BookingType.CHARTER;
                     let statusColors = "";
 
                     if (isCharterSelected) {

@@ -1,13 +1,24 @@
 // types/booking.ts
-import { RoomStatus, BookingType, BookingStatus, Role, GenderType, File_info, AddressType, RoomType, CitizenType, PaymentStatus } from "@prisma/client";
+import {
+  RoomStatus,
+  BookingType,
+  BookingStatus,
+  Role,
+  GenderType,
+  File_info,
+  AddressType,
+  RoomType,
+  CitizenType,
+  PaymentStatus,
+} from "@prisma/client";
 
 export interface Resident {
   id: number;
-  citizenType: string;
-  citizenNumber: string;
-  studentId: string;
-  gender: GenderType;
-  titleName: string;
+  citizenType?: string;
+  citizenNumber?: string;
+  studentId?: string;
+  gender?: GenderType;
+  titleName?: string;
   name?: string;
   name_en: string;
   name_th: string;
@@ -20,15 +31,17 @@ export interface Resident {
   // department?: string;
   lifestyle?: string[] | any;
   lifestyleNote?: string;
-  isEnabled?: boolean;
+  // isEnabled?: boolean;
   // image?: string;
   // tu_status?: string;
-
+  hasLineLogin?: boolean;
   address?: Address[];
   guardians?: Guardian[];
   profileImage?: File_info[];
-  vehicleInfo?: Vehicle | null;
-  role: Role;
+  facePhotoFile?: File | null;
+  citizenCardFile?: File | null;
+  vehicleInfo?: Partial<Vehicle> | null;
+  role?: Role;
 }
 
 export interface Guardian {
@@ -40,12 +53,13 @@ export interface Guardian {
 
 export interface Vehicle {
   id: number;
-  userId: number;
+  userId?: number;
   licensePlate: string;
   province: string;
   ownerName: string;
-  fileImages: string;
-  // createdAt: Date;
+  path?: string;
+  registrationFile?: File | null;
+  createdAt?: Date;
   // updatedAt: Date;
 }
 
@@ -67,41 +81,41 @@ export interface Campus {
 }
 
 export interface Dorm {
-  id: number;
+  id?: number;
   name: string;
-  genderType: GenderType;
-  mapUrl: string;
-  maxCols: number;
-  maxRows: number;
-  campus: Campus;
+  genderType?: GenderType;
+  mapUrl?: string;
+  maxCols?: number;
+  maxRows?: number;
+  campus?: string;
   // floors: number[]
   rooms?: Room[];
 }
 
 export interface Room {
-  id: number;
+  id?: number;
   campus: string;
   dorm: Dorm;
   roomId: string;
   floor: number;
-  status: RoomStatus;
-  isLocked: boolean;
+  status?: RoomStatus;
+  isLocked?: boolean;
   roomType: RoomType;
-  price: number;
-  capacity: number;
-  currentOccupancy: number;
-  lifestyleConfig: any; // Prisma เก็บเป็น Json
+  price?: number;
+  capacity?: number;
+  currentOccupancy?: number;
+  lifestyleConfig?: any; // Prisma เก็บเป็น Json
   lifestyleNote?: String;
   facultyConfig?: any;
 
-  isSuite: boolean;
-  parentId?: number | null;     // ID ของห้องใหญ่ (กรณีที่เป็นห้องย่อย A หรือ B)
-  parent?: Room | null;         // ข้อมูลห้องใหญ่
+  isSuite?: boolean;
+  parentId?: number | null; // ID ของห้องใหญ่ (กรณีที่เป็นห้องย่อย A หรือ B)
+  parent?: Room | null; // ข้อมูลห้องใหญ่
   subRooms?: Room[];
 
-  posX: number;
-  posY: number;
-  booking: Booking[];
+  posX?: number;
+  posY?: number;
+  booking?: Booking[];
 
   // bookingId?: number; // สำหรับเก็บ ID การจองเมื่อมีการจองสำเร็จ
 }
@@ -114,70 +128,47 @@ export interface OwnerInfo {
   // roomNumber: string;
 }
 
-export { RoomStatus, BookingType, BookingStatus, Role, RoomType, GenderType, CitizenType, PaymentStatus };
+export {
+  RoomStatus,
+  BookingType,
+  BookingStatus,
+  Role,
+  RoomType,
+  GenderType,
+  CitizenType,
+  PaymentStatus,
+  AddressType,
+};
+
+export interface BookRoomFormProps {
+  user: Resident;
+  // rooms: Room[];
+}
 
 export interface Booking {
+  id?: number;
   success: boolean;
   message: string;
 
-  id?: number;
   status?: BookingStatus;
   type?: BookingType;
-  createdAt?: Date;
+  groupId?: string | null;
   remark?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 
-  // expiresAt?: Date | null;
-  // verifiedBy?: number | null;
-  // verifier?: Admin | null;
-
-  // vehicle?: Vehicle;
   cus_users?: Resident;
   room?: Room;
-  payments?: Payment;
-}
+  // address?: Address;
 
-export interface Payment {
-  id?: number;
-  amount?: number;
-}
-
-export interface MyBookingResponse {
-  success: boolean;
-  message: string;
-  id?: number; // หรือ string ตาม schema
-  status?: BookingStatus;
-  type?: string;
-  createdAt?: Date;
-  remark?: string | null;
-  room?: {
-    roomId: string;
-    floor: number;
-    dorm: string;
-    campus: string;
-    roomType: string;
-    lifestyleNote: string;
-    facultyConfig: any;
-  };
-  cus_users?: {
-    userId: number;
-    studentId: string;
-    name_th: string;
-    name_en: string;
-    email: string;
-    mobilePhone: string;
-    gender: string;
-    isScholarshipStudent: boolean;
-    isDisabled: boolean;
-    faculty_department: string;
-    lifestyle: any; // หรือใส่ type ของ lifestyle ถ้ามี
-    lifestyleNote: string;
-  };
-  booking?: null; // สำหรับกรณีไม่พบข้อมูล
+  hasCheckin?: boolean;
+  hasCheckout?: boolean;
+  canBookAgain?: boolean;
 }
 
 export interface MailBookingData {
   id: number;
-  type: string;
+  type: BookingType;
   cus_users: {
     name_th: string;
     email: string;
@@ -185,7 +176,7 @@ export interface MailBookingData {
   room: {
     roomId: string;
     floor: number;
-    roomType: string;
+    roomType: RoomType;
     dorm: {
       name: string;
       campus: {
@@ -202,3 +193,22 @@ export interface Staff {
   employeeId: string | null;
   role: Role;
 }
+
+export interface Checkin {
+  id: number;
+  bookingId: number;
+  type: string;
+  createdBy: number;
+  createdAt: Date;
+}
+
+// export {
+//   RoomStatus,
+//   BookingType,
+//   BookingStatus,
+//   Role,
+//   GenderType,
+//   // profileImage,
+//   AddressType,
+//   RoomType
+// } from "@prisma/client";

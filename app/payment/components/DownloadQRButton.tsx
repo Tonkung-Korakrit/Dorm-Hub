@@ -1,7 +1,5 @@
-// payment/components/DownloadQRButton.tsx
 'use client';
 
-// icons
 import { MdCloudUpload } from "react-icons/md";
 
 interface DownloadQRButtonProps {
@@ -10,41 +8,43 @@ interface DownloadQRButtonProps {
 }
 
 export default function DownloadQRButton({ qrUrl, bookingId }: DownloadQRButtonProps) {
-  // วิธีการดาวน์โหลดไฟล์ภาพ
-  // const handleDownloadQR = () => {
-  //   const link = document.createElement('a');
-  //   link.href = qrUrl;
-  //   link.download = `Tudorm-QR-Booking-${bookingId}.png`;
-  //   document.body.appendChild(link);
-  //   link.click();
-  //   document.body.removeChild(link);
-  // };
-
+  
   const handleDownloadQR = async () => {
     try {
-      // 1. ดึงข้อมูลรูปภาพ
+      const fileName = `Tudorm-QR-Booking-${bookingId}.png`;
+      
+      // 1. ดึงข้อมูลรูปภาพเป็น Blob
       const response = await fetch(qrUrl);
-      if (!response.ok) throw new Error('Network response was not ok');
-
-      // 2. แปลงเป็น Blob
       const blob = await response.blob();
+      
+      // 2. ตรวจสอบว่า Browser รองรับ Web Share API และสามารถแชร์ไฟล์ได้หรือไม่ (เน้นมือถือ)
+      if (navigator.share && navigator.canShare) {
+        const file = new File([blob], fileName, { type: blob.type });
+        
+        if (navigator.canShare({ files: [file] })) {
+          await navigator.share({
+            files: [file],
+            title: 'QR Code สำหรับชำระเงิน',
+            text: 'บันทึกรูปภาพเพื่อใช้ชำระเงินผ่านแอปธนาคาร',
+          });
+          return; // จบการทำงานสำหรับมือถือที่รองรับ
+        }
+      }
 
-      // 3. สร้าง URL ชั่วคราวจาก Blob
+      // 3. Fallback สำหรับ Desktop หรือ Browser ที่ไม่รองรับ Web Share
       const url = window.URL.createObjectURL(blob);
-
-      // 4. สร้างลิงก์หลอกๆ ขึ้นมาคลิก
       const link = document.createElement('a');
       link.href = url;
-      link.download = `Tudorm-QR-Booking-${bookingId}.png`;
+      link.download = fileName;
       document.body.appendChild(link);
       link.click();
-
-      // 5. ทำความสะอาด
+      
+      // Cleanup
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Download error:", error);
-      // ถ้าพังจริงๆ ให้เปิดรูปในแท็บใหม่เพื่อให้ User กดค้างเซฟเอง (Fallback)
+      // ถ้าพังจริงๆ ให้เปิดรูปในแท็บใหม่
       window.open(qrUrl, '_blank');
     }
   };

@@ -2,9 +2,8 @@
 "use client";
 
 import { createContext, useContext, useState, ReactNode } from "react";
-import { Room, Resident, Booking, BookingType, RoomStatus, 
-  Role, BookingStatus, RoomType, GenderType, OwnerInfo, Vehicle, 
-  Staff, CitizenType } from "@/utils/types";
+import { Room, Resident, Booking, RoomStatus, Role, RoomType, GenderType, 
+  OwnerInfo, Staff, CitizenType, AddressType } from "@/utils/types";
 
 // กำหนด Interface สำหรับข้อมูลใน Context (จะแชร์อะไรบ้าง)
 interface BookingContextType {
@@ -16,8 +15,8 @@ interface BookingContextType {
   setCurrentBooking: React.Dispatch<React.SetStateAction<Booking>>;
   ownerInfo: OwnerInfo | null;
   setOwnerInfo: React.Dispatch<React.SetStateAction<OwnerInfo>>;
-  vehicle: Vehicle | null;
-  setVehicle: React.Dispatch<React.SetStateAction<Vehicle>>;
+  // vehicle: Vehicle | null;
+  // setVehicle: React.Dispatch<React.SetStateAction<Vehicle>>;
   isEditMode: boolean;
   setIsEditMode: React.Dispatch<React.SetStateAction<boolean>>;
 
@@ -36,10 +35,6 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [isEditMode, setIsEditMode] = useState(false);
-  // const [editState, setEditState] = useState<{
-  //   section: 'resident' | 'room' | 'lifestyle' | null;
-  //   isEdit: boolean;
-  // }>({ section: null, isEdit: false });
 
   const [formResident, setFormResident] = useState<Resident>({
     id: 0,
@@ -58,9 +53,20 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     isDisabled: false,
     faculty_department: "",
     lifestyle: [],
-    isEnabled: true,
+    // isEnabled: true,
 
-    address: [],
+    address: [
+      {
+        id: 0,
+        type: AddressType.CURRENT,
+        addressDetail: "",
+        subDistrict: "",
+        district: "",
+        province: "",
+        postalCode: "",
+        country: "Thailand",
+      },
+    ],
     guardians: [],
     profileImage: [],
     vehicleInfo: null,
@@ -70,6 +76,16 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
   const [formRoom, setFormRoom] = useState<Room>({
     id: 0,
     campus: "",
+    // dorm: "",
+    dorm: {
+      name: "",
+      genderType: GenderType.OTHER,
+      mapUrl: "",
+      maxCols: 0,
+      maxRows: 0,
+      // campus: { name: "" },
+      // floors: []
+    },
     roomId: "",
     floor: 0,
     status: RoomStatus.AVAILABLE, // "AVAILABLE"
@@ -80,7 +96,6 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     currentOccupancy: 0,
 
     isSuite: false,
-
     posX: 1,
     posY: 1,
     lifestyleConfig: [],
@@ -88,44 +103,22 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
     // facultyConfig: [],
 
     booking: [],
-
-    dorm: {
-      id: 0,
-      name: "",
-      genderType: GenderType.OTHER,
-      mapUrl: "",
-      maxCols: 0,
-      maxRows: 0,
-      campus: {
-        id: 0,
-        name: "",
-        // dorm: []
-      },
-      // floors: []
-    },
   });
 
   const [ownerInfo, setOwnerInfo] = useState<OwnerInfo | null>(null)
 
-  const [vehicle, setVehicle] = useState<Vehicle>({
-    id: 0,
-    userId: 0,
-    licensePlate: "",
-    province: "",
-    ownerName: "",
-    fileImages: "",
-  })
+  // const [vehicle, setVehicle] = useState<Vehicle>({
+  //   id: 0,
+  //   userId: 0,
+  //   licensePlate: "",
+  //   province: "",
+  //   ownerName: "",
+  //   path: "",
+  // })
 
   const [currentBooking, setCurrentBooking] = useState<Booking>({
     success: false,
     message: "",
-
-    id: 0,
-    status: BookingStatus.PENDING,
-    type: BookingType.NOT_CHARTER,
-    createdAt: new Date(),
-    cus_users: formResident,
-    room: formRoom,
   });
 
   const [staff, setStaff] = useState<Staff>({
@@ -145,7 +138,7 @@ export const BookingProvider = ({ children }: { children: ReactNode }) => {
         formRoom, setFormRoom,
         currentBooking, setCurrentBooking,
         ownerInfo, setOwnerInfo,
-        vehicle, setVehicle,
+        // vehicle, setVehicle,
         staff, setStaff,
         isEditMode, setIsEditMode,
         message, setMessage

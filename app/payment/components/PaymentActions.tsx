@@ -126,9 +126,8 @@ const PaymentActions = ({ bookingId, qrUrl }: PaymentActionsPros) => {
         >
           {isLoading ? "กำลังประมวลผล..." : "จำลองการจ่ายเงิน และอัปโหลดสลีปโอนเงินสำเร็จ (Simulate Success)"}
         </button>
-
-        {isLoading && <LoadingOverlay message="Saving booking information...." />}
       </div>
+      {isLoading && <LoadingOverlay message="Saving booking information...." />}
     </>
   )
 }

@@ -17,6 +17,7 @@ const RoomDetail = (props: RoomDetailProps) => {
 
   // console.log("isResubmitting: ", isResubmitting)
   // console.log("currentBooking?.type: ", currentBooking?.type)
+  // console.log("formRoom: ", formRoom)
 
   return (
     <section>

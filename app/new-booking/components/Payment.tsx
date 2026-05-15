@@ -12,13 +12,13 @@ import { useScrollTop } from "@/hooks/useScrollTop";
 import Container from "@/components/Container";
 import PaymentInstructions from "@/app/payment/components/PaymentInstructions";
 import PaymentAllocation from "@/app/payment/components/PaymentAllocation";
-import PrintButton from "../../payment/success/components/PrintButton";
+import PrintButton from "../../payment/success/components/DownloadEvidenceButton";
 import HomeButton from "../../../components/HomeButton";
 import { LoadingOverlay } from "@/components/Loading/LoadingOverlay";
 
 // icons
-import { MdCheckCircle, MdTimer, MdQrCodeScanner, MdEmail, MdErrorOutline, MdCloudUpload, MdClose, MdInfo, MdError } from "react-icons/md";
-import { RiHomeSmileFill, RiLineFill } from "react-icons/ri";
+import { MdCheckCircle, MdQrCodeScanner, MdEmail, MdCloudUpload, MdClose, MdInfo, MdError } from "react-icons/md";
+import { RiHomeSmileFill } from "react-icons/ri";
 import { LuAlarmClock } from "react-icons/lu";
 
 
@@ -37,13 +37,13 @@ export function PaymentPage() {
   useScrollTop();
 
   const handleAutoCancel = useCallback(async () => {
-    if (!currentBooking.id || isVerifying || isExpired) return;
+    if (!currentBooking?.id || isVerifying || isExpired) return;
 
     try {
       const res = await customFetch("/api/bookings/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: currentBooking.id, isExpired: isExpired })
+        body: JSON.stringify({ bookingId: currentBooking?.id, isExpired: isExpired })
       });
 
       // ไม่ว่าจะสำเร็จหรือไม่ ถ้าเวลาหมดและไม่ได้จ่าย เราควรล็อกหน้าจอ Expired
@@ -57,7 +57,7 @@ export function PaymentPage() {
       console.error("Network error during auto-cancel:", err);
       setIsExpired(true); // บังคับ Expired แม้เน็ตหลุด
     }
-  }, [currentBooking.id, isVerifying, isExpired]);
+  }, [currentBooking?.id, isVerifying, isExpired]);
 
   // 1. ระบบนับเวลาถอยหลัง 10 นาที
   useEffect(() => {
@@ -102,7 +102,7 @@ export function PaymentPage() {
   // 2. จำลองการจ่ายเงินสำเร็จ
   const handlePaymentSuccess = async () => {
     // เรียกใช้ bookingId ที่เราพึ่งเซตไปใน Step ก่อนหน้า
-    const bId = currentBooking.id;
+    const bId = currentBooking?.id;
     setIsLoading(true);
 
     if (!bId) {
@@ -205,7 +205,7 @@ export function PaymentPage() {
           <div className="p-6 border-b border-gray-200 flex justify-between items-center bg-green-50">
             <div>
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Booking ID</p>
-              <p className="text-lg font-black text-gray-800">#TU-B-{currentBooking.id.toString().padStart(5, '0')}</p>
+              <p className="text-lg font-black text-gray-800">#TU-B-{currentBooking?.id.toString().padStart(5, '0')}</p>
             </div>
             <div className="bg-green-500/10 text-green-600 px-4 py-1.5 rounded-full text-xs font-black">
               Success
@@ -216,13 +216,13 @@ export function PaymentPage() {
           <div className="px-8 py-4 space-y-6">
 
             {/* รายละเอียดราคาที่โดดเด่นแต่เรียบง่าย */}
-            <div className="flex justify-between items-center">
+            {/* <div className="flex justify-between items-center">
               <span className="text-gray-400 text-xs font-bold uppercase tracking-wider">Amount Paid</span>
               <div className="text-right">
                 <span className="text-2xl font-black text-[#126A31]">฿{currentBooking.payments.amount.toLocaleString()}</span>
               </div>
               <span className="text-xs font-bold text-gray-300">THB</span>
-            </div>
+            </div> */}
 
             <div className="h-px bg-dashed border-t border-dashed border-gray-200"></div>
 
@@ -235,13 +235,13 @@ export function PaymentPage() {
                 </div>
                 <div className="flex-1 min-w-0"> {/* เพิ่ม flex-1 และ min-w-0 เพื่อให้ตัดคำได้ */}
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Dormitory & Room</p>
-                  <p className="text-sm font-bold text-gray-700 truncate" title={`${currentBooking.room.campus} — ${currentBooking.room.roomId}`}>
-                    Campus: {currentBooking.room.campus}
+                  <p className="text-sm font-bold text-gray-700 truncate" title={`${currentBooking?.room.campus} — ${currentBooking?.room.roomId}`}>
+                    Campus: {currentBooking?.room.campus}
                     <br />
-                    Room: {currentBooking.room.roomId}
+                    Room: {currentBooking?.room.roomId}
                   </p>
                   <p className="text-[10px] text-gray-400 font-medium truncate">
-                    Floor {currentBooking.room.floor} • {currentBooking.room.roomType}
+                    Floor {currentBooking?.room.floor} • {currentBooking?.room.roomType}
                   </p>
                 </div>
               </div>
@@ -254,13 +254,13 @@ export function PaymentPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact</p>
                   <div className="mt-0.5 space-y-0.5">
-                    <p className="text-[12px] font-bold text-gray-700 truncate" title={currentBooking.cus_users?.email}>
+                    <p className="text-[12px] font-bold text-gray-700 truncate" title={currentBooking?.cus_users?.email}>
                       <span className="text-gray-400 font-medium mr-1">Email:</span>
-                      {currentBooking.cus_users?.email}
+                      {currentBooking?.cus_users?.email}
                     </p>
                     <p className="text-[12px] font-bold text-gray-700 truncate">
                       <span className="text-gray-400 font-medium mr-1">Phone:</span>
-                      {currentBooking.cus_users?.mobilePhone}
+                      {currentBooking?.cus_users?.mobilePhone}
                     </p>
                   </div>
                 </div>

@@ -66,8 +66,6 @@ export const RoomGridSelector = ({ setStep }: RoomGridSelectorProps) => {
     setStep(5)
   }
 
-  // console.log("formRoom: ", formRoom)
-
   return (
     <Container
       title={`Room Information / ข้อมูลห้องพัก (โซน ${formRoom?.dorm?.name})`}
@@ -75,7 +73,7 @@ export const RoomGridSelector = ({ setStep }: RoomGridSelectorProps) => {
     >
       <InfoBox
         gender={formResident.gender}
-        bookingType={currentBooking.type}
+        bookingType={currentBooking?.type}
         campus={formRoom.campus}
         dorm={formRoom.dorm.name}
         lifestyle={formResident.lifestyle}

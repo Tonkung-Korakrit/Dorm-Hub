@@ -2,10 +2,10 @@
 
 import { useBooking } from '@/app/contexts/BookingContext';
 import React from 'react'
-import { MdCheck, MdInfoOutline } from 'react-icons/md';
+import { MdInfoOutline } from 'react-icons/md';
 
 interface RejectedAlertProps {
-  editId: string;
+  editId: number;
   step?: number;
 }
 
@@ -27,7 +27,7 @@ const RejectedAlert = ({ editId, step }: RejectedAlertProps) => {
             Reason from Admin:
           </span>
           <span className="text-amber-900 text-[15px] font-thai font-medium italic">
-            "{currentBooking.remark || "Please check your information"}"
+            "{currentBooking?.remark || "Please check your information"}"
           </span>
         </div>
 

@@ -41,7 +41,7 @@ export function DormSelector({ setStep }: DormSelectorProps) {
     >
       <InfoBox
         gender={formResident.gender}
-        bookingType={currentBooking.type}
+        bookingType={currentBooking?.type}
         campus={formRoom.campus}
         lifestyle={formResident.lifestyle}
         lifestyleNote={formResident.lifestyleNote}

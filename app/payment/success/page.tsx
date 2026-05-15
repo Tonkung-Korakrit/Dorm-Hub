@@ -8,7 +8,7 @@ import { RiHomeSmileFill } from "react-icons/ri";
 
 // components
 import Container from "@/components/Container";
-import PrintButton from "./components/PrintButton";
+import DownloadEvidenceButton from "./components/DownloadEvidenceButton";
 import HomeButton from "@/components/HomeButton";
 
 interface BookingSuccessPageProps { 
@@ -94,7 +94,11 @@ const BookingSuccessPage = async ({ searchParams }: BookingSuccessPageProps) => 
               <div className="flex-1 min-w-0">
                 <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Contact</p>
                 <div className="mt-0.5 space-y-0.5">
-                  <p className="text-[12px] font-bold text-gray-700 truncate" title={booking.cus_users?.email}>
+                  {/* <p className="text-[12px] font-bold text-gray-700 truncate" title={booking.cus_users?.email}>
+                    <span className="text-gray-400 font-medium mr-1">Email:</span>
+                    {booking.cus_users?.email}
+                  </p> */}
+                  <p className="text-[12px] font-bold text-gray-700 break-all" title={booking.cus_users?.email}>
                     <span className="text-gray-400 font-medium mr-1">Email:</span>
                     {booking.cus_users?.email}
                   </p>
@@ -126,7 +130,7 @@ const BookingSuccessPage = async ({ searchParams }: BookingSuccessPageProps) => 
 
       {/* ปุ่ม Action */}
       <div className="flex flex-col md:flex-row gap-4 px-2">
-        <PrintButton />
+        <DownloadEvidenceButton />
         <HomeButton isSuccess={true} />
       </div>
     </Container>

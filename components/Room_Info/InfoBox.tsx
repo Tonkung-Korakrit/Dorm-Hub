@@ -54,7 +54,7 @@ const InfoBox = (props: InfoBoxProps) => {
         </div>
       )}
 
-      {currentBooking.type === "NOT_CHARTER" && (
+      {currentBooking?.type === "NOT_CHARTER" && (
         <div className="md:col-span-2 flex flex-col gap-1 mt-1 bg-gray-50/50 rounded-2xl">
           <div className="gap-2">
             {/* <div className="w-1.5 h-6 bg-[#006633] rounded-full"></div> เส้นแถบสีเขียวข้างหน้า */}

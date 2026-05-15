@@ -25,7 +25,7 @@ const StepRenderer = ({ step, setStep }: StepRendererProps) => {
     case 4: return <CampusSelector setStep={setStep} />
     case 5: return <DormSelector setStep={setStep} />
     case 6: return <RoomGridSelector setStep={setStep} />
-    case 7: return <SummaryBooking setStep={setStep} isSubmitting={false} />
+    case 7: return <SummaryBooking setStep={setStep} />
     // case 8: return <PaymentPage />
     default: return null;
   }

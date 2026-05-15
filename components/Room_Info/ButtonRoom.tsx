@@ -27,7 +27,7 @@ const ButtonRoom = (props: ButtonRoomProps) => {
         Back
       </button>
 
-      {(ownerInfo && (currentBooking.type === "CO_RESIDENT")) && (
+      {(ownerInfo && (currentBooking?.type === "CO_RESIDENT")) && (
         <button
           disabled={!ownerInfo}
           onClick={handleNextSummary}

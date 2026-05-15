@@ -9,7 +9,7 @@ import Button from './Personal_Info/Button'
 
 interface ContainerProps {
   title: string
-  rejected?: boolean
+  pending_correction?: boolean
   children: React.ReactNode
   href?: string
   handleNextStep?: () => void
@@ -20,7 +20,7 @@ interface ContainerProps {
 }
 
 const Container = (props: ContainerProps) => {
-  const { title, rejected, children, href,
+  const { title, pending_correction, children, href,
     handleNextStep, handleBackStep, handleNextSummary, isEditMode, isEmptyPage } = props
   const { currentBooking } = useBooking();
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -31,7 +31,7 @@ const Container = (props: ContainerProps) => {
       border border-gray-200 overflow-y-auto custom-scrollbar max-h-[83vh]
       ${isEmptyPage ? 'text-center items-center' : ''}`}>
       {/* alert REJECTED */}
-      {rejected && (
+      {pending_correction && (
         <>
           {/* <div className="mb-6 p-4 bg-amber-50 border-l-4 border-amber-500 rounded-r-xl">
             <p className="text-amber-800 font-bold text-sm uppercase flex items-center gap-2">

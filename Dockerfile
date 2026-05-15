@@ -17,6 +17,9 @@ COPY . .
 ENV DATABASE_URL="postgresql://johndoe:randompassword@localhost:5432/mydb?schema=public"
 ENV NEXT_TELEMETRY_DISABLED=1
 
+ARG NEXT_PUBLIC_LINE_LOGIN_CHANNEL
+ENV NEXT_PUBLIC_LINE_LOGIN_CHANNEL=$NEXT_PUBLIC_LINE_LOGIN_CHANNEL
+
 RUN npx prisma generate
 RUN npm run build
 

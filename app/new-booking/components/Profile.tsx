@@ -1,29 +1,25 @@
 // app/new-booking/components/Profile.tsx
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { BookingStatus } from "@/utils/types";
-
-// context
+import { useEffect, useMemo, useRef, useState } from "react";
+import { HiCamera, HiIdentification } from "react-icons/hi";
+import { MdClose } from "react-icons/md";
+import toast from "react-hot-toast";
 import { useBooking } from "@/app/contexts/BookingContext";
-
-// hook
+import { BookingStatus, Resident } from "@/utils/types";
+import Card from "@/components/Container";
 import { useScrollTop } from "@/hooks/useScrollTop";
-
-// components
 import Container from "@/components/Container";
 
-import toast from "react-hot-toast";
-
-// icons
-import { HiCamera, HiIdentification } from "react-icons/hi";
-import { MdClose, MdInfoOutline } from "react-icons/md";
+const getProfileImagePath = (
+  profileImages: Resident["profileImage"],
+  type: "FACE_PHOTO" | "CITIZEN_CARD"
+) => profileImages?.find((image) => image.type === type)?.path || null;
 
 export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
-  const { isEditMode, currentBooking } = useBooking();
+  const { formResident, setFormResident, isEditMode, currentBooking } = useBooking();
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [idCardImage, setIdCardImage] = useState<string | null>(null);
-
   const [idFileName, setIdFileName] = useState<string>("");
 
   const faceInputRef = useRef<HTMLInputElement>(null);
@@ -31,67 +27,131 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
 
   useScrollTop();
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'face' | 'id') => {
+  const faceImagePath = useMemo(
+    () => getProfileImagePath(formResident.profileImage, "FACE_PHOTO"),
+    [formResident.profileImage]
+  );
+  const citizenCardPath = useMemo(
+    () => getProfileImagePath(formResident.profileImage, "CITIZEN_CARD"),
+    [formResident.profileImage]
+  );
+
+  useEffect(() => {
+    if (formResident.facePhotoFile) {
+      const previewUrl = URL.createObjectURL(formResident.facePhotoFile);
+      setFaceImage(previewUrl);
+
+      return () => URL.revokeObjectURL(previewUrl);
+    }
+
+    setFaceImage(faceImagePath);
+  }, [faceImagePath, formResident.facePhotoFile]);
+
+  useEffect(() => {
+    if (formResident.citizenCardFile) {
+      const previewUrl = URL.createObjectURL(formResident.citizenCardFile);
+      setIdCardImage(previewUrl);
+      setIdFileName(formResident.citizenCardFile.name);
+
+      return () => URL.revokeObjectURL(previewUrl);
+    }
+
+    setIdCardImage(citizenCardPath);
+    setIdFileName(citizenCardPath ? citizenCardPath.split("/").pop() || "" : "");
+  }, [citizenCardPath, formResident.citizenCardFile]);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "face" | "id") => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // 1. ตรวจสอบประเภทไฟล์ (MIME Type)
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       toast.error("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP) เท่านั้น");
-      e.target.value = ""; // Clear input
+      e.target.value = "";
       return;
     }
 
-    // 2. ตรวจสอบขนาดไฟล์ (5MB)
     if (file.size > 5 * 1024 * 1024) {
       toast.error("ขนาดไฟล์ใหญ่เกินไป กรุณาอัปโหลดรูปไม่เกิน 5MB");
       e.target.value = "";
       return;
     }
 
-    // 3. สร้าง Preview URL
     const imageUrl = URL.createObjectURL(file);
-    if (type === 'face') {
-      setFaceImage(imageUrl);
+    if (type === "face") {
+      // setFaceImage(imageUrl);
+      setFormResident((prev) => ({
+        ...prev,
+        facePhotoFile: file,
+        profileImage: (prev.profileImage || []).filter((image) => image.type !== "FACE_PHOTO"),
+      }));
     } else {
-      setIdCardImage(imageUrl);
-      setIdFileName(file.name); // เก็บชื่อไฟล์บัตรประชาชน
+      // setIdCardImage(imageUrl);
+      setIdFileName(file.name);
+      setFormResident((prev) => ({
+        ...prev,
+        citizenCardFile: file,
+        profileImage: (prev.profileImage || []).filter((image) => image.type !== "CITIZEN_CARD"),
+      }));
     }
 
-    // *** หัวใจสำคัญ: ล้างค่า value ใน input เพื่อให้เลือกไฟล์เดิมซ้ำได้ ***
     e.target.value = "";
   };
 
-  const handleClearImage = (type: 'face' | 'id') => {
-    if (type === 'face') {
+  const handleClearImage = (type: "face" | "id") => {
+    if (type === "face") {
       setFaceImage(null);
+      setFormResident((prev) => ({
+        ...prev,
+        facePhotoFile: null,
+        profileImage: (prev.profileImage || []).filter((image) => image.type !== "FACE_PHOTO"),
+      }));
+      // ล้างค่า input เพื่อให้อัปโหลดไฟล์เดิมซ้ำได้
+      if (faceInputRef.current) faceInputRef.current.value = "";
     } else {
       setIdCardImage(null);
       setIdFileName("");
+      setFormResident((prev) => ({
+        ...prev,
+        citizenCardFile: null,
+        profileImage: (prev.profileImage || []).filter((image) => image.type !== "CITIZEN_CARD"),
+      }));
+      //ล้างค่า input เพื่อให้อัปโหลดไฟล์เดิมซ้ำได้
+      if (idInputRef.current) idInputRef.current.value = "";
     }
   };
 
   const handleNextStep = () => {
-    setStep(3)
-  }
+    const hasFacePhoto = Boolean(formResident.facePhotoFile || faceImagePath);
+    const hasCitizenCard = Boolean(formResident.citizenCardFile || citizenCardPath);
+
+    if (!hasFacePhoto || !hasCitizenCard) {
+      toast.error("กรุณาอัปโหลดรูปหน้าตรงและรูปบัตรประชาชนให้ครบถ้วน", {
+        id: "profile-image-required",
+      });
+      return;
+    }
+
+    setStep(3);
+  };
 
   const handleBackStep = () => {
-    setStep(1)
-  }
+    setStep(1);
+  };
+
+  console.log("formResident in profile: " ,formResident)
 
   return (
     <Container
       title="Student Profile / รูปหน้าตรง และบัตรประชาชนนักศึกษา"
-      rejected={currentBooking?.status === BookingStatus.REJECTED}
+      pending_correction={currentBooking?.status === BookingStatus.PENDING_CORRECTION}
       handleNextStep={handleNextStep}
       handleBackStep={handleBackStep}
       isEditMode={isEditMode}
     >
       <div className="space-y-10">
-        {/* --- ส่วนอัปโหลดรูปหน้าตรง --- */}
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายหน้าตรง</p> {/* <span className="text-red-500"> *</span> */}
+          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายหน้าตรง</p>
           <p className="text-xs text-gray-400 mb-4">**ต้องเป็นรูปหน้าตรง เห็นใบหน้าชัดเจน เพื่อใช้สำหรับสแกนใบหน้าเข้าอาคารหอพัก</p>
 
           <input
@@ -99,19 +159,23 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
             ref={faceInputRef}
             className="hidden"
             accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => handleFileChange(e, 'face')}
+            capture="user"
+            onChange={(e) => handleFileChange(e, "face")}
+            onError={() => handleClearImage("face")}
           />
 
           <div
             onClick={() => !faceImage && faceInputRef.current?.click()}
-            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${faceImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-              }`}
+            className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${faceImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"}`}
           >
             {faceImage ? (
               <>
                 <img src={faceImage} alt="Face Preview" className="w-full h-full object-cover" />
                 <button
-                  onClick={(e) => { e.stopPropagation(); handleClearImage('face'); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleClearImage("face");
+                  }}
                   className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
                 >
                   <MdClose size={20} />
@@ -126,9 +190,8 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
           </div>
         </div>
 
-        {/* --- ส่วนอัปโหลดบัตรประชาชน --- */}
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน</p> {/* <span className="text-red-500"> *</span> */}
+          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน</p>
           <p className="text-xs text-gray-400 mb-4">*เฉพาะบัตรประจำตัวประชาชนเท่านั้น ไม่สามารถใช้เอกสารอื่นแทนได้</p>
 
           <input
@@ -136,20 +199,23 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
             ref={idInputRef}
             className="hidden"
             accept="image/jpeg,image/png,image/webp"
-            onChange={(e) => handleFileChange(e, 'id')}
+            onChange={(e) => handleFileChange(e, "id")}
+            onError={() => handleClearImage("id")}
           />
 
           <div className="flex flex-col gap-3">
             <div
               onClick={() => !idCardImage && idInputRef.current?.click()}
-              className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${idCardImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"
-                }`}
+              className={`w-full h-64 border-2 border-dashed rounded-3xl flex flex-col items-center justify-center relative overflow-hidden transition-all ${idCardImage ? "border-transparent" : "border-gray-300 bg-gray-50 hover:bg-gray-100 cursor-pointer"}`}
             >
               {idCardImage ? (
                 <>
                   <img src={idCardImage} alt="ID Card Preview" className="w-full h-full object-cover" />
                   <button
-                    onClick={(e) => { e.stopPropagation(); handleClearImage('id'); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleClearImage("id");
+                    }}
                     className="absolute top-4 right-4 bg-red-500 text-white p-2 rounded-full shadow-lg hover:bg-red-600 transition-colors z-10"
                   >
                     <MdClose size={20} />
@@ -162,9 +228,13 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
                 </div>
               )}
             </div>
+
+            {/* {idFileName && (
+              <p className="text-xs text-gray-500 truncate">ไฟล์ที่เลือก: {idFileName}</p>
+            )} */}
           </div>
         </div>
       </div>
-    </Container >
+    </Container>
   );
 }

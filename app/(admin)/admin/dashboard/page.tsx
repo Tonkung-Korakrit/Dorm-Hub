@@ -12,6 +12,8 @@ import {
   MdSearch, MdHistory, MdPerson, MdMeetingRoom,
   MdAccountBalanceWallet, MdEventAvailable, MdEditNote
 } from "react-icons/md";
+import BookingDetailModal from "./modal/BookingDetailModal";
+import { BookingStatus } from "@prisma/client";
 
 // --- Types ---
 type ActionType = 'confirm' | 'reject' | 'request-edit';
@@ -23,6 +25,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [isActioning, setIsActioning] = useState<number | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
 
   const [metadata, setMetadata] = useState({ total: 0, page: 1, totalPages: 1 });
   const [currentPage, setCurrentPage] = useState(1);
@@ -68,10 +71,10 @@ export default function AdminDashboard() {
 
   // useEffect(() => { fetchData(); }, []);
 
-  // ฟังก์ชันช่วยแปลง Status จาก DB มาเป็น Label
+  // ฟังก์ชันช่วยแปลง Status จาก DB มาเป็น Label ของเรา
   const mapStatusToAction = (status: string): ActionType => {
-    if (status === 'SUCCESS') return 'confirm';
-    if (status === 'REJECTED') return 'reject';
+    if (status === BookingStatus.COMPLETED) return 'confirm';
+    if (status === BookingStatus.REJECTED) return 'reject';
     return 'request-edit';
   };
 
@@ -105,6 +108,9 @@ export default function AdminDashboard() {
         const err = await res.json();
         alert(err.message || "เกิดข้อผิดพลาด");
       }
+
+      // console.log("DEBUG PAYLOAD:", JSON.stringify({ bookingId: booking.id, remark }));
+    
     } catch (e) {
       alert("Network Error");
     } finally {
@@ -128,6 +134,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const openBookingDetail = (booking: any) => {
+    setSelectedBooking(booking);
+  };
+
+  const closeBookingDetail = () => {
+    setSelectedBooking(null);
+  };
+
   return (
     <div className="min-h-screen bg-[#FDFDFD] text-slate-800 antialiased font-sans">
       <div className="max-w-[1400px] mx-auto px-6 py-10">
@@ -137,6 +151,18 @@ export default function AdminDashboard() {
           <div className="space-y-1">
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 italic">Dorm<span className="text-[#126A31]">Hub</span> Admin</h1>
             <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em]">Dormitory Management System</p>
+          </div>
+          
+          <div className="space-y-1">
+            <button
+              type="button"
+              onClick={() => router.push('/admin/checkin')}
+              className="inline-flex items-center gap-2 p-4 bg-[#126A31] text-white font-bold rounded-xl hover:bg-[#093218] transition-all shadow-md shadow-green-100"
+              title="Manage check-in/check-out"
+            >
+              <MdCheck size={20} />
+              จัดการย้ายเข้า/ออก
+            </button>
           </div>
 
           <div className="flex items-center gap-3 w-full md:w-auto">
@@ -182,7 +208,7 @@ export default function AdminDashboard() {
                   <tr className="border-b border-slate-50 bg-slate-50/30">
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Student</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Room</th>
-                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Receipt</th>
+                    <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Detail</th>
                     <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                   </tr>
                 </thead>
@@ -198,10 +224,14 @@ export default function AdminDashboard() {
                         <div className="text-[9px] font-black text-slate-300 uppercase">{b.type}</div>
                       </td>
                       <td className="px-8 py-6 text-center">
-                        {/* แสดงรูปภาพสลิปที่เก็บไว้ใน Log ล่าสุด */}
-                        <a href={b.booking_logs?.[0]?.paymentProof || "#"} target="_blank" className="inline-flex p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-90 shadow-sm">
+                        <button
+                          type="button"
+                          onClick={() => openBookingDetail(b)}
+                          className="inline-flex p-2.5 bg-slate-50 text-slate-400 rounded-xl hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-90 shadow-sm"
+                          title="View booking details"
+                        >
                           <MdVisibility size={18} />
-                        </a>
+                        </button>
                       </td>
                       <td className="px-8 py-6">
                         <div className="flex justify-end gap-2">
@@ -302,6 +332,12 @@ export default function AdminDashboard() {
 
         </div>
       </div>
+
+      <BookingDetailModal
+        booking={selectedBooking}
+        isOpen={!!selectedBooking}
+        onClose={closeBookingDetail}
+      />
     </div>
   );
 }

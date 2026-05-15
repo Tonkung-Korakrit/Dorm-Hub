@@ -1,6 +1,7 @@
 // api/admin/verify
 
 import { prisma } from "@/lib/prisma";
+import { PROFILE_IMAGE_TYPES } from "@/lib/profile-images";
 import { NextRequest, NextResponse } from "next/server";
 import { BookingStatus } from "@prisma/client";
 import { cookies } from "next/headers";
@@ -32,35 +33,77 @@ export async function GET(req: NextRequest) {
         cus_users: {
           select: {
             id: true,
+            gender: true,
             name_th: true,
+            name_en: true,
+            citizenType: true,
+            citizenNumber: true,
             studentId: true,
             email: true,
             mobilePhone: true,
-          },
+            faculty_department: true,
+            address: {
+              select: {
+                id: true,
+                type: true,
+                addressDetail: true,
+                subDistrict: true,
+                district: true,
+                province: true,
+                postalCode: true,
+                country: true,
+              },
+            },
+            profileImage: {
+              where: {
+                type: {
+                  in: PROFILE_IMAGE_TYPES,
+                },
+              },
+              select: {
+                id: true,
+                type: true,
+                path: true,
+              },
+            },
+            vehicleInfo: {
+              include: {
+                file_info: {
+                  select: {
+                    path: true,
+                  },
+                },
+              },
+            },
+          }
         },
         room: {
+          // select: {
+          //   roomId: true,
+          //   floor: true,
+          // },
           include: {
             dorm: {
-              include: { campus: true },
-            },
-          },
+              include: { campus: true }
+            }
+          }
         },
         // ดึง Log เฉพาะอันล่าสุดเพื่อเช็คสถานะ "ปัจจุบัน"
         booking_logs: {
-          orderBy: { createdAt: "desc" },
+          orderBy: { createdAt: 'desc' },
           take: 1,
           include: {
-            file: true, // ดึงข้อมูลไฟล์แนบ (ถ้ามี)
-          },
+            file: true // ดึงข้อมูลไฟล์แนบ (ถ้ามี)
+          }
         },
         // ดึงข้อมูลการชำระเงินล่าสุด
         payments: {
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
+          orderBy: { createdAt: 'desc' },
+          take: 1
+        }
       },
       orderBy: {
-        id: "desc", // เอาเคสใหม่ล่าสุดขึ้นก่อน
+        id: 'desc' // เอาเคสใหม่ล่าสุดขึ้นก่อน
       },
       skip: skip,
       take: limit,
@@ -68,8 +111,8 @@ export async function GET(req: NextRequest) {
 
     // 3. Filter สำคัญ: กรองเฉพาะรายการที่ "สถานะล่าสุด" คือ VERIFYING เท่านั้น
     // ป้องกันเคสที่เคย VERIFYING แต่ตอนนี้ SUCCESS ไปแล้วโผล่มาซ้ำ
-    const filteredBookings = bookings.filter(
-      (b) => b.booking_logs[0]?.status === BookingStatus.VERIFYING,
+    const filteredBookings = bookings.filter(b =>
+      b.booking_logs[0]?.status === BookingStatus.VERIFYING
     );
 
     // ดึงจำนวนทั้งหมดเพื่อไปทำตัวเลขหน้าใน UI
@@ -93,16 +136,26 @@ export async function GET(req: NextRequest) {
       totalPages: Math.ceil(total / limit),
     };
 
+    const formattedBookings = filteredBookings.map((booking) => ({
+      ...booking,
+      cus_users: {
+        ...booking.cus_users,
+        vehicleInfo: booking.cus_users.vehicleInfo
+          ? {
+              ...booking.cus_users.vehicleInfo,
+              fileImages: booking.cus_users.vehicleInfo.file_info?.path || "",
+            }
+          : null,
+      },
+    }));
+
     return NextResponse.json({
-      data: filteredBookings, // ข้อมูลที่ผ่านการกรองแล้ว
-      metadata,
+      data: formattedBookings, // ข้อมูลที่ผ่านการกรองแล้ว
+      metadata
     });
   } catch (error: any) {
     console.error("Admin Fetch Error:", error);
-    return NextResponse.json(
-      { error: "Internal Server Error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 

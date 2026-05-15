@@ -37,10 +37,11 @@ model Google_login {
 
 model Line_login {
   id                Int      @id @default(autoincrement())
-  lineUserId        Int
-  username          String
+  userId            Int       @unique
+  lineUserId        String
+  username          String?
 
-  cus_user  Cus_users @relation(fields: [lineUserId], references: [id])
+  cus_user  Cus_users @relation(fields: [userId], references: [id])
 
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
@@ -146,6 +147,7 @@ model File_info {
   isEnabled Boolean @default(true)
 
   booking_logs Booking_log[]
+  vehicle Vehicle?
 
   createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -168,9 +170,12 @@ model Vehicle {
   // model        String
   // color        String
 
-  licensePlate String @unique // หมายเลขป้ายทะเบียน
+  licensePlate String // @unique // หมายเลขป้ายทะเบียน
   province     String // จังหวัดบนป้ายทะเบียน
   ownerName    String // ชื่อผู้ครอบครองรถ (เผื่อเป็นชื่อพ่อแม่ ไม่ใช่ชื่อนศ.)
+  
+  fileId Int? @unique
+  file_info File_info? @relation(fields: [fileId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -297,6 +302,7 @@ model Booking {
 
   booking_logs Booking_log[]
   payments     Payment[]
+  checkins     Checkin[]
 
   @@index([userId])
   @@index([roomId])
@@ -389,6 +395,7 @@ model Staff_users {
 
   booking_logs Booking_log[] @relation("AdminVerifications")
   staff_action_log Staff_action_log[]
+  checkins     Checkin[]
 
   createdAt     DateTime @default(now())
   // updatedAt     DateTime @updatedAt
@@ -412,4 +419,21 @@ model Staff_action_log {
   // verifiedAt   DateTime?
 
   createdAt DateTime @default(now())
+}
+
+model Checkin {
+  id        Int           @id @default(autoincrement())
+  bookingId Int
+  booking Booking @relation(fields:[bookingId], references:[id])
+  type type 
+  createdBy Int
+  staff Staff_users @relation(fields:[createdBy], references:[id])
+  createdAt DateTime @default(now())
+
+  @@unique([bookingId, type])
+}
+
+enum type {
+  CHECKIN
+  CHECKOUT
 }

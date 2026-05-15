@@ -4,7 +4,7 @@
 import React from 'react'
 import { useBooking } from '@/app/contexts/BookingContext';
 import { DORM_LABELS } from '@/utils/constants'
-import { BookingType, Resident } from "@/utils/types";
+import { BookingType } from "@/utils/types";
 
 import FormSelect from '../Personal_Info/Select'
 import TypeEmpty from './TypeEmpty';
@@ -38,7 +38,7 @@ const BookingTypeSelect = (props: BookingTypeSelectProps) => {
     [BookingType.CHARTER]: TypeCharter,
   };
 
-  const SelectedComponent = currentBooking.type ? TYPE_COMPONENTS[currentBooking.type] : TypeEmpty;
+  const SelectedComponent = currentBooking?.type ? TYPE_COMPONENTS[currentBooking?.type] : TypeEmpty;
 
   return (
     <div className="space-y-4">
@@ -90,7 +90,7 @@ const BookingTypeSelect = (props: BookingTypeSelectProps) => {
             <div>
               <p className="text-[13px] font-bold text-amber-500 mb-1">รายละเอียดประเภทการจอง:</p>
               <p className="text-[12px] text-gray-600 leading-relaxed">
-                {DORM_LABELS.RESIDENT_TYPE_DESC[currentBooking.type as keyof typeof DORM_LABELS.RESIDENT_TYPE_DESC]}
+                {DORM_LABELS.RESIDENT_TYPE_DESC[currentBooking?.type as keyof typeof DORM_LABELS.RESIDENT_TYPE_DESC]}
               </p>
             </div>
           </div>

@@ -9,7 +9,7 @@ import { RiHomeSmileFill } from 'react-icons/ri';
 interface StepperProps {
   step: number;
   setStep: (s: number) => void;
-  editId: string;
+  editId: number;
 }
 
 const Stepper = ({ step, setStep, editId }: StepperProps) => {
@@ -63,7 +63,9 @@ const Stepper = ({ step, setStep, editId }: StepperProps) => {
           label="Room"
           active={step >= 4}
           current={step >= 4 && step <= 6}
-          onClick={() => setStep(4)}
+          // onClick={() => setStep(4)}
+          onClick={editId ? undefined : () => setStep(4)}
+          editId={editId}
         />
         <StepIcon
           icon={<HiDocumentMagnifyingGlass size={24} />}
@@ -76,7 +78,7 @@ const Stepper = ({ step, setStep, editId }: StepperProps) => {
   )
 }
 
-const StepIcon = ({ icon, label, active, current, onClick }: { icon: any, label: string, active?: boolean, current?: boolean, onClick?: () => void }) => {
+const StepIcon = ({ icon, label, active, current, onClick, editId }: { icon: any, label: string, active?: boolean, current?: boolean, onClick?: () => void, editId?: number }) => {
   return (
     <div
       className={`flex flex-col items-center gap-1 flex-1 transition-all duration-300
@@ -86,7 +88,7 @@ const StepIcon = ({ icon, label, active, current, onClick }: { icon: any, label:
     >
       {/* วงกลมไอคอน */}
       <div className={`w-10 h-10 md:w-14 md:h-14 rounded-full flex items-center justify-center transition-all duration-300 relative
-        ${active ? "bg-[#006432] text-white shadow-md" : "bg-[#8ACCA1] text-white"}
+        ${editId ? "bg-gray-300 text-white shadow-md" : active ? "bg-[#006432] text-white shadow-md" : "bg-[#8ACCA1] text-white"}
         ${current ? "ring-4 ring-white/30" : ""} 
       `}>
         {icon}

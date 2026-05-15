@@ -22,7 +22,11 @@ sudo apt-get install k6
 k6 version
 
 // how to run
+<<<<<<< HEAD
 k6 run ./tester_code/k6/test-race-condition.js
+=======
+k6 run tests/k6/test-race-condition.js
+>>>>>>> origin/line_integration
 
 //"ระบบผ่านการทดสอบ Concurrency โดยมีการตั้งค่า Threshold 
 // เพื่อยืนยันว่าในสภาวะที่มีการแย่งชิงทรัพยากร (Race Condition) 

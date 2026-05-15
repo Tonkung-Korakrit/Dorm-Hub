@@ -25,13 +25,11 @@ export default function () {
   // เปลี่ยน URL เป็นของขวัญ (Local) หรือ Railway ตามที่คุณใช้งาน
   const url = 'https://tudormbooking-production.up.railway.app/api/bookings';
   // const url = 'http://localhost:3000/api/bookings';
-
-  // 2. สร้างข้อมูล Mock Data
-  // ใช้ __VU (Virtual User ID) เพื่อให้ userId และ studentId ไม่ซ้ำกัน
+    
   const payload = JSON.stringify({
     user: {
-      id: 4 + __VU, // จำลอง User ID 101, 102, ...
-      studentId: `650961${__VU.toString().padStart(4, '0')}`, // 6509610001, ...
+      id: 4 + __VU, 
+      studentId: `650961${__VU.toString().padStart(4, '0')}`,
       name_th: `นักศึกษาคนที่ ${__VU}`,
       name_en: `name_en ${__VU}`,
       email: `student${__VU}@tu.ac.th`,
@@ -43,16 +41,11 @@ export default function () {
       titleName: "Mr.",
       mobilePhone: `081234567${__VU}`,
       isDisabled: false,
-      isScholarshipStudent: false,
+      isScholarshipStudent: false
     },
     room: {
-      id: 44, // ** สำคัญ: ใส่ ID ห้องที่มีอยู่ใน DB จริงๆ และเหลือที่ว่างแค่ 1 ที่ **
-      // campus: "rangsit",
-      // dorm: "M1",
-      // floor: 3,
-      // roomId: "M1-317",
-      // roomType: "FAN_SHARED_BATHROOM",
-      capacity: 4,
+      id: 44, // ตรวจสอบให้แน่ใจว่าเป็น ID นี้ใน DB
+      capacity: 4
     },
     type: "NOT_CHARTER",
     groupId: null
