@@ -1,8 +1,8 @@
 // api/upload/vehicle/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
-import fs from "fs";
+// import { writeFile, mkdir } from "fs/promises";
+// import path from "path";
+// import fs from "fs";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const S3 = new S3Client({

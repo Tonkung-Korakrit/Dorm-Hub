@@ -6,7 +6,7 @@ on:
     branches:
       # - "main"
       - "dev_ton"
-      - "test"
+      # - "test"
 
 jobs:
   build-and-deploy:
