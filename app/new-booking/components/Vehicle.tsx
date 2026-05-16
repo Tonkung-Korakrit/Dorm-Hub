@@ -215,7 +215,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     setStep(2);
   };
 
-  // console.log("formResident in vehicle: ", formResident);
+  console.log("formResident in vehicle: ", formResident);
 
   return (
     <Container
@@ -405,7 +405,10 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
               // setVehicle((prev) => ({ ...prev, province: val }))
               setFormResident((prev) => ({
                 ...prev,
-                province: val,
+                vehicleInfo: {
+                  ...(prev.vehicleInfo || {}),
+                  province: val,
+                },
               }))
             }
           >

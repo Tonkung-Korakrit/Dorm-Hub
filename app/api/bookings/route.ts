@@ -1,11 +1,11 @@
-// api/bookings/upload-proof
+// api/bookings/route.ts
 
 import { prisma } from "@/lib/prisma";
 import { sendBookingStatusFlex } from "@/lib/line";
 import { syncProfileImages } from "@/lib/profile-images";
 import { NextRequest, NextResponse } from "next/server";
 import { BookingStatus, BookingType, RoomStatus } from "@/utils/types";
-import { getAuthSession } from "@/services/identify";
+// import { getAuthSession } from "@/services/identify";
 
 export async function POST(request: NextRequest) {
   try {
@@ -302,11 +302,16 @@ export async function POST(request: NextRequest) {
 
     await syncProfileImages(prisma, Number(uId), profileImages);
 
-    if (body.vehicle && body.vehicle.licensePlate) {
+    const vehicleInfo = user.vehicleInfo
+
+    // console.log("user in api/booking: ", user)
+    // console.log("user.vehicle in api/booking: ", vehicleInfo)
+
+    if (vehicleInfo && vehicleInfo.licensePlate) {
       try {
         let fileId = undefined;
 
-        if (body.vehicle.filePath) {
+        if (vehicleInfo.path) {
           const newFile = await prisma.file_info.create({
             data: {
               createdBy: Number(uId),
@@ -318,9 +323,9 @@ export async function POST(request: NextRequest) {
         }
 
         const vehicleData = {
-          licensePlate: body.vehicle.licensePlate,
-          province: body.vehicle.province,
-          ownerName: body.vehicle.ownerName || "",
+          licensePlate: vehicleInfo.licensePlate,
+          province: vehicleInfo.province,
+          ownerName: vehicleInfo.ownerName || "",
           ...(fileId && { fileId: fileId }),
         };
 
@@ -330,7 +335,7 @@ export async function POST(request: NextRequest) {
           create: {
             ...vehicleData,
             userId: Number(uId),
-            ownerName: body.vehicle.ownerName || "",
+            ownerName: vehicleInfo.ownerName || "",
           },
         });
       } catch (vehError: any) {

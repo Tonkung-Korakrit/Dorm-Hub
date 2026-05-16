@@ -124,7 +124,7 @@ const useSummary = (setStep: (step: number) => void) => {
         }
       }
 
-      // console.log("after ",formResident?.vehicleInfo)
+      console.log("vehicleFilePath ", vehicleFilePath)
 
       const endpoint = isResubmitting
         ? "/api/bookings/update-rejected"
@@ -147,7 +147,7 @@ const useSummary = (setStep: (step: number) => void) => {
             ...formResident?.vehicleInfo,
             registrationFile: undefined,
             // ถ้ามีไฟล์ใหม่ใช้ vehicleFilePath ถ้าไม่มีให้ใช้รูปเก่า ถ้าไม่มีเลยให้เป็น null
-            filePath: vehicleFilePath || formResident?.vehicleInfo?.file_info?.path || null,
+            path: vehicleFilePath || formResident?.vehicleInfo?.file_info?.path || null,
           } : null, // ถ้าไม่มีทะเบียนรถ ก็ส่ง null ไปเลย
           type: currentBooking?.type,
           groupId: ownerInfo?.studentId,

@@ -29,7 +29,7 @@ export const SummaryBooking = ({ setStep }: SummaryBookingProps) => {
   const { isSubmitting, isResubmitting, isAcceptAgreement, bookingError, setBookingError,
     handleEdit, handleCheckbox, handleFinalConfirm, handleBackStep } = useSummary(setStep)
 
-  // console.log("formResident in Summary:", formResident);  
+  console.log("formResident in Summary:", formResident);  
   // console.log("formRoom in Summary:", formRoom);
   // console.log("currentBooking in Summary:", currentBooking);
   // console.log("vehicle in vehicle: ", vehicle);
