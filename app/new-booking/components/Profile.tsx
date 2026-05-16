@@ -13,11 +13,12 @@ import Container from "@/components/Container";
 
 const getProfileImagePath = (
   profileImages: Resident["profileImage"],
-  type: "FACE_PHOTO" | "CITIZEN_CARD"
+  type: "FACE_PHOTO" | "CITIZEN_CARD",
 ) => profileImages?.find((image) => image.type === type)?.path || null;
 
 export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
-  const { formResident, setFormResident, isEditMode, currentBooking } = useBooking();
+  const { formResident, setFormResident, isEditMode, currentBooking } =
+    useBooking();
   const [faceImage, setFaceImage] = useState<string | null>(null);
   const [idCardImage, setIdCardImage] = useState<string | null>(null);
   const [idFileName, setIdFileName] = useState<string>("");
@@ -29,11 +30,11 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
 
   const faceImagePath = useMemo(
     () => getProfileImagePath(formResident.profileImage, "FACE_PHOTO"),
-    [formResident.profileImage]
+    [formResident.profileImage],
   );
   const citizenCardPath = useMemo(
     () => getProfileImagePath(formResident.profileImage, "CITIZEN_CARD"),
-    [formResident.profileImage]
+    [formResident.profileImage],
   );
 
   useEffect(() => {
@@ -57,10 +58,53 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     }
 
     setIdCardImage(citizenCardPath);
-    setIdFileName(citizenCardPath ? citizenCardPath.split("/").pop() || "" : "");
+    setIdFileName(
+      citizenCardPath ? citizenCardPath.split("/").pop() || "" : "",
+    );
   }, [citizenCardPath, formResident.citizenCardFile]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: "face" | "id") => {
+  // const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>, type: "face" | "id") => {
+  //   const file = e.target.files?.[0];
+  //   if (!file) return;
+
+  //   const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+  //   if (!allowedTypes.includes(file.type)) {
+  //     toast.error("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, WEBP) เท่านั้น");
+  //     e.target.value = "";
+  //     return;
+  //   }
+
+  //   if (file.size > 5 * 1024 * 1024) {
+  //     toast.error("ขนาดไฟล์ใหญ่เกินไป กรุณาอัปโหลดรูปไม่เกิน 5MB");
+  //     e.target.value = "";
+  //     return;
+  //   }
+
+  //   const imageUrl = URL.createObjectURL(file);
+  //   if (type === "face") {
+  //     // setFaceImage(imageUrl);
+  //     setFormResident((prev) => ({
+  //       ...prev,
+  //       facePhotoFile: file,
+  //       profileImage: (prev.profileImage || []).filter((image) => image.type !== "FACE_PHOTO"),
+  //     }));
+  //   } else {
+  //     // setIdCardImage(imageUrl);
+  //     setIdFileName(file.name);
+  //     setFormResident((prev) => ({
+  //       ...prev,
+  //       citizenCardFile: file,
+  //       profileImage: (prev.profileImage || []).filter((image) => image.type !== "CITIZEN_CARD"),
+  //     }));
+  //   }
+
+  //   e.target.value = "";
+  // };
+
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    type: "face" | "id",
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -77,25 +121,43 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
       return;
     }
 
-    const imageUrl = URL.createObjectURL(file);
-    if (type === "face") {
-      // setFaceImage(imageUrl);
-      setFormResident((prev) => ({
-        ...prev,
-        facePhotoFile: file,
-        profileImage: (prev.profileImage || []).filter((image) => image.type !== "FACE_PHOTO"),
-      }));
-    } else {
-      // setIdCardImage(imageUrl);
-      setIdFileName(file.name);
-      setFormResident((prev) => ({
-        ...prev,
-        citizenCardFile: file,
-        profileImage: (prev.profileImage || []).filter((image) => image.type !== "CITIZEN_CARD"),
-      }));
-    }
+    try {
+      // 💉 โคลนนิ่งไฟล์ดูดเข้า RAM ป้องกันมือถือแอบเคลียร์เมมมอรี่
+      const arrayBuffer = await file.arrayBuffer();
+      const persistentFile = new File([arrayBuffer], file.name, {
+        type: file.type,
+      });
 
-    e.target.value = "";
+      // สร้าง URL สำหรับ Preview จากไฟล์ที่โคลนแล้ว
+      const imageUrl = URL.createObjectURL(persistentFile);
+
+      if (type === "face") {
+        // setFaceImage(imageUrl);
+        setFormResident((prev) => ({
+          ...prev,
+          facePhotoFile: persistentFile, // 👈 ใช้ไฟล์โคลน (persistentFile) แทน file
+          profileImage: (prev.profileImage || []).filter(
+            (image) => image.type !== "FACE_PHOTO",
+          ),
+        }));
+      } else {
+        // setIdCardImage(imageUrl);
+        setIdFileName(persistentFile.name);
+        setFormResident((prev) => ({
+          ...prev,
+          citizenCardFile: persistentFile, // 👈 ใช้ไฟล์โคลน (persistentFile) แทน file
+          profileImage: (prev.profileImage || []).filter(
+            (image) => image.type !== "CITIZEN_CARD",
+          ),
+        }));
+      }
+    } catch (err) {
+      console.error("สร้างไฟล์โคลนไม่สำเร็จ:", err);
+      toast.error("เกิดข้อผิดพลาดในการอ่านไฟล์ กรุณาลองเลือกรูปใหม่อีกครั้ง");
+    } finally {
+      // ล้างค่า input เพื่อให้ผู้ใช้สามารถคลิกเลือก "ไฟล์เดิม" ซ้ำได้เสมอ
+      e.target.value = "";
+    }
   };
 
   const handleClearImage = (type: "face" | "id") => {
@@ -104,7 +166,9 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
       setFormResident((prev) => ({
         ...prev,
         facePhotoFile: null,
-        profileImage: (prev.profileImage || []).filter((image) => image.type !== "FACE_PHOTO"),
+        profileImage: (prev.profileImage || []).filter(
+          (image) => image.type !== "FACE_PHOTO",
+        ),
       }));
       // ล้างค่า input เพื่อให้อัปโหลดไฟล์เดิมซ้ำได้
       if (faceInputRef.current) faceInputRef.current.value = "";
@@ -114,7 +178,9 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
       setFormResident((prev) => ({
         ...prev,
         citizenCardFile: null,
-        profileImage: (prev.profileImage || []).filter((image) => image.type !== "CITIZEN_CARD"),
+        profileImage: (prev.profileImage || []).filter(
+          (image) => image.type !== "CITIZEN_CARD",
+        ),
       }));
       //ล้างค่า input เพื่อให้อัปโหลดไฟล์เดิมซ้ำได้
       if (idInputRef.current) idInputRef.current.value = "";
@@ -123,7 +189,9 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
 
   const handleNextStep = () => {
     const hasFacePhoto = Boolean(formResident.facePhotoFile || faceImagePath);
-    const hasCitizenCard = Boolean(formResident.citizenCardFile || citizenCardPath);
+    const hasCitizenCard = Boolean(
+      formResident.citizenCardFile || citizenCardPath,
+    );
 
     if (!hasFacePhoto || !hasCitizenCard) {
       toast.error("กรุณาอัปโหลดรูปหน้าตรงและรูปบัตรประชาชนให้ครบถ้วน", {
@@ -139,20 +207,27 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     setStep(1);
   };
 
-  console.log("formResident in profile: " ,formResident)
+  console.log("formResident in profile: ", formResident);
 
   return (
     <Container
       title="Student Profile / รูปหน้าตรง และบัตรประชาชนนักศึกษา"
-      pending_correction={currentBooking?.status === BookingStatus.PENDING_CORRECTION}
+      pending_correction={
+        currentBooking?.status === BookingStatus.PENDING_CORRECTION
+      }
       handleNextStep={handleNextStep}
       handleBackStep={handleBackStep}
       isEditMode={isEditMode}
     >
       <div className="space-y-10">
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายหน้าตรง</p>
-          <p className="text-xs text-gray-400 mb-4">**ต้องเป็นรูปหน้าตรง เห็นใบหน้าชัดเจน เพื่อใช้สำหรับสแกนใบหน้าเข้าอาคารหอพัก</p>
+          <p className="text-sm font-bold text-gray-600 mb-1">
+            กรุณาอัปโหลดรูปถ่ายหน้าตรง
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            **ต้องเป็นรูปหน้าตรง เห็นใบหน้าชัดเจน
+            เพื่อใช้สำหรับสแกนใบหน้าเข้าอาคารหอพัก
+          </p>
 
           <input
             type="file"
@@ -170,7 +245,11 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
           >
             {faceImage ? (
               <>
-                <img src={faceImage} alt="Face Preview" className="w-full h-full object-cover" />
+                <img
+                  src={faceImage}
+                  alt="Face Preview"
+                  className="w-full h-full object-cover"
+                />
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -184,15 +263,21 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
             ) : (
               <div className="text-center">
                 <HiCamera size={48} className="text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-400 text-sm font-bold">คลิกเพื่ออัปโหลดรูปหน้าตรง</p>
+                <p className="text-gray-400 text-sm font-bold">
+                  คลิกเพื่ออัปโหลดรูปหน้าตรง
+                </p>
               </div>
             )}
           </div>
         </div>
 
         <div>
-          <p className="text-sm font-bold text-gray-600 mb-1">กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน</p>
-          <p className="text-xs text-gray-400 mb-4">*เฉพาะบัตรประจำตัวประชาชนเท่านั้น ไม่สามารถใช้เอกสารอื่นแทนได้</p>
+          <p className="text-sm font-bold text-gray-600 mb-1">
+            กรุณาอัปโหลดรูปถ่ายบัตรประจำตัวประชาชน
+          </p>
+          <p className="text-xs text-gray-400 mb-4">
+            *เฉพาะบัตรประจำตัวประชาชนเท่านั้น ไม่สามารถใช้เอกสารอื่นแทนได้
+          </p>
 
           <input
             type="file"
@@ -210,7 +295,11 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
             >
               {idCardImage ? (
                 <>
-                  <img src={idCardImage} alt="ID Card Preview" className="w-full h-full object-cover" />
+                  <img
+                    src={idCardImage}
+                    alt="ID Card Preview"
+                    className="w-full h-full object-cover"
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -223,8 +312,13 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
                 </>
               ) : (
                 <div className="text-center">
-                  <HiIdentification size={48} className="text-gray-300 mx-auto mb-2" />
-                  <p className="text-gray-400 text-sm font-bold">คลิกเพื่ออัปโหลดรูปบัตรประชาชน</p>
+                  <HiIdentification
+                    size={48}
+                    className="text-gray-300 mx-auto mb-2"
+                  />
+                  <p className="text-gray-400 text-sm font-bold">
+                    คลิกเพื่ออัปโหลดรูปบัตรประชาชน
+                  </p>
                 </div>
               )}
             </div>

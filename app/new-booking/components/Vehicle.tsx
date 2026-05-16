@@ -139,7 +139,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   };
 
   // ฟังก์ชันจัดการไฟล์
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       // เซตไฟล์ลง Context อย่างเดียว เดี๋ยว useEffect ข้างบนจะสร้าง Preview ให้เอง
@@ -152,14 +152,24 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
       //     path: undefined,
       //   },
       // }));
-      setFormResident((prev) => ({
-        ...prev,
-        vehicleInfo: {
-          ...(prev.vehicleInfo || {}),
-          registrationFile: file, // เก็บเป็นไฟล์เพียวๆ ไว้ที่ตัวแปรนี้
-          file_info: undefined, // เคลียร์รูปเก่าจาก DB ทิ้ง (เพราะผู้ใช้อัปโหลดรูปใหม่แล้ว)
-        },
-      }));
+      try {
+        // โคลนนิ่งไฟล์ทันที! ดูดข้อมูลรูปเข้ามาเก็บใน RAM ของเว็บเรา (ป้องกันมือถือลบทิ้ง)
+        const arrayBuffer = await file.arrayBuffer();
+        const persistentFile = new File([arrayBuffer], file.name, {
+          type: file.type,
+        });
+        setFormResident((prev) => ({
+          ...prev,
+          vehicleInfo: {
+            ...(prev.vehicleInfo || {}),
+            registrationFile: persistentFile, // เก็บเป็นไฟล์เพียวๆ ไว้ที่ตัวแปรนี้
+            file_info: undefined, // เคลียร์รูปเก่าจาก DB ทิ้ง (เพราะผู้ใช้อัปโหลดรูปใหม่แล้ว)
+          },
+        }));
+      } catch (err) {
+        console.error("สร้างไฟล์โคลนไม่สำเร็จ:", err);
+        alert("เกิดข้อผิดพลาดในการอ่านไฟล์ กรุณาลองเลือกรูปใหม่อีกครั้ง");
+      }
     }
   };
 
