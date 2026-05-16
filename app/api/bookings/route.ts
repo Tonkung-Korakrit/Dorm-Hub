@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
     // }
 
     const body = await request.json();
-    const { user, room, type, groupId, address, profileImages } = body;
+    const { user, room, type, groupId, address, profileImages, vehicle } = body;
 
     const uId = user?.id || user?.userId;
     const rId = room?.id;
@@ -302,30 +302,28 @@ export async function POST(request: NextRequest) {
 
     await syncProfileImages(prisma, Number(uId), profileImages);
 
-    const vehicleInfo = user.vehicleInfo
-
     // console.log("user in api/booking: ", user)
     // console.log("user.vehicle in api/booking: ", vehicleInfo)
 
-    if (vehicleInfo && vehicleInfo.licensePlate) {
+    if (vehicle && vehicle.licensePlate) {
       try {
         let fileId = undefined;
 
-        if (vehicleInfo.path) {
+        if (vehicle.path) {
           const newFile = await prisma.file_info.create({
             data: {
               createdBy: Number(uId),
               type: "VEHICLE_CARD",
-              path: body.vehicle.filePath,
+              path: vehicle.path,
             },
           });
           fileId = newFile.id;
         }
 
         const vehicleData = {
-          licensePlate: vehicleInfo.licensePlate,
-          province: vehicleInfo.province,
-          ownerName: vehicleInfo.ownerName || "",
+          licensePlate: vehicle.licensePlate,
+          province: vehicle.province,
+          ownerName: vehicle.ownerName || "",
           ...(fileId && { fileId: fileId }),
         };
 
@@ -335,7 +333,7 @@ export async function POST(request: NextRequest) {
           create: {
             ...vehicleData,
             userId: Number(uId),
-            ownerName: vehicleInfo.ownerName || "",
+            ownerName: vehicle.ownerName || "",
           },
         });
       } catch (vehError: any) {

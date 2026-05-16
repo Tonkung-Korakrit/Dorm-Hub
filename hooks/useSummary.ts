@@ -139,10 +139,6 @@ const useSummary = (setStep: (step: number) => void) => {
           user: userPayload,
           profileImages,
           room: formRoom,
-          // vehicle: {
-          //   ...formResident?.vehicleInfo,
-          //   filePath: vehicleFilePath || formResident?.vehicleInfo.file_info.path,
-          // },
           vehicle: formResident?.vehicleInfo?.licensePlate ? {
             ...formResident?.vehicleInfo,
             registrationFile: undefined,
