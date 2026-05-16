@@ -51,6 +51,17 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   useScrollTop();
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const script = document.createElement("script");
+      script.src = "https://cdn.jsdelivr.net/npm/eruda";
+      document.body.appendChild(script);
+      script.onload = () => {
+        (window as any).eruda.init();
+      };
+    }
+  }, []);
+
+  useEffect(() => {
     // 1. สร้างตัวแปรเช็คว่า "ผู้ใช้มีข้อมูลในฟอร์มแล้วหรือยัง?" (ถ้ามีทะเบียนรถแปลว่าโหลดมาแล้ว หรือกำลังกรอกอยู่)
     const isAlreadyLoaded = Boolean(
       formResident?.vehicleInfo?.licensePlate ||
@@ -91,9 +102,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
         formResident.vehicleInfo.registrationFile,
       );
       setPreviewImage(objectUrl);
-    }
-    
-    else if (formResident?.vehicleInfo?.path) {
+    } else if (formResident?.vehicleInfo?.path) {
       setPreviewImage(formResident.vehicleInfo.path);
     } else if (formResident?.vehicleInfo?.file_info?.path) {
       setPreviewImage(formResident.vehicleInfo.file_info.path);
