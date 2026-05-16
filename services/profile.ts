@@ -102,7 +102,7 @@ export const getResidentProfile = async (): Promise<Resident> => {
         select: RESIDENT_SELECT_FIELDS,
       });
 
-      return resident;
+      return resident as any;
     }
 
     return null; // ถ้าไม่เข้าเงื่อนไขไหนเลย แปลว่าไม่ได้ Login

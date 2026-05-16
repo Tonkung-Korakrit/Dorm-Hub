@@ -59,6 +59,7 @@ export interface Vehicle {
   ownerName: string;
   path?: string;
   registrationFile?: File | null;
+  file_info?: File_info | null;
   createdAt?: Date;
   // updatedAt: Date;
 }

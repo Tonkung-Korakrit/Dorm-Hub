@@ -4,6 +4,7 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import { Combobox, Transition } from "@headlessui/react";
 import { BookingStatus } from "@/utils/types";
+import toast from "react-hot-toast"; // อย่าลืมเช็คว่ามี import toast ไว้ด้านบนสุดหรือยังนะครับ
 
 // context
 import { useBooking } from "@/app/contexts/BookingContext";
@@ -16,6 +17,7 @@ import { useScrollTop } from "@/hooks/useScrollTop";
 
 // icons
 import { MdSwapVert, MdCheck, MdClose, MdCloudUpload } from "react-icons/md";
+import { PROVINCE_LIST } from "@/utils/constants";
 
 export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   const {
@@ -49,45 +51,66 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   useScrollTop();
 
   useEffect(() => {
+    // 1. สร้างตัวแปรเช็คว่า "ผู้ใช้มีข้อมูลในฟอร์มแล้วหรือยัง?" (ถ้ามีทะเบียนรถแปลว่าโหลดมาแล้ว หรือกำลังกรอกอยู่)
+    const isAlreadyLoaded = Boolean(
+      formResident?.vehicleInfo?.licensePlate ||
+      formResident?.vehicleInfo?.ownerName,
+    );
+
     if (
       currentBooking?.status === BookingStatus.PENDING_CORRECTION &&
-      currentBooking?.cus_users?.vehicleInfo && !isEditMode
+      currentBooking?.cus_users?.vehicleInfo &&
+      !isEditMode &&
+      !isAlreadyLoaded // 2. เพิ่มเงื่อนไขนี้: ถ้าโหลดแล้ว ห้ามดึงของเก่ามาทับอีก!
     ) {
-      // setFormResident(currentBooking.cus_users.vehicleInfo);
+      console.log(
+        "2. Setting FormResident with:",
+        currentBooking?.cus_users?.vehicleInfo,
+      );
       setFormResident((prev) => ({
         ...prev,
-        vehicleInfo: currentBooking.cus_users.vehicleInfo // ยัดข้อมูลรถเก่าลงไปเลย
+        vehicleInfo: currentBooking?.cus_users?.vehicleInfo,
       }));
 
-      // ถ้ามี URL รูปเดิมจาก DB ก็เอามาใส่ Preview
-      if (currentBooking?.cus_users?.vehicleInfo?.path) {
-        setPreviewImage(currentBooking.cus_users.vehicleInfo.path);
-      }
+      // ❌ ลบโค้ด setPreviewImage(currentBooking...) ตรงนี้ทิ้งไปเลยครับ!
+      // เพราะเดี๋ยว useEffect ตัวที่ 2 มันจะตรวจจับ formResident ที่เปลี่ยนไป แล้วไปสร้าง Preview ให้เองอย่างถูกต้องครับ
     }
-  }, [currentBooking, setFormResident, isEditMode]);
+  }, [
+    currentBooking,
+    setFormResident,
+    isEditMode,
+    formResident?.vehicleInfo?.licensePlate,
+  ]);
 
   useEffect(() => {
     let objectUrl: string | null = null;
 
+    // 1. เช็คไฟล์ใหม่ก่อน
     if (formResident?.vehicleInfo?.registrationFile instanceof File) {
-      // ถ้ามีไฟล์ที่เพิ่งเลือก (เป็นก้อน File) ให้สร้าง URL ชั่วคราว
-      objectUrl = URL.createObjectURL(formResident?.vehicleInfo?.registrationFile);
+      objectUrl = URL.createObjectURL(
+        formResident.vehicleInfo.registrationFile,
+      );
       setPreviewImage(objectUrl);
-    } else if (formResident?.vehicleInfo?.path) {
-      // ถ้าไม่มีไฟล์ใหม่ แต่มี URL รูปเดิมจากฐานข้อมูล
-      setPreviewImage(formResident?.vehicleInfo?.path);
-    } else {
-      // ถ้าไม่มีทั้งคู่
+    }
+    
+    else if (formResident?.vehicleInfo?.path) {
+      setPreviewImage(formResident.vehicleInfo.path);
+    } else if (formResident?.vehicleInfo?.file_info?.path) {
+      setPreviewImage(formResident.vehicleInfo.file_info.path);
+    }
+    // 3. ถ้าไม่มีทั้งคู่ ก็คือเป็นค่าว่าง
+    else {
       setPreviewImage(null);
     }
 
-    // Cleanup function: สำคัญมาก เพื่อป้องกัน Memory Leak
     return () => {
-      if (objectUrl) {
-        URL.revokeObjectURL(objectUrl);
-      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [formResident?.vehicleInfo?.registrationFile, formResident?.vehicleInfo?.path]);
+  }, [
+    formResident?.vehicleInfo?.registrationFile,
+    formResident?.vehicleInfo?.path,
+    formResident?.vehicleInfo?.file_info?.path,
+  ]);
 
   const handlePlateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     // ลบช่องว่าง และอนุญาตเฉพาะ ก-ฮ, สระ, A-Z, 0-9
@@ -101,7 +124,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
       ...prev,
       vehicleInfo: {
         ...(prev.vehicleInfo || {}), // ดึงข้อมูลรถเดิมมาใส่ก่อน (กัน null)
-        licensePlate: cleanValue,    // อัปเดตฟิลด์ที่ต้องการ
+        licensePlate: cleanValue, // อัปเดตฟิลด์ที่ต้องการ
       },
     }));
   };
@@ -112,23 +135,53 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     if (file) {
       // เซตไฟล์ลง Context อย่างเดียว เดี๋ยว useEffect ข้างบนจะสร้าง Preview ให้เอง
       // setVehicle((prev) => ({ ...prev, registrationFile: file }));
-        setFormResident((prev) => ({
+      //   setFormResident((prev) => ({
+      //   ...prev,
+      //   vehicleInfo: {
+      //     ...(prev.vehicleInfo || {}),
+      //     file_info: file,
+      //     path: undefined,
+      //   },
+      // }));
+      setFormResident((prev) => ({
         ...prev,
         vehicleInfo: {
           ...(prev.vehicleInfo || {}),
-          registrationFile: file,
-          path: undefined,
+          registrationFile: file, // เก็บเป็นไฟล์เพียวๆ ไว้ที่ตัวแปรนี้
+          file_info: undefined, // เคลียร์รูปเก่าจาก DB ทิ้ง (เพราะผู้ใช้อัปโหลดรูปใหม่แล้ว)
         },
       }));
     }
   };
 
+  // const handleNextStep = () => {
+  //   // ตรวจสอบความถูกต้องเบื้องต้น (ถ้ามีทะเบียน ต้องมีจังหวัดและรูป)
+  //   // if (vehicle.licensePlate && (!vehicle.province || !previewImage)) {
+  //   //   toast.error("กรุณาระบุข้อมูลรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ใช้รถ");
+  //   //   return;
+  //   // }
+
+  //   if (editId || isEditMode) {
+  //     // ถ้าเป็นโหมดแก้ไข ให้ข้ามไปหน้าสรุป (Step 7) เลย!
+  //     setStep(7);
+  //   } else {
+  //     // โหมดจองปกติ ไปเลือกวิทยาเขตต่อ (Step 4)
+  //     setStep(4);
+  //   }
+  // };
+
   const handleNextStep = () => {
-    // ตรวจสอบความถูกต้องเบื้องต้น (ถ้ามีทะเบียน ต้องมีจังหวัดและรูป)
-    // if (vehicle.licensePlate && (!vehicle.province || !previewImage)) {
-    //   toast.error("กรุณาระบุข้อมูลรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ใช้รถ");
-    //   return;
-    // }
+    // const hasLicensePlate = Boolean(formResident.vehicleInfo?.licensePlate);
+    // const hasProvince = Boolean(formResident.vehicleInfo?.province);
+    const hasImage = Boolean(previewImage); // เช็คจาก previewImage ง่ายสุด เพราะมันคลุมทั้งไฟล์ใหม่และรูปเก่าแล้ว
+
+    // 🛡️ ป้องกันบั๊ก: ถ้ามีทะเบียนรถ ต้องบังคับกรอกจังหวัดและอัปโหลดรูป!
+    if (!hasImage) {
+      toast.error(
+        "กรุณาระบุจังหวัดและอัปโหลดรูปรายการจดทะเบียนรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ต้องการใช้รถ",
+      );
+      return; // เตะกลับ ไม่ให้ไปหน้าถัดไป
+    }
 
     if (editId || isEditMode) {
       // ถ้าเป็นโหมดแก้ไข ให้ข้ามไปหน้าสรุป (Step 7) เลย!
@@ -214,7 +267,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
                 vehicleInfo: {
                   ...(prev.vehicleInfo || {}),
                   ownerName: e.target.value,
-                }
+                },
               }))
             }
             placeholder="name-last name / ชื่อ-นามสกุล"
@@ -243,8 +296,13 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
                 ...prev,
                 vehicleInfo: {
                   ...(prev.vehicleInfo || {}),
+                  file_info: {
+                    ...(prev.vehicleInfo?.file_info || {}),
+                    path: undefined,
+                  } as any,
                   path: undefined,
-                }
+                  registrationFile: undefined,
+                },
               }));
             }}
           />
@@ -280,8 +338,9 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
                       ...prev,
                       vehicleInfo: {
                         ...(prev.vehicleInfo || {}),
-                        registrationFile: undefined, 
-                        path: undefined, 
+                        registrationFile: undefined,
+                        file_info: undefined,
+                        path: undefined,
                       },
                     }));
 
@@ -406,83 +465,3 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     </Container>
   );
 }
-
-const PROVINCE_LIST = [
-  { id: "1", name_th: "กรุงเทพมหานคร", name_en: "Bangkok" },
-  { id: "2", name_th: "สมุทรปราการ", name_en: "Samut Prakan" },
-  { id: "3", name_th: "นนทบุรี", name_en: "Nonthaburi" },
-  { id: "4", name_th: "ปทุมธานี", name_en: "Pathum Thani" },
-  { id: "5", name_th: "พระนครศรีอยุธยา", name_en: "Phra Nakhon Si Ayutthaya" },
-  { id: "6", name_th: "อ่างทอง", name_en: "Ang Thong" },
-  { id: "7", name_th: "ลพบุรี", name_en: "Lop Buri" },
-  { id: "8", name_th: "สิงห์บุรี", name_en: "Sing Buri" },
-  { id: "9", name_th: "ชัยนาท", name_en: "Chai Nat" },
-  { id: "10", name_th: "สระบุรี", name_en: "Saraburi" },
-  { id: "11", name_th: "ชลบุรี", name_en: "Chon Buri" },
-  { id: "12", name_th: "ระยอง", name_en: "Rayong" },
-  { id: "13", name_th: "จันทบุรี", name_en: "Chanthaburi" },
-  { id: "14", name_th: "ตราด", name_en: "Trat" },
-  { id: "15", name_th: "ฉะเชิงเทรา", name_en: "Chachoengsao" },
-  { id: "16", name_th: "ปราจีนบุรี", name_en: "Prachin Buri" },
-  { id: "17", name_th: "นครนายก", name_en: "Nakhon Nayok" },
-  { id: "18", name_th: "สระแก้ว", name_en: "Sa Kaeo" },
-  { id: "19", name_th: "นครราชสีมา", name_en: "Nakhon Ratchasima" },
-  { id: "20", name_th: "บุรีรัมย์", name_en: "Buri Ram" },
-  { id: "21", name_th: "สุรินทร์", name_en: "Surin" },
-  { id: "22", name_th: "ศรีสะเกษ", name_en: "Si Sa Ket" },
-  { id: "23", name_th: "อุบลราชธานี", name_en: "Ubon Ratchathani" },
-  { id: "24", name_th: "ยโสธร", name_en: "Yasothon" },
-  { id: "25", name_th: "ชัยภูมิ", name_en: "Chaiyaphum" },
-  { id: "26", name_th: "อำนาจเจริญ", name_en: "Amnat Charoen" },
-  { id: "27", name_th: "หนองบัวลำภู", name_en: "Nong Bua Lam Phu" },
-  { id: "28", name_th: "ขอนแก่น", name_en: "Khon Kaen" },
-  { id: "29", name_th: "อุดรธานี", name_en: "Udon Thani" },
-  { id: "30", name_th: "เลย", name_en: "Loei" },
-  { id: "31", name_th: "หนองคาย", name_en: "Nong Khai" },
-  { id: "32", name_th: "มหาสารคาม", name_en: "Maha Sarakham" },
-  { id: "33", name_th: "ร้อยเอ็ด", name_en: "Roi Et" },
-  { id: "34", name_th: "กาฬสินธุ์", name_en: "Kalasin" },
-  { id: "35", name_th: "สกลนคร", name_en: "Sakon Nakhon" },
-  { id: "36", name_th: "นครพนม", name_en: "Nakhon Phanom" },
-  { id: "37", name_th: "มุกดาหาร", name_en: "Mukdahan" },
-  { id: "38", name_th: "เชียงใหม่", name_en: "Chiang Mai" },
-  { id: "39", name_th: "ลำพูน", name_en: "Lamphun" },
-  { id: "40", name_th: "ลำปาง", name_en: "Lampang" },
-  { id: "41", name_th: "อุตรดิตถ์", name_en: "Uttaradit" },
-  { id: "42", name_th: "แพร่", name_en: "Phrae" },
-  { id: "43", name_th: "น่าน", name_en: "Nan" },
-  { id: "44", name_th: "พะเยา", name_en: "Phayao" },
-  { id: "45", name_th: "เชียงราย", name_en: "Chiang Rai" },
-  { id: "46", name_th: "แม่ฮ่องสอน", name_en: "Mae Hong Son" },
-  { id: "47", name_th: "นครสวรรค์", name_en: "Nakhon Sawan" },
-  { id: "48", name_th: "อุทัยธานี", name_en: "Uthai Thani" },
-  { id: "49", name_th: "กำแพงเพชร", name_en: "Kamphaeng Phet" },
-  { id: "50", name_th: "ตาก", name_en: "Tak" },
-  { id: "51", name_th: "สุโขทัย", name_en: "Sukhothai" },
-  { id: "52", name_th: "พิษณุโลก", name_en: "Phitsanulok" },
-  { id: "53", name_th: "พิจิตร", name_en: "Phichit" },
-  { id: "54", name_th: "เพชรบูรณ์", name_en: "Phetchabun" },
-  { id: "55", name_th: "ราชบุรี", name_en: "Ratchaburi" },
-  { id: "56", name_th: "กาญจนบุรี", name_en: "Kanchanaburi" },
-  { id: "57", name_th: "สุพรรณบุรี", name_en: "Suphan Buri" },
-  { id: "58", name_th: "นครปฐม", name_en: "Nakhon Pathom" },
-  { id: "59", name_th: "สมุทรสาคร", name_en: "Samut Sakhon" },
-  { id: "60", name_th: "สมุทรสงคราม", name_en: "Samut Songkhram" },
-  { id: "61", name_th: "เพชรบุรี", name_en: "Phetchaburi" },
-  { id: "62", name_th: "ประจวบคีรีขันธ์", name_en: "Prachuap Khiri Khan" },
-  { id: "63", name_th: "นครศรีธรรมราช", name_en: "Nakhon Si Thammarat" },
-  { id: "64", name_th: "กระบี่", name_en: "Krabi" },
-  { id: "65", name_th: "พังงา", name_en: "Phangnga" },
-  { id: "66", name_th: "ภูเก็ต", name_en: "Phuket" },
-  { id: "67", name_th: "สุราษฎร์ธานี", name_en: "Surat Thani" },
-  { id: "68", name_th: "ระนอง", name_en: "Ranong" },
-  { id: "69", name_th: "ชุมพร", name_en: "Chumphon" },
-  { id: "70", name_th: "สงขลา", name_en: "Songkhla" },
-  { id: "71", name_th: "สตูล", name_en: "Satun" },
-  { id: "72", name_th: "ตรัง", name_en: "Trang" },
-  { id: "73", name_th: "พัทลุง", name_en: "Phatthalung" },
-  { id: "74", name_th: "ปัตตานี", name_en: "Pattani" },
-  { id: "75", name_th: "ยะลา", name_en: "Yala" },
-  { id: "76", name_th: "นราธิวาส", name_en: "Narathiwat" },
-  { id: "77", name_th: "บึงกาฬ", name_en: "Bueng Kan" },
-];

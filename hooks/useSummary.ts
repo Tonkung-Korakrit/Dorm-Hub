@@ -62,6 +62,7 @@ const useSummary = (setStep: (step: number) => void) => {
   };
 
   const handleFinalConfirm = async () => {
+    // console.log("3. FormResident before Submit:", formResident.vehicleInfo);
     setIsSubmitting(true);
     try {
       let vehicleFilePath = "";
@@ -78,6 +79,9 @@ const useSummary = (setStep: (step: number) => void) => {
             path: image.path,
           }))
         : [];
+
+      // console.log(formResident?.facePhotoFile)
+      // console.log(formResident?.citizenCardFile)
 
       if (formResident.facePhotoFile) {
         const facePhotoPath = await uploadProfileImage(
@@ -101,9 +105,12 @@ const useSummary = (setStep: (step: number) => void) => {
         profileImages.push({ type: "CITIZEN_CARD", path: citizenCardPath });
       }
 
-      if (formResident?.vehicleInfo?.registrationFile) {
+      // console.log("before ",formResident?.vehicleInfo instanceof File)
+
+      if (formResident?.vehicleInfo?.registrationFile instanceof File) {
         const formData = new FormData();
-        formData.append("file", formResident?.vehicleInfo?.registrationFile);
+        // formData.append("file", formResident?.vehicleInfo?.file_info.path);
+        formData.append("file", formResident.vehicleInfo.registrationFile);
 
         const uploadRes = await fetch("/api/upload/vehicle", {
           method: "POST",
@@ -111,11 +118,13 @@ const useSummary = (setStep: (step: number) => void) => {
         });
         const uploadData = await uploadRes.json();
         if (uploadData.success) {
-          vehicleFilePath = uploadData.path;
+          vehicleFilePath = uploadData.path; // ได้ URL ใหม่บน Cloudflare R2
         } else {
           console.error("Upload vehicle image failed:", uploadData.message);
         }
       }
+
+      // console.log("after ",formResident?.vehicleInfo)
 
       const endpoint = isResubmitting
         ? "/api/bookings/update-rejected"
@@ -130,10 +139,16 @@ const useSummary = (setStep: (step: number) => void) => {
           user: userPayload,
           profileImages,
           room: formRoom,
-          vehicle: {
+          // vehicle: {
+          //   ...formResident?.vehicleInfo,
+          //   filePath: vehicleFilePath || formResident?.vehicleInfo.file_info.path,
+          // },
+          vehicle: formResident?.vehicleInfo?.licensePlate ? {
             ...formResident?.vehicleInfo,
-            filePath: vehicleFilePath || formResident?.vehicleInfo?.path,
-          },
+            registrationFile: undefined,
+            // ถ้ามีไฟล์ใหม่ใช้ vehicleFilePath ถ้าไม่มีให้ใช้รูปเก่า ถ้าไม่มีเลยให้เป็น null
+            filePath: vehicleFilePath || formResident?.vehicleInfo?.file_info?.path || null,
+          } : null, // ถ้าไม่มีทะเบียนรถ ก็ส่ง null ไปเลย
           type: currentBooking?.type,
           groupId: ownerInfo?.studentId,
           address: formResident.address[0],

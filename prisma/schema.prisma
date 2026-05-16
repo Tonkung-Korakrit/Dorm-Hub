@@ -16,7 +16,7 @@ generator client {
 model Google_login {
   id                Int      @id @default(autoincrement())
   userId            Int
-  email             String? @db.Text
+  email             String?  @db.Text
   type              String
   provider          String
   providerAccountId String
@@ -36,15 +36,15 @@ model Google_login {
 }
 
 model Line_login {
-  id                Int      @id @default(autoincrement())
-  userId            Int       @unique
-  lineUserId        String
-  username          String?
+  id         Int     @id @default(autoincrement())
+  userId     Int     @unique
+  lineUserId String
+  username   String?
 
-  cus_user  Cus_users @relation(fields: [userId], references: [id])
+  cus_user Cus_users @relation(fields: [userId], references: [id])
 
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Session {
@@ -57,55 +57,55 @@ model Session {
 }
 
 model Cus_users {
-  id            Int        @id @default(autoincrement())
-  citizenType   CitizenType?
-  citizenNumber String?    @unique
-  studentId     String?    @unique
-  gender        GenderType?
-  titleName     String?
-  name          String?
-  name_th       String?
-  name_en       String?
-  email         String     @unique @db.VarChar(191)
+  id                   Int          @id @default(autoincrement())
+  citizenType          CitizenType?
+  citizenNumber        String?      @unique
+  studentId            String?      @unique
+  gender               GenderType?
+  titleName            String?
+  name                 String?
+  name_th              String?
+  name_en              String?
+  email                String       @unique @db.VarChar(191)
   // password      String?
   // religion      String?
-  mobilePhone   String?
-  birthDate     DateTime?
-  isScholarshipStudent  Boolean? @default(false)
-  isDisabled            Boolean? @default(false)
-  faculty_department    String?
+  mobilePhone          String?
+  birthDate            DateTime?
+  isScholarshipStudent Boolean?     @default(false)
+  isDisabled           Boolean?     @default(false)
+  faculty_department   String?
   // faculty    String?
   // department String?
   // tu_status  String?
-  lifestyle     Json? // เก็บเป็น JSON string เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]'
-  lifestyleNote String?
-  isEnabled     Boolean @default(true) // สถานะการใช้งาน (เผื่อลาออก หรือระงับสิทธิ์ชั่วคราว)
+  lifestyle            Json? // เก็บเป็น JSON string เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]'
+  lifestyleNote        String?
+  isEnabled            Boolean      @default(true) // สถานะการใช้งาน (เผื่อลาออก หรือระงับสิทธิ์ชั่วคราว)
 
-  address       Address[]
-  guardians     Guardian[]
-  profileImage  File_info[]
-  vehicleInfo   Vehicle?
+  address      Address[]
+  guardians    Guardian[]
+  profileImage File_info[]
+  vehicleInfo  Vehicle?
 
-  role          Role      @default(STUDENT)
-  bookings      Booking[]
+  role     Role      @default(STUDENT)
+  bookings Booking[]
 
-  emailVerified   DateTime?
-  googleAccounts  Google_login[]
-  line_logins     Line_login[]
-  sessions        Session[]
-  logs            cus_users_log[]
+  emailVerified  DateTime?
+  googleAccounts Google_login[]
+  line_logins    Line_login[]
+  sessions       Session[]
+  logs           cus_users_log[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model cus_users_log {
-  id        Int           @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   userId    Int
-  cus_users      Cus_users    @relation(fields: [userId], references: [id])
+  cus_users Cus_users @relation(fields: [userId], references: [id])
 
-  action    String // เช่น "CREATE", "UPDATE", "DELETE"
-  details   Json?  // รายละเอียดเพิ่มเติม เช่น ข้อมูลที่ถูกเปลี่ยนแปลง
+  action  String // เช่น "CREATE", "UPDATE", "DELETE"
+  details Json? // รายละเอียดเพิ่มเติม เช่น ข้อมูลที่ถูกเปลี่ยนแปลง
 
   createdAt DateTime @default(now())
 }
@@ -124,27 +124,27 @@ enum GenderType {
 }
 
 model Guardian {
-  id       Int       @id @default(autoincrement())
-  userId   Int
-  cus_users     Cus_users      @relation(fields: [userId], references: [id])
-  name     String
-  relation String
-  phone    String
-  address  Address[]
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  cus_users Cus_users @relation(fields: [userId], references: [id])
+  name      String
+  relation  String
+  phone     String
+  address   Address[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model File_info {
-  id     Int  @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   createdBy Int
-  cus_users   Cus_users @relation(fields: [createdBy], references: [id], onDelete: Cascade)
+  cus_users Cus_users @relation(fields: [createdBy], references: [id], onDelete: Cascade)
 
-  type   FileType // Enum: CITIZEN_CARD, FACE_PHOTO, VEHICLE_PHOTO
-  path   String
+  type      FileType // Enum: CITIZEN_CARD, FACE_PHOTO, VEHICLE_PHOTO
+  path      String
   // extension String
-  isEnabled Boolean @default(true)
+  isEnabled Boolean  @default(true)
 
   booking_logs Booking_log[]
   vehicle Vehicle?
@@ -161,9 +161,9 @@ enum FileType {
 }
 
 model Vehicle {
-  id     Int  @id @default(autoincrement())
-  userId Int  @unique
-  cus_users   Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int       @id @default(autoincrement())
+  userId    Int       @unique
+  cus_users Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // type         VehicleType   // ประเภทรถ เช่น รถยนต์, มอเตอร์ไซค์
   // brand        String
@@ -173,8 +173,8 @@ model Vehicle {
   licensePlate String // @unique // หมายเลขป้ายทะเบียน
   province     String // จังหวัดบนป้ายทะเบียน
   ownerName    String // ชื่อผู้ครอบครองรถ (เผื่อเป็นชื่อพ่อแม่ ไม่ใช่ชื่อนศ.)
-  
-  fileId Int? @unique
+
+  fileId    Int?       @unique
   file_info File_info? @relation(fields: [fileId], references: [id])
 
   createdAt DateTime @default(now())
@@ -189,9 +189,9 @@ enum VehicleType {
 }
 
 model Address {
-  id     Int  @id @default(autoincrement())
-  userId Int
-  cus_users   Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  cus_users Cus_users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   type          AddressType // Enum: REGISTERED (ตามทะเบียนบ้าน), CURRENT (ปัจจุบัน)
   addressDetail String // เลขที่บ้าน, ถนน, ซอย
@@ -222,17 +222,17 @@ model Campus {
 }
 
 model Dorm {
-  id      Int        @id @default(autoincrement())
-  name    String     @unique
-  genderType  GenderType @default(OTHER)
-  mapUrl  String
-  maxCols Int        @default(15) // จำนวนคอลัมน์ของแผนผัง
-  maxRows Int        @default(25) // จำนวนแถวของแผนผัง
-  campusId  Int
-  campus    Campus       @relation(fields: [campusId], references: [id])
+  id             Int        @id @default(autoincrement())
+  name           String     @unique
+  genderType     GenderType @default(OTHER)
+  mapUrl         String
+  maxCols        Int        @default(15) // จำนวนคอลัมน์ของแผนผัง
+  maxRows        Int        @default(25) // จำนวนแถวของแผนผัง
+  campusId       Int
+  campus         Campus     @relation(fields: [campusId], references: [id])
   // floors  Json       @default("[]")
-  availableRooms Int @default(0)
-  rooms   Room[]
+  availableRooms Int        @default(0)
+  rooms          Room[]
 
   // createdAt DateTime @default(now())
   // updatedAt DateTime @updatedAt
@@ -240,7 +240,7 @@ model Dorm {
 
 model Room {
   id               Int        @id @default(autoincrement())
-  roomId           String     //@unique ไม่ได้เพราะ มีห้อง M1-COMMON , TOILET, WASH, ELEVATOR ที่ซ้ำกันในแต่ละ Zone
+  roomId           String //@unique ไม่ได้เพราะ มีห้อง M1-COMMON , TOILET, WASH, ELEVATOR ที่ซ้ำกันในแต่ละ Zone
   floor            Int
   // zone            String
   dormId           Int
@@ -255,16 +255,16 @@ model Room {
   lifestyleConfig  Json? // คนแรกที่จองจะมา Set ค่าที่นี่ไว้ เช่น '["NIGHT_OWL", "QUIET", "LGBTQ_FRIENDLY"]' เพื่อให้คนที่จองต่อไปต้องมี Lifestyle ที่เข้ากัน
   lifestyleNote    String?
   facultyConfig    Json?
-  
+
   // --- เพื่อรองรับ Zone B ---
-  isSuite          Boolean      @default(false) // ระบุว่าเป็นห้องใหญ่ หรือไม่
-  parentId         Int?         // ชี้ไปที่ ID ของห้องใหญ่ (สำหรับห้องย่อย A, B)
-  parent           Room?        @relation("RoomToSubRoom", fields: [parentId], references: [id])
-  subRooms         Room[]       @relation("RoomToSubRoom")
-  
-  booking          Booking[]
-  posX             Int @default(1)
-  posY             Int @default(1)
+  isSuite  Boolean @default(false) // ระบุว่าเป็นห้องใหญ่ หรือไม่
+  parentId Int? // ชี้ไปที่ ID ของห้องใหญ่ (สำหรับห้องย่อย A, B)
+  parent   Room?   @relation("RoomToSubRoom", fields: [parentId], references: [id])
+  subRooms Room[]  @relation("RoomToSubRoom")
+
+  booking Booking[]
+  posX    Int       @default(1)
+  posY    Int       @default(1)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -293,7 +293,7 @@ enum RoomStatus {
 model Booking {
   id        Int           @id @default(autoincrement())
   userId    Int
-  cus_users      Cus_users          @relation(fields: [userId], references: [id])
+  cus_users Cus_users     @relation(fields: [userId], references: [id])
   roomId    Int
   room      Room          @relation(fields: [roomId], references: [id])
   status    BookingStatus @default(PENDING)
@@ -309,17 +309,17 @@ model Booking {
 }
 
 model Booking_log {
-  id        Int           @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   bookingId Int
-  booking      Booking          @relation(fields: [bookingId], references: [id])
+  booking   Booking @relation(fields: [bookingId], references: [id])
 
-  status    BookingStatus @default(PENDING)
-  file      File_info[]
+  status BookingStatus @default(PENDING)
+  file   File_info[]
   // expiresAt DateTime? // เวลาที่การจองนี้จะหมดอายุ (ถ้ายังไม่ชำระเงิน)
 
   paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
   verifiedBy   Int? // ID ของ Admin ที่เป็นคนกดอนุมัติ
-  verifier     Staff_users?    @relation("AdminVerifications", fields: [verifiedBy], references: [id])
+  verifier     Staff_users? @relation("AdminVerifications", fields: [verifiedBy], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -342,23 +342,23 @@ enum BookingType {
 }
 
 model Payment {
-  id             String        @id @default(uuid()) // ใช้ UUID เพื่อความปลอดภัยในการส่งค่าไป Gateway
-  bookingId      Int
-  booking        Booking       @relation(fields: [bookingId], references: [id])
-  
-  amount         Decimal       // จำนวนเงินมัดจำ
-  currency       String        @default("THB")
-  
-  status         PaymentStatus @default(PENDING)
-  method         String        @default("PROMPTPAY") // เก็บไว้เผื่ออนาคตรองรับ Credit Card
-  
+  id        String  @id @default(uuid()) // ใช้ UUID เพื่อความปลอดภัยในการส่งค่าไป Gateway
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id])
+
+  amount   Decimal // จำนวนเงินมัดจำ
+  currency String  @default("THB")
+
+  status PaymentStatus @default(PENDING)
+  method String        @default("PROMPTPAY") // เก็บไว้เผื่ออนาคตรองรับ Credit Card
+
   // ข้อมูลจาก Gateway (สำคัญมากสำหรับตรวจสอบ)
-  external_id    String?       @unique // เช่น Charge ID จาก Omise หรือ Reference No. จากธนาคาร
-  qr_payload     String?       @db.Text // เก็บข้อมูลที่ใช้เจน QR Code
-  
-  paidAt         DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  external_id String? @unique // เช่น Charge ID จาก Omise หรือ Reference No. จากธนาคาร
+  qr_payload  String? @db.Text // เก็บข้อมูลที่ใช้เจน QR Code
+
+  paidAt    DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 
   @@index([bookingId])
 }
@@ -376,59 +376,59 @@ enum Role {
 }
 
 model Staff_users {
-  id            Int     @id @default(autoincrement())
-  email         String  @unique
-  password      String
+  id       Int    @id @default(autoincrement())
+  email    String @unique
+  password String
 
-  titleName     String?
-  name          String?
-  phone         String?
-  profileImage  String?
+  titleName    String?
+  name         String?
+  phone        String?
+  profileImage String?
 
-  role          Role    @default(ADMIN)
-  employeeId    String?  @unique
-  department    String?
+  role       Role    @default(ADMIN)
+  employeeId String? @unique
+  department String?
   // level         Int     @default(1)
-  isEnabled     Boolean @default(true)
+  isEnabled  Boolean @default(true)
 
-  lastLogin     DateTime?
+  lastLogin DateTime?
 
-  booking_logs Booking_log[] @relation("AdminVerifications")
+  booking_logs     Booking_log[]      @relation("AdminVerifications")
   staff_action_log Staff_action_log[]
-  checkins     Checkin[]
+  checkins         Checkin[]
 
-  createdAt     DateTime @default(now())
+  createdAt DateTime @default(now())
   // updatedAt     DateTime @updatedAt
 }
 
 model Staff_action_log {
-  id        Int           @id @default(autoincrement())
-  verifiedBy   Int
-  staff     Staff_users    @relation(fields: [verifiedBy], references: [id])
+  id         Int         @id @default(autoincrement())
+  verifiedBy Int
+  staff      Staff_users @relation(fields: [verifiedBy], references: [id])
 
   // verified_logs
   // เชื่อมกลับไปที่ Booking_log เพื่อดูว่า Admin คนนี้อนุมัติรายการไหนบ้าง
   // booking_log    booking_log[] @relation("AdminVerifications")
 
   // paymentProof String? // URL ของรูปภาพสลิป หรือเอกสาร
-  
+
   // verifiedBy   Int? // ID ของ Admin ที่เป็นคนกดอนุมัติ
   // verifier     Staff_users?    @relation("AdminVerifications", fields: [verifiedBy], references: [id])
-  
-  remark  String? // หมายเหตุจาก Admin (กรณีปฏิเสธการจอง)
+
+  remark String? // หมายเหตุจาก Admin (กรณีปฏิเสธการจอง)
   // verifiedAt   DateTime?
 
   createdAt DateTime @default(now())
 }
 
 model Checkin {
-  id        Int           @id @default(autoincrement())
+  id        Int         @id @default(autoincrement())
   bookingId Int
-  booking Booking @relation(fields:[bookingId], references:[id])
-  type type 
+  booking   Booking     @relation(fields: [bookingId], references: [id])
+  type      type
   createdBy Int
-  staff Staff_users @relation(fields:[createdBy], references:[id])
-  createdAt DateTime @default(now())
+  staff     Staff_users @relation(fields: [createdBy], references: [id])
+  createdAt DateTime    @default(now())
 
   @@unique([bookingId, type])
 }
