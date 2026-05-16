@@ -50,16 +50,16 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
 
   useScrollTop();
 
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const script = document.createElement("script");
-      script.src = "https://cdn.jsdelivr.net/npm/eruda";
-      document.body.appendChild(script);
-      script.onload = () => {
-        (window as any).eruda.init();
-      };
-    }
-  }, []);
+  // useEffect(() => {
+  //   if (typeof window !== "undefined") {
+  //     const script = document.createElement("script");
+  //     script.src = "https://cdn.jsdelivr.net/npm/eruda";
+  //     document.body.appendChild(script);
+  //     script.onload = () => {
+  //       (window as any).eruda.init();
+  //     };
+  //   }
+  // }, []);
 
   useEffect(() => {
     // 1. สร้างตัวแปรเช็คว่า "ผู้ใช้มีข้อมูลในฟอร์มแล้วหรือยัง?" (ถ้ามีทะเบียนรถแปลว่าโหลดมาแล้ว หรือกำลังกรอกอยู่)
@@ -194,7 +194,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     // const hasProvince = Boolean(formResident.vehicleInfo?.province);
     const hasImage = Boolean(previewImage); // เช็คจาก previewImage ง่ายสุด เพราะมันคลุมทั้งไฟล์ใหม่และรูปเก่าแล้ว
 
-    // 🛡️ ป้องกันบั๊ก: ถ้ามีทะเบียนรถ ต้องบังคับกรอกจังหวัดและอัปโหลดรูป!
+    // ป้องกันบั๊ก: ถ้ามีทะเบียนรถ ต้องบังคับกรอกจังหวัดและอัปโหลดรูป!
     if (!hasImage) {
       toast.error(
         "กรุณาระบุจังหวัดและอัปโหลดรูปรายการจดทะเบียนรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ต้องการใช้รถ",
@@ -215,8 +215,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     setStep(2);
   };
 
-  console.log("formResident in vehicle: ", formResident);
-  // console.log("vehicle in vehicle: ", vehicle);
+  // console.log("formResident in vehicle: ", formResident);
 
   return (
     <Container

@@ -122,7 +122,7 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     }
 
     try {
-      // 💉 โคลนนิ่งไฟล์ดูดเข้า RAM ป้องกันมือถือแอบเคลียร์เมมมอรี่
+      // โคลนนิ่งไฟล์ดูดเข้า RAM ป้องกันมือถือแอบเคลียร์เมมมอรี่
       const arrayBuffer = await file.arrayBuffer();
       const persistentFile = new File([arrayBuffer], file.name, {
         type: file.type,
@@ -135,7 +135,7 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
         // setFaceImage(imageUrl);
         setFormResident((prev) => ({
           ...prev,
-          facePhotoFile: persistentFile, // 👈 ใช้ไฟล์โคลน (persistentFile) แทน file
+          facePhotoFile: persistentFile,
           profileImage: (prev.profileImage || []).filter(
             (image) => image.type !== "FACE_PHOTO",
           ),
@@ -145,7 +145,7 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
         setIdFileName(persistentFile.name);
         setFormResident((prev) => ({
           ...prev,
-          citizenCardFile: persistentFile, // 👈 ใช้ไฟล์โคลน (persistentFile) แทน file
+          citizenCardFile: persistentFile,
           profileImage: (prev.profileImage || []).filter(
             (image) => image.type !== "CITIZEN_CARD",
           ),
@@ -207,7 +207,7 @@ export function ProfileStep({ setStep }: { setStep: (s: number) => void }) {
     setStep(1);
   };
 
-  console.log("formResident in profile: ", formResident);
+  // console.log("formResident in profile: ", formResident);
 
   return (
     <Container
