@@ -190,23 +190,24 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
   // };
 
   const handleNextStep = () => {
-    // const hasLicensePlate = Boolean(formResident.vehicleInfo?.licensePlate);
-    // const hasProvince = Boolean(formResident.vehicleInfo?.province);
-    const hasImage = Boolean(previewImage); // เช็คจาก previewImage ง่ายสุด เพราะมันคลุมทั้งไฟล์ใหม่และรูปเก่าแล้ว
+    const hasLicensePlate = Boolean(formResident.vehicleInfo?.licensePlate);
+    const hasProvince = Boolean(formResident.vehicleInfo?.province);
+    const hasOwener = Boolean(formResident.vehicleInfo?.ownerName);
+    const hasImage = Boolean(previewImage);
 
-    // ป้องกันบั๊ก: ถ้ามีทะเบียนรถ ต้องบังคับกรอกจังหวัดและอัปโหลดรูป!
-    if (!hasImage) {
+    // ป้องกันบั๊ก: ถ้ามีทะเบียนรถ ต้องบังคับกรอกชื่อเจ้าของ จังหวัด และอัปโหลดรูป!
+    if (hasLicensePlate && (!hasProvince || !hasImage || !hasOwener)) {
       toast.error(
-        "กรุณาระบุจังหวัดและอัปโหลดรูปรายการจดทะเบียนรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ต้องการใช้รถ",
+        "กรุณาระบุจังหวัด และอัปโหลดรูปรายการจดทะเบียนรถให้ครบถ้วน หรือลบข้อมูลทะเบียนออกหากไม่ต้องการใช้รถ",
       );
-      return; // เตะกลับ ไม่ให้ไปหน้าถัดไป
+      return;
     }
 
     if (editId || isEditMode) {
-      // ถ้าเป็นโหมดแก้ไข ให้ข้ามไปหน้าสรุป (Step 7) เลย!
+      // ถ้าเป็นโหมดแก้ไข
       setStep(7);
     } else {
-      // โหมดจองปกติ ไปเลือกวิทยาเขตต่อ (Step 4)
+      // โหมดจองปกติ
       setStep(4);
     }
   };
@@ -215,7 +216,7 @@ export function VehicleStep({ setStep }: { setStep: (s: number) => void }) {
     setStep(2);
   };
 
-  console.log("formResident in vehicle: ", formResident);
+  // console.log("formResident in vehicle: ", formResident);
 
   return (
     <Container
